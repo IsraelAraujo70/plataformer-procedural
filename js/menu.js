@@ -108,7 +108,8 @@ export function showGameOver() {
                 <hr style="margin: 15px 0; border-color: #00ffff;">
                 <p style="font-size: 24px; margin: 10px 0; color: #00ffff;"><strong>🏆 TOTAL: ${totalScore} points</strong></p>
             </div>
-            <button onclick="location.reload()">Play Again</button>
+            <button id="playAgainBtn">🔄 Play Again</button>
+            <button id="backToMenuBtn">🏠 Back to Menu</button>
         `;
     } else {
         // Modo 1 jogador: mostrar pontuação única
@@ -128,12 +129,43 @@ export function showGameOver() {
                 <hr style="margin: 15px 0; border-color: #00ffff;">
                 <p style="font-size: 22px; margin: 10px 0; color: #00ffff;"><strong>🏆 TOTAL: ${game.player.score} points</strong></p>
             </div>
-            <button onclick="location.reload()">Play Again</button>
+            <button id="playAgainBtn">🔄 Play Again</button>
+            <button id="backToMenuBtn">🏠 Back to Menu</button>
         `;
     }
 
     menu.classList.remove('hidden');
     document.getElementById('hud').classList.add('hidden');
+
+    // Configurar event listeners dos botões
+    setupGameOverButtons();
+}
+
+// ============================================
+// RESTART GAME
+// ============================================
+export function restartGame() {
+    // Esconder menu primeiro
+    document.getElementById('menu').classList.add('hidden');
+
+    // Reiniciar no mesmo modo atual
+    startGame(game.twoPlayerMode);
+}
+
+// ============================================
+// SETUP GAME OVER BUTTONS
+// ============================================
+function setupGameOverButtons() {
+    const playAgainBtn = document.getElementById('playAgainBtn');
+    const backToMenuBtn = document.getElementById('backToMenuBtn');
+
+    if (playAgainBtn) {
+        playAgainBtn.addEventListener('click', restartGame);
+    }
+
+    if (backToMenuBtn) {
+        backToMenuBtn.addEventListener('click', () => location.reload());
+    }
 }
 
 // Expor showGameOver globalmente para ser chamado pelo Player
