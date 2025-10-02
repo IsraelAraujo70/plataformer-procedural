@@ -88,13 +88,25 @@ function gameLoop(currentTime) {
 }
 
 // ============================================
+// CANVAS RESPONSIVO (TELA CHEIA)
+// ============================================
+function resizeCanvas() {
+    // Canvas sempre em tela cheia
+    game.canvas.width = game.width;
+    game.canvas.height = game.height;
+    game.canvas.style.width = '100vw';
+    game.canvas.style.height = '100vh';
+}
+
+// ============================================
 // INICIALIZAÇÃO
 // ============================================
 window.addEventListener('load', () => {
     game.canvas = document.getElementById('gameCanvas');
     game.ctx = game.canvas.getContext('2d');
-    game.canvas.width = game.width;
-    game.canvas.height = game.height;
+
+    // Configurar canvas responsivo
+    resizeCanvas();
 
     // Configurar handlers
     setupMenuHandlers();
@@ -103,3 +115,6 @@ window.addEventListener('load', () => {
     // Começar o loop (mesmo no menu, para possíveis animações)
     requestAnimationFrame(gameLoop);
 });
+
+// Redimensionar quando a janela mudar de tamanho
+window.addEventListener('resize', resizeCanvas);

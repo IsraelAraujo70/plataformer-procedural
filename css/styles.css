@@ -6,33 +6,43 @@
 
 body {
     overflow: hidden;
-    background: #1a1a2e;
+    background: #000;
+    margin: 0;
+    padding: 0;
     font-family: 'Courier New', monospace;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
 }
 
 #gameCanvas {
-    border: 3px solid #0f3460;
-    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw !important;
+    height: 100vh !important;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
+    display: block;
 }
 
 #menu {
-    position: absolute;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     background: rgba(15, 52, 96, 0.95);
     padding: 40px;
     border-radius: 15px;
     text-align: center;
     color: #eee;
     box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
 }
 
 #menu h1 {
-    font-size: 48px;
+    font-size: clamp(24px, 5vw, 48px);
     margin-bottom: 20px;
     color: #00ffff;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
@@ -42,8 +52,8 @@ body {
     background: #e94560;
     color: white;
     border: none;
-    padding: 15px 40px;
-    font-size: 20px;
+    padding: clamp(10px, 2vh, 15px) clamp(20px, 4vw, 40px);
+    font-size: clamp(14px, 2vw, 20px);
     margin: 10px;
     cursor: pointer;
     border-radius: 8px;
@@ -69,7 +79,7 @@ body {
 
 #instructions {
     margin-top: 20px;
-    font-size: 14px;
+    font-size: clamp(12px, 1.5vw, 14px);
     line-height: 1.6;
 }
 
@@ -78,11 +88,21 @@ body {
 }
 
 #hud {
-    position: absolute;
-    top: 20px;
-    left: 20px;
+    position: fixed;
+    top: 15px;
+    right: 15px;
     color: white;
-    font-size: 20px;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-    z-index: 10;
+    font-size: clamp(14px, 1.8vw, 18px);
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.75);
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: 2px solid rgba(0, 217, 255, 0.5);
+    backdrop-filter: blur(5px);
+    text-align: right;
+    line-height: 1.6;
+}
+
+#hud > div {
+    margin: 5px 0;
 }
