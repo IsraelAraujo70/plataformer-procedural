@@ -50,14 +50,48 @@ export class Player {
         this.lives = 3;
         this.score = 0;
 
+        // Sistema de checkpoint
+        this.lastSafeX = x;
+        this.lastSafeY = y;
+
         // Animação de caminhada
         this.animFrame = 0;
         this.animCounter = 0;
         this.animSpeed = 4; // Frames de jogo entre cada frame de animação (mais rápido = mais fluido)
         this.facingRight = true;
+
+        // Animação de morte
+        this.dying = false;
+        this.deathAnimTime = 0;
+        this.deathAnimDuration = 60; // 1 segundo a 60fps
     }
 
     update() {
+        // Atualizar animação de morte
+        if (this.dying) {
+            this.deathAnimTime++;
+
+            // Efeito de queda e rotação
+            this.vy += CONFIG.GRAVITY * 0.5;
+            this.y += this.vy;
+            this.vx *= 0.95; // Desacelerar horizontalmente
+            this.x += this.vx;
+
+            // Quando a animação terminar, marcar como completamente morto
+            if (this.deathAnimTime >= this.deathAnimDuration) {
+                this.completelyDead = true;
+
+                // Disparar game over se necessário
+                if (this.shouldTriggerGameOver) {
+                    game.state = 'gameover';
+                    if (window.showGameOver) {
+                        window.showGameOver();
+                    }
+                }
+            }
+            return;
+        }
+
         // Jogador morto não pode se mover
         if (this.lives <= 0) {
             return;
@@ -237,9 +271,15 @@ export class Player {
         this.grounded = false;
         this.handleCollisions();
 
-        // Limites do mundo
+        // Salvar última posição segura quando está no chão
+        if (this.grounded) {
+            this.lastSafeX = this.x;
+            this.lastSafeY = this.y;
+        }
+
+        // Limites do mundo - respawn ao invés de game over imediato
         if (this.y > game.height + 100) {
-            this.die();
+            this.respawn();
         }
 
         // Invulnerabilidade
@@ -386,6 +426,43 @@ export class Player {
         }
     }
 
+    respawn() {
+        if (game.devMode.enabled && game.devMode.invincible) return; // Dev Mode: não perde vida
+
+        this.lives--;
+
+        // Atualizar HUD apropriado
+        if (this.playerNumber === 1) {
+            document.getElementById('p1-lives').textContent = this.lives;
+        } else {
+            document.getElementById('p2-lives').textContent = this.lives;
+        }
+
+        // Game over se não tem mais vidas
+        if (this.lives <= 0) {
+            this.die();
+            return;
+        }
+
+        // Respawn na última posição segura
+        this.x = this.lastSafeX;
+        this.y = this.lastSafeY;
+        this.vx = 0;
+        this.vy = 0;
+
+        // Invulnerabilidade temporária
+        this.invulnerable = true;
+        this.invulnerableTime = 120; // 2 segundos a 60fps
+
+        // Efeito visual de respawn
+        if (window.createParticles) {
+            window.createParticles(this.x + this.width / 2, this.y + this.height / 2, this.color, 30);
+        }
+        if (window.createFloatingText) {
+            window.createFloatingText('RESPAWN!', this.x + this.width / 2, this.y, this.color);
+        }
+    }
+
     takeDamage() {
         if (this.invulnerable) return;
         if (game.devMode.enabled && game.devMode.invincible) return; // Dev Mode: invencível
@@ -431,6 +508,20 @@ export class Player {
     die() {
         if (game.devMode.enabled && game.devMode.invincible) return; // Dev Mode: não morre
 
+        // Iniciar animação de morte
+        this.dying = true;
+        this.deathAnimTime = 0;
+        this.completelyDead = false;
+
+        // Impulso para cima e para trás ao morrer
+        this.vy = -8;
+        this.vx = this.facingRight ? -3 : 3;
+
+        // Criar partículas de morte
+        if (window.createParticles) {
+            window.createParticles(this.x + this.width / 2, this.y + this.height / 2, this.color, 50);
+        }
+
         // Em modo 2 jogadores, verificar se o outro ainda está vivo
         if (game.twoPlayerMode) {
             const otherPlayer = this.playerNumber === 1 ? game.player2 : game.player;
@@ -438,20 +529,23 @@ export class Player {
                 // Outro jogador ainda vivo, não game over
                 console.log(`Player ${this.playerNumber} morreu, mas Player ${otherPlayer.playerNumber} continua!`);
                 this.lives = 0;
+                this.shouldTriggerGameOver = false;
                 // Jogador morto continua no jogo mas não pode mais ser controlado
+                // A animação vai rodar e depois o jogador desaparece
                 return;
             }
         }
 
-        // Game over (modo 1P ou ambos morreram em 2P)
-        game.state = 'gameover';
-        // showGameOver será chamado no menu.js
-        if (window.showGameOver) {
-            window.showGameOver();
-        }
+        // Game over (modo 1P ou ambos morreram em 2P) - marcar para game over após animação
+        this.shouldTriggerGameOver = true;
     }
 
     draw(ctx) {
+        // Não desenhar se completamente morto
+        if (this.completelyDead) {
+            return;
+        }
+
         // Efeito de piscar quando invulnerável
         if (this.invulnerable && Math.floor(this.invulnerableTime / 5) % 2 === 0) {
             return;
@@ -459,6 +553,24 @@ export class Player {
 
         const screenX = this.x - game.camera.x;
         const screenY = this.y - game.camera.y;
+
+        // Aplicar transparência e rotação durante animação de morte
+        if (this.dying) {
+            ctx.save();
+
+            // Calcular opacidade (fade out)
+            const opacity = 1 - (this.deathAnimTime / this.deathAnimDuration);
+            ctx.globalAlpha = opacity;
+
+            // Calcular rotação (girar enquanto cai)
+            const rotation = (this.deathAnimTime / this.deathAnimDuration) * Math.PI * 2;
+            const centerX = screenX + this.width / 2;
+            const centerY = screenY + this.height / 2;
+
+            ctx.translate(centerX, centerY);
+            ctx.rotate(rotation);
+            ctx.translate(-centerX, -centerY);
+        }
 
         // Auras de power-ups
         if (this.jumpBoostTime > 0) {
@@ -579,6 +691,11 @@ export class Player {
         } else {
             // Boca normal (linha)
             ctx.fillRect(screenX + 8, screenY + 18, 8, 2);
+        }
+
+        // Restaurar contexto se estava na animação de morte
+        if (this.dying) {
+            ctx.restore();
         }
     }
 
