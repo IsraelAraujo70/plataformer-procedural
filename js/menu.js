@@ -57,7 +57,7 @@ export function startGame(twoPlayerMode = false) {
     if (twoPlayerMode) {
         game.player2 = new Player(200, spawnY, 2);
         document.getElementById('p2-hud').style.display = 'block';
-        console.log('Modo 2 jogadores ativado!');
+        console.log('2 Player Mode activated!');
     } else {
         game.player2 = null;
         document.getElementById('p2-hud').style.display = 'none';
@@ -97,18 +97,18 @@ export function showGameOver() {
         menu.innerHTML = `
             <h1>GAME OVER</h1>
             <div style="text-align: left; display: inline-block; margin: 20px 0;">
-                <p style="font-size: 18px; margin: 10px 0;"><strong>📊 Breakdown da Pontuação:</strong></p>
-                <p style="font-size: 16px; margin: 8px 0;">💰 Moedas: ${game.stats.coinsCollected} × 10 = ${coinPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">👹 Inimigos: ${game.stats.enemiesDefeated} × 50 = ${enemyPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">⚡ Modificadores: ${game.stats.modifiersCollected} × 25 = ${modifierPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">📏 Distância: ${game.distance}m = ${distancePoints} pts</p>
+                <p style="font-size: 18px; margin: 10px 0;"><strong>📊 Score Breakdown:</strong></p>
+                <p style="font-size: 16px; margin: 8px 0;">💰 Coins: ${game.stats.coinsCollected} × 10 = ${coinPoints} pts</p>
+                <p style="font-size: 16px; margin: 8px 0;">👹 Enemies: ${game.stats.enemiesDefeated} × 50 = ${enemyPoints} pts</p>
+                <p style="font-size: 16px; margin: 8px 0;">⚡ Modifiers: ${game.stats.modifiersCollected} × 25 = ${modifierPoints} pts</p>
+                <p style="font-size: 16px; margin: 8px 0;">📏 Distance: ${game.distance}m = ${distancePoints} pts</p>
                 <hr style="margin: 15px 0; border-color: #00ffff;">
-                <p style="font-size: 20px; margin: 10px 0; color: #00d9ff;"><strong>🎮 Player 1: ${p1Score} pontos</strong></p>
-                <p style="font-size: 20px; margin: 10px 0; color: #ff6b6b;"><strong>🎮 Player 2: ${p2Score} pontos</strong></p>
+                <p style="font-size: 20px; margin: 10px 0; color: #00d9ff;"><strong>🎮 Player 1: ${p1Score} points</strong></p>
+                <p style="font-size: 20px; margin: 10px 0; color: #ff6b6b;"><strong>🎮 Player 2: ${p2Score} points</strong></p>
                 <hr style="margin: 15px 0; border-color: #00ffff;">
-                <p style="font-size: 24px; margin: 10px 0; color: #00ffff;"><strong>🏆 TOTAL: ${totalScore} pontos</strong></p>
+                <p style="font-size: 24px; margin: 10px 0; color: #00ffff;"><strong>🏆 TOTAL: ${totalScore} points</strong></p>
             </div>
-            <button onclick="location.reload()">Jogar Novamente</button>
+            <button onclick="location.reload()">Play Again</button>
         `;
     } else {
         // Modo 1 jogador: mostrar pontuação única
@@ -120,15 +120,15 @@ export function showGameOver() {
         menu.innerHTML = `
             <h1>GAME OVER</h1>
             <div style="text-align: left; display: inline-block; margin: 20px 0;">
-                <p style="font-size: 18px; margin: 10px 0;"><strong>📊 Breakdown da Pontuação:</strong></p>
-                <p style="font-size: 16px; margin: 8px 0;">💰 Moedas: ${game.stats.coinsCollected} × 10 = ${coinPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">👹 Inimigos: ${game.stats.enemiesDefeated} × 50 = ${enemyPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">⚡ Modificadores: ${game.stats.modifiersCollected} × 25 = ${modifierPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">📏 Distância: ${game.distance}m = ${distancePoints} pts</p>
+                <p style="font-size: 18px; margin: 10px 0;"><strong>📊 Score Breakdown:</strong></p>
+                <p style="font-size: 16px; margin: 8px 0;">💰 Coins: ${game.stats.coinsCollected} × 10 = ${coinPoints} pts</p>
+                <p style="font-size: 16px; margin: 8px 0;">👹 Enemies: ${game.stats.enemiesDefeated} × 50 = ${enemyPoints} pts</p>
+                <p style="font-size: 16px; margin: 8px 0;">⚡ Modifiers: ${game.stats.modifiersCollected} × 25 = ${modifierPoints} pts</p>
+                <p style="font-size: 16px; margin: 8px 0;">📏 Distance: ${game.distance}m = ${distancePoints} pts</p>
                 <hr style="margin: 15px 0; border-color: #00ffff;">
-                <p style="font-size: 22px; margin: 10px 0; color: #00ffff;"><strong>🏆 TOTAL: ${game.player.score} pontos</strong></p>
+                <p style="font-size: 22px; margin: 10px 0; color: #00ffff;"><strong>🏆 TOTAL: ${game.player.score} points</strong></p>
             </div>
-            <button onclick="location.reload()">Jogar Novamente</button>
+            <button onclick="location.reload()">Play Again</button>
         `;
     }
 

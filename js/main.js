@@ -6,6 +6,7 @@ import { setupMenuHandlers } from './menu.js';
 import { setupInputHandlers } from './input.js';
 import { FloatingText } from './entities/FloatingText.js';
 import { drawModifierTimers } from './ui/ModifierTimers.js';
+import { drawOffscreenBubble } from './ui/OffscreenBubble.js';
 
 // ============================================
 // HELPERS GLOBAIS
@@ -86,6 +87,9 @@ function gameLoop(currentTime) {
 
     // Timers de modificadores (centralizados no topo)
     drawModifierTimers(ctx);
+
+    // Bolha mostrando jogador fora da tela (modo 2 jogadores)
+    drawOffscreenBubble(ctx);
 
     // Dev Mode UI (por cima de absolutamente tudo)
     drawDevModeUI(ctx);

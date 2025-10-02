@@ -11,14 +11,14 @@ export function toggleDevMode() {
     game.devMode.enabled = !game.devMode.enabled;
 
     if (game.devMode.enabled) {
-        console.log('🛠️ DEV MODE ATIVADO');
-        // Ativar invencibilidade e noclip por padrão
+        console.log('🛠️ DEV MODE ACTIVATED');
+        // Enable invincibility and noclip by default
         game.devMode.invincible = true;
         game.devMode.noclip = true;
         game.devMode.showHitboxes = false;
         game.devMode.showGrid = false;
     } else {
-        console.log('DEV MODE DESATIVADO');
+        console.log('DEV MODE DEACTIVATED');
         game.devMode.noclip = false;
         game.devMode.invincible = false;
         game.devMode.gravityEnabled = true;
@@ -36,17 +36,17 @@ export function handleDevModeKeys(key) {
 
         case 'g': // Toggle Gravity
             game.devMode.gravityEnabled = !game.devMode.gravityEnabled;
-            console.log('Gravidade:', game.devMode.gravityEnabled ? 'ON' : 'OFF');
+            console.log('Gravity:', game.devMode.gravityEnabled ? 'ON' : 'OFF');
             break;
 
         case 'f': // Toggle Noclip/Fly
             game.devMode.noclip = !game.devMode.noclip;
-            console.log('Voo/Noclip:', game.devMode.noclip ? 'ON' : 'OFF');
+            console.log('Fly/Noclip:', game.devMode.noclip ? 'ON' : 'OFF');
             break;
 
         case 'i': // Toggle Invincible
             game.devMode.invincible = !game.devMode.invincible;
-            console.log('Invencível:', game.devMode.invincible ? 'ON' : 'OFF');
+            console.log('Invincible:', game.devMode.invincible ? 'ON' : 'OFF');
             break;
 
         case 'm': // Teleport forward
@@ -57,7 +57,7 @@ export function handleDevModeKeys(key) {
         case 'r': // Reset position
             game.player.x = 100;
             game.player.y = 100;
-            console.log('Posição resetada');
+            console.log('Position reset');
             break;
 
         case 'n': // Force generate next chunk
@@ -69,7 +69,7 @@ export function handleDevModeKeys(key) {
                 game.coins.push(...chunk.coins);
                 game.enemies.push(...chunk.enemies);
                 game.modifiers.push(...chunk.modifiers);
-                console.log('Chunk', nextChunk, 'gerado manualmente');
+                console.log('Chunk', nextChunk, 'generated manually');
             }
             break;
 
@@ -81,13 +81,13 @@ export function handleDevModeKeys(key) {
         case '=':
         case '+': // Increase speed
             game.devMode.flySpeed = Math.min(30, game.devMode.flySpeed + 2);
-            console.log('Velocidade de voo:', game.devMode.flySpeed);
+            console.log('Fly speed:', game.devMode.flySpeed);
             break;
 
         case '-':
         case '_': // Decrease speed
             game.devMode.flySpeed = Math.max(2, game.devMode.flySpeed - 2);
-            console.log('Velocidade de voo:', game.devMode.flySpeed);
+            console.log('Fly speed:', game.devMode.flySpeed);
             break;
     }
 }
@@ -108,10 +108,10 @@ export function drawDevModeUI(ctx) {
         ctx.lineWidth = 2;
         ctx.strokeRect(10, 10, 300, 330);
 
-        // Texto
+        // Text
         ctx.fillStyle = '#00ffff';
         ctx.font = 'bold 16px monospace';
-        ctx.fillText('🛠️ DEV MODE ATIVO', 20, 35);
+        ctx.fillText('🛠️ DEV MODE ACTIVE', 20, 35);
 
         ctx.strokeStyle = '#00ffff';
         ctx.beginPath();
@@ -140,13 +140,13 @@ export function drawDevModeUI(ctx) {
         ctx.stroke();
 
         ctx.fillStyle = game.devMode.noclip ? '#00ff00' : '#ff0000';
-        ctx.fillText(`[F] Voo: ${game.devMode.noclip ? 'ON' : 'OFF'}`, 20, y); y += lineHeight;
+        ctx.fillText(`[F] Fly: ${game.devMode.noclip ? 'ON' : 'OFF'}`, 20, y); y += lineHeight;
 
         ctx.fillStyle = game.devMode.invincible ? '#00ff00' : '#ff0000';
-        ctx.fillText(`[I] Invencível: ${game.devMode.invincible ? 'ON' : 'OFF'}`, 20, y); y += lineHeight;
+        ctx.fillText(`[I] Invincible: ${game.devMode.invincible ? 'ON' : 'OFF'}`, 20, y); y += lineHeight;
 
         ctx.fillStyle = game.devMode.gravityEnabled ? '#00ff00' : '#ff0000';
-        ctx.fillText(`[G] Gravidade: ${game.devMode.gravityEnabled ? 'ON' : 'OFF'}`, 20, y); y += lineHeight;
+        ctx.fillText(`[G] Gravity: ${game.devMode.gravityEnabled ? 'ON' : 'OFF'}`, 20, y); y += lineHeight;
 
         ctx.fillStyle = game.devMode.showHitboxes ? '#00ff00' : '#ff0000';
         ctx.fillText(`[H] Hitboxes: ${game.devMode.showHitboxes ? 'ON' : 'OFF'}`, 20, y); y += lineHeight;

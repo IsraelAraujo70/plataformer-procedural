@@ -526,12 +526,12 @@ export class Player {
         if (game.twoPlayerMode) {
             const otherPlayer = this.playerNumber === 1 ? game.player2 : game.player;
             if (otherPlayer && otherPlayer.lives > 0) {
-                // Outro jogador ainda vivo, não game over
-                console.log(`Player ${this.playerNumber} morreu, mas Player ${otherPlayer.playerNumber} continua!`);
+                // Other player still alive, no game over
+                console.log(`Player ${this.playerNumber} died, but Player ${otherPlayer.playerNumber} continues!`);
                 this.lives = 0;
                 this.shouldTriggerGameOver = false;
-                // Jogador morto continua no jogo mas não pode mais ser controlado
-                // A animação vai rodar e depois o jogador desaparece
+                // Dead player continues in game but can no longer be controlled
+                // Animation will play and then player disappears
                 return;
             }
         }
