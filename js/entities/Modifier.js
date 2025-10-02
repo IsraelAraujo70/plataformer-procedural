@@ -52,6 +52,14 @@ export class Modifier {
 
         // Colisão com Player 1
         if (this.intersects(game.player)) {
+            // Se for swap e algum jogador estiver morto, transformar em outro modificador
+            if (this.type === 'swap' && game.twoPlayerMode && game.player2) {
+                if (game.player.lives <= 0 || game.player.dying || game.player2.lives <= 0 || game.player2.dying) {
+                    const nonSwapModifiers = ['jump', 'speed', 'shield', 'reverse', 'ice', 'doublejump', 'magnet', 'tiny', 'heavy', 'bouncy', 'timewarp'];
+                    this.type = nonSwapModifiers[Math.floor(Math.random() * nonSwapModifiers.length)];
+                }
+            }
+
             this.collected = true;
 
             // Em modo 2 jogadores, aplicar efeito em ambos
@@ -82,6 +90,14 @@ export class Modifier {
 
         // Colisão com Player 2 (se existir)
         if (game.player2 && !this.collected && this.intersects(game.player2)) {
+            // Se for swap e algum jogador estiver morto, transformar em outro modificador
+            if (this.type === 'swap' && game.twoPlayerMode && game.player) {
+                if (game.player.lives <= 0 || game.player.dying || game.player2.lives <= 0 || game.player2.dying) {
+                    const nonSwapModifiers = ['jump', 'speed', 'shield', 'reverse', 'ice', 'doublejump', 'magnet', 'tiny', 'heavy', 'bouncy', 'timewarp'];
+                    this.type = nonSwapModifiers[Math.floor(Math.random() * nonSwapModifiers.length)];
+                }
+            }
+
             this.collected = true;
 
             // Em modo 2 jogadores, aplicar efeito em ambos
