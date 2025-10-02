@@ -1,6 +1,6 @@
 import { game } from './game.js';
 import { updateChunks, updateCamera } from './camera.js';
-import { drawBackground, createParticles } from './render.js';
+import { drawBackground, createParticles, initAmbientParticles, updateAmbientParticles, drawAmbientParticles } from './render.js';
 import { drawDevModeUI } from './devMode.js';
 import { setupMenuHandlers } from './menu.js';
 import { setupInputHandlers } from './input.js';
@@ -51,6 +51,10 @@ function gameLoop(currentTime) {
         game.modifiers.forEach(modifier => modifier.update());
         game.particles.forEach(particle => particle.update());
         game.floatingTexts.forEach(text => text.update());
+
+        // Atualizar partículas ambientes
+        initAmbientParticles();
+        updateAmbientParticles();
     }
 
     // Remover partículas e textos mortos
@@ -74,6 +78,9 @@ function gameLoop(currentTime) {
     ctx.fillRect(0, 0, game.width, game.height);
 
     drawBackground(ctx);
+
+    // Partículas ambientes (atrás de tudo, mas na frente do background)
+    drawAmbientParticles(ctx);
 
     // Chunks (terreno)
     game.chunks.forEach(chunk => chunk.draw(ctx));

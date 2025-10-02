@@ -61,18 +61,55 @@ export class Coin {
         const screenX = this.x - game.camera.x + this.width / 2;
         const screenY = this.y - game.camera.y + this.height / 2;
 
+        // Efeito de brilho/glow ao redor
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 10;
+
         ctx.save();
         ctx.translate(screenX, screenY);
         ctx.rotate(this.rotation);
 
-        // Moeda dourada
-        ctx.fillStyle = '#ffd700';
-        ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+        // Moeda dourada (círculo ao invés de quadrado)
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.width / 2);
+        gradient.addColorStop(0, '#ffed4e');
+        gradient.addColorStop(0.7, '#ffd700');
+        gradient.addColorStop(1, '#daa520');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.width / 2, 0, Math.PI * 2);
+        ctx.fill();
 
-        // Brilho
-        ctx.fillStyle = '#ffed4e';
-        ctx.fillRect(-this.width / 3, -this.height / 3, this.width / 1.5, this.height / 1.5);
+        // Símbolo de moeda (C ou $)
+        ctx.fillStyle = '#b8860b';
+        ctx.font = 'bold 10px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('$', 0, 0);
+
+        // Highlight brilhante
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.beginPath();
+        ctx.arc(-2, -2, this.width / 4, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.restore();
+
+        // Resetar shadow
+        ctx.shadowBlur = 0;
+
+        // Partículas brilhantes ao redor (efeito idle)
+        const time = Date.now() / 1000 + this.x; // Offset por posição para variar
+        for (let i = 0; i < 3; i++) {
+            const angle = time + (i * Math.PI * 2 / 3);
+            const radius = 12 + Math.sin(time * 2 + i) * 3;
+            const px = screenX + Math.cos(angle) * radius;
+            const py = screenY + Math.sin(angle) * radius;
+            const opacity = 0.3 + Math.sin(time * 3 + i) * 0.2;
+
+            ctx.fillStyle = `rgba(255, 215, 0, ${opacity})`;
+            ctx.beginPath();
+            ctx.arc(px, py, 1, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 }

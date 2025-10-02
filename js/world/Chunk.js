@@ -40,6 +40,7 @@ export class Chunk {
         this.coins = [];
         this.enemies = [];
         this.modifiers = [];
+        this.decorations = []; // Elementos decorativos
 
         this.generate(random);
     }
@@ -253,6 +254,26 @@ export class Chunk {
             }
         }
 
+        // Adicionar decorações nas plataformas
+        this.platforms.forEach(platform => {
+            // Apenas adicionar decorações em plataformas ground
+            if (platform.type === 'ground') {
+                const numDecorations = rng.int(2, 5);
+                for (let i = 0; i < numDecorations; i++) {
+                    const decorationType = rng.next() > 0.5 ? 'flower' : (rng.next() > 0.5 ? 'rock' : 'bush');
+                    const decorX = platform.x + rng.range(10, platform.width - 10);
+                    const decorY = platform.y;
+
+                    this.decorations.push({
+                        x: decorX,
+                        y: decorY,
+                        type: decorationType,
+                        variant: rng.int(0, 2) // Variação visual (0, 1, ou 2)
+                    });
+                }
+            }
+        });
+
         // Adicionar modificadores (100% de chance - um por chunk)
         if (this.index >= 0) {
             // Criar lista de todos os itens já colocados (para verificar colisões)
@@ -307,18 +328,246 @@ export class Chunk {
             const screenX = platform.x - game.camera.x;
             const screenY = platform.y - game.camera.y;
 
-            // Cor baseada no tipo
             if (platform.type === 'floating') {
-                ctx.fillStyle = '#8b5cf6';
+                // Plataformas flutuantes com efeito cristal/mágico
+                this.drawFloatingPlatform(ctx, screenX, screenY, platform.width, platform.height);
             } else {
-                ctx.fillStyle = '#2ecc71';
+                // Plataformas ground com textura de terra/grama
+                this.drawGroundPlatform(ctx, screenX, screenY, platform.width, platform.height);
             }
-
-            ctx.fillRect(screenX, screenY, platform.width, platform.height);
-
-            // Borda superior mais clara
-            ctx.fillStyle = platform.type === 'floating' ? '#a78bfa' : '#52d681';
-            ctx.fillRect(screenX, screenY, platform.width, 4);
         });
+
+        // Desenhar decorações
+        this.decorations.forEach(decor => {
+            const screenX = decor.x - game.camera.x;
+            const screenY = decor.y - game.camera.y;
+
+            if (decor.type === 'flower') {
+                this.drawFlower(ctx, screenX, screenY, decor.variant);
+            } else if (decor.type === 'rock') {
+                this.drawRock(ctx, screenX, screenY, decor.variant);
+            } else if (decor.type === 'bush') {
+                this.drawBush(ctx, screenX, screenY, decor.variant);
+            }
+        });
+    }
+
+    drawGroundPlatform(ctx, x, y, width, height) {
+        const tileSize = 16; // Tamanho dos "blocos" da textura
+
+        // Fundo base com gradiente
+        const gradient = ctx.createLinearGradient(x, y, x, y + height);
+        gradient.addColorStop(0, '#8b6914');
+        gradient.addColorStop(0.5, '#654321');
+        gradient.addColorStop(1, '#3d2812');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x, y, width, height);
+
+        // Camada de grama no topo
+        const grassHeight = 8;
+        const grassGradient = ctx.createLinearGradient(x, y, x, y + grassHeight);
+        grassGradient.addColorStop(0, '#52d681');
+        grassGradient.addColorStop(1, '#2ecc71');
+        ctx.fillStyle = grassGradient;
+        ctx.fillRect(x, y, width, grassHeight);
+
+        // Detalhes de grama (tufos)
+        ctx.fillStyle = '#52d681';
+        for (let i = 0; i < width; i += 8) {
+            const tuftHeight = 3 + (i % 3);
+            ctx.fillRect(x + i, y - tuftHeight, 3, tuftHeight);
+        }
+
+        // Textura de blocos na lateral (padrão de tijolos)
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.lineWidth = 1;
+
+        // Linhas horizontais
+        for (let row = grassHeight; row < height; row += tileSize) {
+            ctx.beginPath();
+            ctx.moveTo(x, y + row);
+            ctx.lineTo(x + width, y + row);
+            ctx.stroke();
+        }
+
+        // Linhas verticais (padrão tijolo alternado)
+        for (let row = 0; row < Math.ceil(height / tileSize); row++) {
+            const offset = (row % 2) * (tileSize / 2);
+            for (let col = offset; col < width; col += tileSize) {
+                ctx.beginPath();
+                ctx.moveTo(x + col, y + grassHeight + row * tileSize);
+                ctx.lineTo(x + col, y + grassHeight + Math.min((row + 1) * tileSize, height));
+                ctx.stroke();
+            }
+        }
+
+        // Pontos de luz aleatórios (pequenas pedras/minerais brilhantes)
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.4)';
+        const seed = Math.floor(x / 100);
+        for (let i = 0; i < 3; i++) {
+            const px = x + ((seed * 73 + i * 137) % width);
+            const py = y + grassHeight + ((seed * 97 + i * 211) % (height - grassHeight));
+            ctx.fillRect(px, py, 2, 2);
+        }
+
+        // Sombra na borda inferior
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.fillRect(x, y + height - 2, width, 2);
+    }
+
+    drawFloatingPlatform(ctx, x, y, width, height) {
+        // Sombra embaixo da plataforma (efeito 3D)
+        const shadowOffset = 8;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(x + width/2, y + height + shadowOffset, width/2 - 5, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Base da plataforma com gradiente cristalino
+        const gradient = ctx.createLinearGradient(x, y, x, y + height);
+        gradient.addColorStop(0, '#a78bfa');
+        gradient.addColorStop(0.5, '#8b5cf6');
+        gradient.addColorStop(1, '#7c3aed');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x, y, width, height);
+
+        // Efeito de brilho/cristal (linhas diagonais)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < width; i += 20) {
+            ctx.beginPath();
+            ctx.moveTo(x + i, y);
+            ctx.lineTo(x + i + 10, y + height);
+            ctx.stroke();
+        }
+
+        // Highlight no topo
+        const topGradient = ctx.createLinearGradient(x, y, x, y + 6);
+        topGradient.addColorStop(0, 'rgba(255, 255, 255, 0.6)');
+        topGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = topGradient;
+        ctx.fillRect(x, y, width, 6);
+
+        // Partículas brilhantes ao redor (efeito mágico)
+        const time = Date.now() / 1000;
+        const particleCount = Math.floor(width / 40);
+        ctx.fillStyle = '#c4b5fd';
+
+        for (let i = 0; i < particleCount; i++) {
+            const angle = time + i * (Math.PI * 2 / particleCount);
+            const radius = 15 + Math.sin(time * 2 + i) * 5;
+            const px = x + width/2 + Math.cos(angle) * radius;
+            const py = y + height/2 + Math.sin(angle) * radius;
+
+            ctx.beginPath();
+            ctx.arc(px, py, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Borda brilhante
+        ctx.strokeStyle = '#c4b5fd';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, width, height);
+    }
+
+    drawFlower(ctx, x, y, variant) {
+        // Haste
+        ctx.strokeStyle = '#27ae60';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y - 8);
+        ctx.stroke();
+
+        // Flor (cores diferentes por variante)
+        const colors = [
+            ['#ff6b9d', '#ff1744'], // Rosa
+            ['#ffd93d', '#ffa726'], // Amarela
+            ['#a78bfa', '#8b5cf6']  // Roxa
+        ];
+        const [color1, color2] = colors[variant];
+
+        // Pétalas
+        ctx.fillStyle = color1;
+        for (let i = 0; i < 5; i++) {
+            const angle = (i * Math.PI * 2 / 5) - Math.PI / 2;
+            const px = x + Math.cos(angle) * 3;
+            const py = y - 8 + Math.sin(angle) * 3;
+            ctx.beginPath();
+            ctx.arc(px, py, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Centro
+        ctx.fillStyle = color2;
+        ctx.beginPath();
+        ctx.arc(x, y - 8, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawRock(ctx, x, y, variant) {
+        // Pedras de diferentes tamanhos
+        const sizes = [
+            { w: 8, h: 6 },
+            { w: 10, h: 7 },
+            { w: 6, h: 5 }
+        ];
+        const size = sizes[variant];
+
+        // Sombra
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.fillRect(x - size.w/2 + 1, y + 1, size.w, 2);
+
+        // Pedra com gradiente
+        const gradient = ctx.createLinearGradient(x - size.w/2, y - size.h, x + size.w/2, y);
+        gradient.addColorStop(0, '#95a5a6');
+        gradient.addColorStop(1, '#7f8c8d');
+        ctx.fillStyle = gradient;
+
+        // Forma irregular da pedra
+        ctx.beginPath();
+        ctx.moveTo(x - size.w/2, y - 2);
+        ctx.lineTo(x - 1, y - size.h);
+        ctx.lineTo(x + size.w/2, y - 3);
+        ctx.lineTo(x + size.w/2 - 1, y);
+        ctx.lineTo(x - size.w/2, y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Highlight
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.beginPath();
+        ctx.arc(x - 1, y - size.h + 2, 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawBush(ctx, x, y, variant) {
+        // Arbustos de diferentes tamanhos
+        const sizes = [12, 14, 10];
+        const size = sizes[variant];
+
+        // Sombra
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.beginPath();
+        ctx.ellipse(x, y + 2, size/2, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Arbusto (3 círculos para dar volume)
+        const colors = ['#1e7d45', '#27ae60', '#2ecc71'];
+
+        ctx.fillStyle = colors[0];
+        ctx.beginPath();
+        ctx.arc(x - 3, y - 6, size/2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = colors[1];
+        ctx.beginPath();
+        ctx.arc(x + 3, y - 6, size/2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = colors[2];
+        ctx.beginPath();
+        ctx.arc(x, y - 8, size/2.2, 0, Math.PI * 2);
+        ctx.fill();
     }
 }
