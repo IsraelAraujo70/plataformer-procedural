@@ -2,7 +2,7 @@ import { CONFIG } from '../config.js';
 import { game } from '../game.js';
 import { Enemy } from '../entities/Enemy.js';
 import { Coin } from '../entities/Coin.js';
-import { PowerUp } from '../entities/PowerUp.js';
+import { Modifier } from '../entities/Modifier.js';
 
 // ============================================
 // HELPERS DE COLISÃO (para geração de itens)
@@ -39,7 +39,7 @@ export class Chunk {
         this.platforms = [];
         this.coins = [];
         this.enemies = [];
-        this.powerups = [];
+        this.modifiers = [];
 
         this.generate(random);
     }
@@ -253,8 +253,8 @@ export class Chunk {
             }
         }
 
-        // Adicionar power-ups raramente (15% de chance por chunk)
-        if (rng.next() > 0.85 && this.index > 0) {
+        // Adicionar modificadores com frequência (50% de chance por chunk)
+        if (rng.next() > 0.50 && this.index >= 0) {
             // Criar lista de todos os itens já colocados (para verificar colisões)
             const allItems = [];
 
@@ -286,14 +286,14 @@ export class Chunk {
                 while (attempts < 5 && !placed) {
                     const platform = this.platforms[rng.int(0, this.platforms.length - 1)];
 
-                    // Escolher tipo de power-up aleatoriamente
+                    // Escolher tipo de modificador aleatoriamente
                     const type = rng.next() > 0.5 ? 'jump' : 'speed';
-                    const powerupX = platform.x + platform.width / 2 - 10;
-                    const powerupY = platform.y - 40;
+                    const modifierX = platform.x + platform.width / 2 - 10;
+                    const modifierY = platform.y - 40;
 
                     // Verificar se não colide com outros itens
-                    if (canPlaceItem(powerupX, powerupY, 20, 20, allItems)) {
-                        this.powerups.push(new PowerUp(powerupX, powerupY, type));
+                    if (canPlaceItem(modifierX, modifierY, 20, 20, allItems)) {
+                        this.modifiers.push(new Modifier(modifierX, modifierY, type));
                         placed = true;
                     }
 

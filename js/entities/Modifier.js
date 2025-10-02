@@ -1,9 +1,9 @@
 import { game } from '../game.js';
 
 // ============================================
-// POWER-UP
+// MODIFIER (Modificador)
 // ============================================
-export class PowerUp {
+export class Modifier {
     constructor(x, y, type) {
         this.x = x;
         this.y = y;
@@ -13,6 +13,9 @@ export class PowerUp {
         this.collected = false;
         this.rotation = 0;
         this.pulseTime = 0;
+
+        // Duração aleatória entre 2 e 15 segundos (120 a 900 frames a 60fps)
+        this.duration = Math.floor(Math.random() * (900 - 120 + 1)) + 120;
     }
 
     update() {
@@ -26,9 +29,9 @@ export class PowerUp {
             this.collected = true;
             this.applyEffect(game.player);
 
-            // Adicionar pontos por coletar power-up
+            // Adicionar pontos por coletar modificador
             game.player.score += 25;
-            game.stats.powerupsCollected++;
+            game.stats.modifiersCollected++;
 
             const color = this.type === 'jump' ? '#00d9ff' : '#00ff88';
             if (window.createFloatingText) {
@@ -44,9 +47,9 @@ export class PowerUp {
             this.collected = true;
             this.applyEffect(game.player2);
 
-            // Adicionar pontos por coletar power-up
+            // Adicionar pontos por coletar modificador
             game.player2.score += 25;
-            game.stats.powerupsCollected++;
+            game.stats.modifiersCollected++;
 
             const color = this.type === 'jump' ? '#00d9ff' : '#00ff88';
             if (window.createFloatingText) {
@@ -60,13 +63,15 @@ export class PowerUp {
 
     applyEffect(player) {
         if (this.type === 'jump') {
-            // Aumentar força do pulo por 10 segundos
+            // Aumentar força do pulo por duração aleatória (2-60s)
             player.jumpBoost = 1.4; // 40% mais forte
-            player.jumpBoostTime = 600; // 10 segundos a 60fps
+            player.jumpBoostTime = this.duration;
+            player.jumpBoostMaxTime = this.duration;
         } else if (this.type === 'speed') {
-            // Aumentar velocidade por 10 segundos
+            // Aumentar velocidade por duração aleatória (2-60s)
             player.speedBoost = 1.5; // 50% mais rápido
-            player.speedBoostTime = 600; // 10 segundos a 60fps
+            player.speedBoostTime = this.duration;
+            player.speedBoostMaxTime = this.duration;
         }
     }
 

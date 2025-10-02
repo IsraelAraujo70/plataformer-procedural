@@ -35,7 +35,7 @@ export function startGame(twoPlayerMode = false) {
     game.chunks.clear();
     game.coins = [];
     game.enemies = [];
-    game.powerups = [];
+    game.modifiers = [];
     game.particles = [];
     game.floatingTexts = [];
     game.score = 0;
@@ -45,7 +45,7 @@ export function startGame(twoPlayerMode = false) {
     game.stats = {
         coinsCollected: 0,
         enemiesDefeated: 0,
-        powerupsCollected: 0,
+        modifiersCollected: 0,
         lastDistance: 0
     };
 
@@ -91,7 +91,7 @@ export function showGameOver() {
         // Calcular pontos de cada categoria (estatísticas globais)
         const coinPoints = game.stats.coinsCollected * 10;
         const enemyPoints = game.stats.enemiesDefeated * 50;
-        const powerupPoints = game.stats.powerupsCollected * 25;
+        const modifierPoints = game.stats.modifiersCollected * 25;
         const distancePoints = game.distance;
 
         menu.innerHTML = `
@@ -100,7 +100,7 @@ export function showGameOver() {
                 <p style="font-size: 18px; margin: 10px 0;"><strong>📊 Breakdown da Pontuação:</strong></p>
                 <p style="font-size: 16px; margin: 8px 0;">💰 Moedas: ${game.stats.coinsCollected} × 10 = ${coinPoints} pts</p>
                 <p style="font-size: 16px; margin: 8px 0;">👹 Inimigos: ${game.stats.enemiesDefeated} × 50 = ${enemyPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">⚡ Power-ups: ${game.stats.powerupsCollected} × 25 = ${powerupPoints} pts</p>
+                <p style="font-size: 16px; margin: 8px 0;">⚡ Modificadores: ${game.stats.modifiersCollected} × 25 = ${modifierPoints} pts</p>
                 <p style="font-size: 16px; margin: 8px 0;">📏 Distância: ${game.distance}m = ${distancePoints} pts</p>
                 <hr style="margin: 15px 0; border-color: #00ffff;">
                 <p style="font-size: 20px; margin: 10px 0; color: #00d9ff;"><strong>🎮 Player 1: ${p1Score} pontos</strong></p>
@@ -114,7 +114,7 @@ export function showGameOver() {
         // Modo 1 jogador: mostrar pontuação única
         const coinPoints = game.stats.coinsCollected * 10;
         const enemyPoints = game.stats.enemiesDefeated * 50;
-        const powerupPoints = game.stats.powerupsCollected * 25;
+        const modifierPoints = game.stats.modifiersCollected * 25;
         const distancePoints = game.distance;
 
         menu.innerHTML = `
@@ -123,7 +123,7 @@ export function showGameOver() {
                 <p style="font-size: 18px; margin: 10px 0;"><strong>📊 Breakdown da Pontuação:</strong></p>
                 <p style="font-size: 16px; margin: 8px 0;">💰 Moedas: ${game.stats.coinsCollected} × 10 = ${coinPoints} pts</p>
                 <p style="font-size: 16px; margin: 8px 0;">👹 Inimigos: ${game.stats.enemiesDefeated} × 50 = ${enemyPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">⚡ Power-ups: ${game.stats.powerupsCollected} × 25 = ${powerupPoints} pts</p>
+                <p style="font-size: 16px; margin: 8px 0;">⚡ Modificadores: ${game.stats.modifiersCollected} × 25 = ${modifierPoints} pts</p>
                 <p style="font-size: 16px; margin: 8px 0;">📏 Distância: ${game.distance}m = ${distancePoints} pts</p>
                 <hr style="margin: 15px 0; border-color: #00ffff;">
                 <p style="font-size: 22px; margin: 10px 0; color: #00ffff;"><strong>🏆 TOTAL: ${game.player.score} pontos</strong></p>

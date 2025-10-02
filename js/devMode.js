@@ -68,7 +68,7 @@ export function handleDevModeKeys(key) {
                 game.chunks.set(nextChunk, chunk);
                 game.coins.push(...chunk.coins);
                 game.enemies.push(...chunk.enemies);
-                game.powerups.push(...chunk.powerups);
+                game.modifiers.push(...chunk.modifiers);
                 console.log('Chunk', nextChunk, 'gerado manualmente');
             }
             break;
@@ -130,7 +130,7 @@ export function drawDevModeUI(ctx) {
         ctx.fillText(`Chunks Loaded: ${game.chunks.size}`, 20, y); y += lineHeight;
         ctx.fillText(`Enemies: ${game.enemies.filter(e => e.alive).length}/${game.enemies.length}`, 20, y); y += lineHeight;
         ctx.fillText(`Coins: ${game.coins.filter(c => !c.collected).length}/${game.coins.length}`, 20, y); y += lineHeight;
-        ctx.fillText(`Powerups: ${game.powerups.filter(p => !p.collected).length}/${game.powerups.length}`, 20, y); y += lineHeight;
+        ctx.fillText(`Modifiers: ${game.modifiers.filter(m => !m.collected).length}/${game.modifiers.length}`, 20, y); y += lineHeight;
 
         y += 10;
         ctx.strokeStyle = '#555555';
@@ -225,14 +225,14 @@ export function drawDevModeUI(ctx) {
             );
         });
 
-        // Powerups hitboxes
-        game.powerups.filter(p => !p.collected).forEach(powerup => {
+        // Modifiers hitboxes
+        game.modifiers.filter(m => !m.collected).forEach(modifier => {
             ctx.strokeStyle = '#00ff00';
             ctx.strokeRect(
-                powerup.x - game.camera.x,
-                powerup.y - game.camera.y,
-                powerup.width,
-                powerup.height
+                modifier.x - game.camera.x,
+                modifier.y - game.camera.y,
+                modifier.width,
+                modifier.height
             );
         });
 

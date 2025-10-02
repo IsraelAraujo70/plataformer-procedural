@@ -18,8 +18,10 @@ export class Player {
         this.invulnerableTime = 0;
         this.jumpBoost = 1;
         this.jumpBoostTime = 0;
+        this.jumpBoostMaxTime = 0;
         this.speedBoost = 1;
         this.speedBoostTime = 0;
+        this.speedBoostMaxTime = 0;
 
         // Multiplayer: definir número do jogador e controles
         this.playerNumber = playerNumber;
@@ -45,11 +47,12 @@ export class Player {
             return;
         }
 
-        // Atualizar power-ups
+        // Atualizar modificadores
         if (this.jumpBoostTime > 0) {
             this.jumpBoostTime--;
             if (this.jumpBoostTime <= 0) {
                 this.jumpBoost = 1;
+                this.jumpBoostMaxTime = 0;
             }
         }
 
@@ -57,6 +60,7 @@ export class Player {
             this.speedBoostTime--;
             if (this.speedBoostTime <= 0) {
                 this.speedBoost = 1;
+                this.speedBoostMaxTime = 0;
             }
         }
 
@@ -385,5 +389,23 @@ export class Player {
         // Desenhar pernas
         ctx.fillRect(screenX + 5, leftLegY, legWidth, leftLegHeight);
         ctx.fillRect(screenX + 13, rightLegY, legWidth, rightLegHeight);
+    }
+
+    getModifierTimeRemaining(type) {
+        if (type === 'jump') {
+            return Math.ceil(this.jumpBoostTime / 60);
+        } else if (type === 'speed') {
+            return Math.ceil(this.speedBoostTime / 60);
+        }
+        return 0;
+    }
+
+    getModifierProgress(type) {
+        if (type === 'jump' && this.jumpBoostMaxTime > 0) {
+            return this.jumpBoostTime / this.jumpBoostMaxTime;
+        } else if (type === 'speed' && this.speedBoostMaxTime > 0) {
+            return this.speedBoostTime / this.speedBoostMaxTime;
+        }
+        return 0;
     }
 }

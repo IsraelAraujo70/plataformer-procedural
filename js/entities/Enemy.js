@@ -106,7 +106,7 @@ export class Enemy {
                 window.createFloatingText('+50', this.x + this.width / 2, this.y, '#ffff00');
             }
             if (window.createParticles) {
-                window.createParticles(this.x + this.width / 2, this.y + this.height / 2, '#ff6b6b', 8);
+                window.createParticles(this.x + this.width / 2, this.y + this.height / 2, '#ff8800', 8);
             }
         } else {
             // Jogador toma dano
@@ -162,8 +162,8 @@ export class Enemy {
         const screenX = this.x - game.camera.x;
         const screenY = this.y - game.camera.y;
 
-        // Corpo do inimigo (vermelho)
-        ctx.fillStyle = '#ff6b6b';
+        // Corpo do inimigo (laranja)
+        ctx.fillStyle = '#ff8800';
         ctx.fillRect(screenX, screenY, this.width, this.height);
 
         // Olhos

@@ -30,7 +30,7 @@ export function updateChunks() {
             // Adicionar entidades do chunk às listas globais
             game.coins.push(...chunk.coins);
             game.enemies.push(...chunk.enemies);
-            game.powerups.push(...chunk.powerups);
+            game.modifiers.push(...chunk.modifiers);
         }
     }
 
@@ -47,7 +47,7 @@ export function updateChunks() {
         // Remover entidades do chunk
         game.coins = game.coins.filter(c => !chunk.coins.includes(c));
         game.enemies = game.enemies.filter(e => !chunk.enemies.includes(e));
-        game.powerups = game.powerups.filter(p => !chunk.powerups.includes(p));
+        game.modifiers = game.modifiers.filter(m => !chunk.modifiers.includes(m));
         game.chunks.delete(index);
     });
 }

@@ -5,6 +5,7 @@ import { drawDevModeUI } from './devMode.js';
 import { setupMenuHandlers } from './menu.js';
 import { setupInputHandlers } from './input.js';
 import { FloatingText } from './entities/FloatingText.js';
+import { drawModifierTimers } from './ui/ModifierTimers.js';
 
 // ============================================
 // HELPERS GLOBAIS
@@ -39,7 +40,7 @@ function gameLoop(currentTime) {
     }
     game.coins.forEach(coin => coin.update());
     game.enemies.forEach(enemy => enemy.update());
-    game.powerups.forEach(powerup => powerup.update());
+    game.modifiers.forEach(modifier => modifier.update());
     game.particles.forEach(particle => particle.update());
     game.floatingTexts.forEach(text => text.update());
 
@@ -71,7 +72,7 @@ function gameLoop(currentTime) {
     // Entities
     game.coins.forEach(coin => coin.draw(ctx));
     game.enemies.forEach(enemy => enemy.draw(ctx));
-    game.powerups.forEach(powerup => powerup.draw(ctx));
+    game.modifiers.forEach(modifier => modifier.draw(ctx));
     game.particles.forEach(particle => particle.draw(ctx));
 
     // Players
@@ -82,6 +83,9 @@ function gameLoop(currentTime) {
 
     // Floating texts (por cima de tudo)
     game.floatingTexts.forEach(text => text.draw(ctx));
+
+    // Timers de modificadores (centralizados no topo)
+    drawModifierTimers(ctx);
 
     // Dev Mode UI (por cima de absolutamente tudo)
     drawDevModeUI(ctx);

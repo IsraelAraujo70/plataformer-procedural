@@ -18,7 +18,7 @@ export const game = {
     entities: [],
     coins: [],
     enemies: [],
-    powerups: [],
+    modifiers: [],
     particles: [],
     floatingTexts: [],
     score: 0,
@@ -28,7 +28,7 @@ export const game = {
     stats: {
         coinsCollected: 0,
         enemiesDefeated: 0,
-        powerupsCollected: 0,
+        modifiersCollected: 0,
         lastDistance: 0
     },
     lastTime: 0,
