@@ -14,6 +14,7 @@ export function setupMenuHandlers() {
         const instructions = document.getElementById('instructions');
         instructions.classList.toggle('hidden');
     });
+    document.getElementById('pauseBtn').addEventListener('click', pauseGame);
 }
 
 export function startGame(twoPlayerMode = false) {
@@ -27,9 +28,10 @@ export function startGame(twoPlayerMode = false) {
     // Inicializar random
     game.random = new Random(game.seed);
 
-    // Esconder menu
+    // Esconder menu e mostrar HUD + botão de pausa
     document.getElementById('menu').classList.add('hidden');
     document.getElementById('hud').classList.remove('hidden');
+    document.getElementById('pauseBtn').classList.remove('hidden');
 
     // Inicializar jogo
     game.chunks.clear();
@@ -136,9 +138,45 @@ export function showGameOver() {
 
     menu.classList.remove('hidden');
     document.getElementById('hud').classList.add('hidden');
+    document.getElementById('pauseBtn').classList.add('hidden');
 
     // Configurar event listeners dos botões
     setupGameOverButtons();
+}
+
+// ============================================
+// PAUSE GAME
+// ============================================
+export function pauseGame() {
+    if (game.state !== 'playing') return;
+
+    game.state = 'paused';
+    const menu = document.getElementById('menu');
+
+    menu.innerHTML = `
+        <h1>⏸️ PAUSED</h1>
+        <p style="font-size: 18px; margin: 20px 0; color: #00ffff;">Game is paused</p>
+        <button id="resumeBtn">▶️ Resume</button>
+        <button id="restartFromPauseBtn">🔄 Restart</button>
+        <button id="quitBtn">🏠 Quit to Menu</button>
+    `;
+
+    menu.classList.remove('hidden');
+    document.getElementById('hud').classList.add('hidden');
+    document.getElementById('pauseBtn').classList.add('hidden');
+
+    setupPauseMenuButtons();
+}
+
+// ============================================
+// RESUME GAME
+// ============================================
+export function resumeGame() {
+    game.state = 'playing';
+    document.getElementById('menu').classList.add('hidden');
+    document.getElementById('hud').classList.remove('hidden');
+    document.getElementById('pauseBtn').classList.remove('hidden');
+    game.lastTime = performance.now();
 }
 
 // ============================================
@@ -150,6 +188,27 @@ export function restartGame() {
 
     // Reiniciar no mesmo modo atual
     startGame(game.twoPlayerMode);
+}
+
+// ============================================
+// SETUP PAUSE MENU BUTTONS
+// ============================================
+function setupPauseMenuButtons() {
+    const resumeBtn = document.getElementById('resumeBtn');
+    const restartBtn = document.getElementById('restartFromPauseBtn');
+    const quitBtn = document.getElementById('quitBtn');
+
+    if (resumeBtn) {
+        resumeBtn.addEventListener('click', resumeGame);
+    }
+
+    if (restartBtn) {
+        restartBtn.addEventListener('click', restartGame);
+    }
+
+    if (quitBtn) {
+        quitBtn.addEventListener('click', () => location.reload());
+    }
 }
 
 // ============================================

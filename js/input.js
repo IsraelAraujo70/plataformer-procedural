@@ -1,5 +1,6 @@
 import { game } from './game.js';
 import { toggleDevMode, handleDevModeKeys } from './devMode.js';
+import { pauseGame } from './menu.js';
 
 // ============================================
 // CONTROLES DE TECLADO
@@ -35,16 +36,7 @@ export function setupInputHandlers() {
 
         // Pause
         if (e.key === 'p' || e.key === 'P') {
-            if (game.state === 'playing') {
-                game.state = 'paused';
-                const menu = document.getElementById('menu');
-                menu.innerHTML = `
-                    <h1>PAUSADO</h1>
-                    <button onclick="window.resumeGame()">Continuar</button>
-                    <button onclick="location.reload()">Menu Principal</button>
-                `;
-                menu.classList.remove('hidden');
-            }
+            pauseGame();
         }
     });
 
@@ -52,10 +44,3 @@ export function setupInputHandlers() {
         game.keys[e.key] = false;
     });
 }
-
-// Função global para resumir o jogo
-window.resumeGame = function() {
-    game.state = 'playing';
-    document.getElementById('menu').classList.add('hidden');
-    game.lastTime = performance.now();
-};
