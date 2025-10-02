@@ -43,9 +43,16 @@ export class Modifier {
         // Colisão com Player 1
         if (this.intersects(game.player)) {
             this.collected = true;
-            this.applyEffect(game.player);
 
-            // Adicionar pontos por coletar modificador
+            // Em modo 2 jogadores, aplicar efeito em ambos
+            if (game.twoPlayerMode && game.player2) {
+                this.applyEffect(game.player);
+                this.applyEffect(game.player2);
+            } else {
+                this.applyEffect(game.player);
+            }
+
+            // Pontos vão apenas para quem coletou
             game.player.score += 25;
             game.stats.modifiersCollected++;
 
@@ -61,9 +68,16 @@ export class Modifier {
         // Colisão com Player 2 (se existir)
         if (game.player2 && !this.collected && this.intersects(game.player2)) {
             this.collected = true;
-            this.applyEffect(game.player2);
 
-            // Adicionar pontos por coletar modificador
+            // Em modo 2 jogadores, aplicar efeito em ambos
+            if (game.twoPlayerMode && game.player) {
+                this.applyEffect(game.player);
+                this.applyEffect(game.player2);
+            } else {
+                this.applyEffect(game.player2);
+            }
+
+            // Pontos vão apenas para quem coletou
             game.player2.score += 25;
             game.stats.modifiersCollected++;
 
