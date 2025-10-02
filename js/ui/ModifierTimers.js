@@ -26,6 +26,56 @@ export function drawModifierTimers(ctx) {
                 icon: '⚡'
             });
         }
+
+        if (player.shieldTime > 0 && !timers.find(t => t.type === 'shield')) {
+            timers.push({
+                type: 'shield',
+                time: player.getModifierTimeRemaining('shield'),
+                progress: player.getModifierProgress('shield'),
+                color: '#ffaa00',
+                icon: '🛡️'
+            });
+        }
+
+        if (player.reverseControlsTime > 0 && !timers.find(t => t.type === 'reverse')) {
+            timers.push({
+                type: 'reverse',
+                time: player.getModifierTimeRemaining('reverse'),
+                progress: player.getModifierProgress('reverse'),
+                color: '#ff0066',
+                icon: '🔄'
+            });
+        }
+
+        if (player.icyFloorTime > 0 && !timers.find(t => t.type === 'ice')) {
+            timers.push({
+                type: 'ice',
+                time: player.getModifierTimeRemaining('ice'),
+                progress: player.getModifierProgress('ice'),
+                color: '#66ffff',
+                icon: '❄️'
+            });
+        }
+
+        if (player.doubleJumpTime > 0 && !timers.find(t => t.type === 'doublejump')) {
+            timers.push({
+                type: 'doublejump',
+                time: player.getModifierTimeRemaining('doublejump'),
+                progress: player.getModifierProgress('doublejump'),
+                color: '#9d00ff',
+                icon: '⏫'
+            });
+        }
+
+        if (player.magnetTime > 0 && !timers.find(t => t.type === 'magnet')) {
+            timers.push({
+                type: 'magnet',
+                time: player.getModifierTimeRemaining('magnet'),
+                progress: player.getModifierProgress('magnet'),
+                color: '#ffd700',
+                icon: '🧲'
+            });
+        }
     });
 
     if (timers.length === 0) return;

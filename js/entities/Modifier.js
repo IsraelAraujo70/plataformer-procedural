@@ -4,15 +4,20 @@ import { game } from '../game.js';
 // MODIFIER (Modificador)
 // ============================================
 export class Modifier {
-    constructor(x, y, type) {
+    constructor(x, y) {
         this.x = x;
         this.y = y;
         this.width = 20;
         this.height = 20;
-        this.type = type; // 'jump' ou 'speed'
         this.collected = false;
         this.rotation = 0;
         this.pulseTime = 0;
+
+        // Lista de modificadores disponíveis
+        const availableModifiers = ['jump', 'speed', 'shield', 'reverse', 'ice', 'doublejump', 'magnet'];
+
+        // Sortear tipo aleatoriamente
+        this.type = availableModifiers[Math.floor(Math.random() * availableModifiers.length)];
 
         // Duração aleatória entre 2 e 15 segundos (120 a 900 frames a 60fps)
         this.duration = Math.floor(Math.random() * (900 - 120 + 1)) + 120;
@@ -24,6 +29,17 @@ export class Modifier {
         this.rotation += 0.03;
         this.pulseTime += 0.1;
 
+        // Mapeamento de cores por tipo de modificador
+        const colors = {
+            jump: '#00d9ff',
+            speed: '#00ff88',
+            shield: '#ffaa00',
+            reverse: '#ff0066',
+            ice: '#66ffff',
+            doublejump: '#9d00ff',
+            magnet: '#ffd700'
+        };
+
         // Colisão com Player 1
         if (this.intersects(game.player)) {
             this.collected = true;
@@ -33,7 +49,7 @@ export class Modifier {
             game.player.score += 25;
             game.stats.modifiersCollected++;
 
-            const color = this.type === 'jump' ? '#00d9ff' : '#00ff88';
+            const color = colors[this.type] || '#ffffff';
             if (window.createFloatingText) {
                 window.createFloatingText('+25', this.x + this.width / 2, this.y, color);
             }
@@ -51,7 +67,7 @@ export class Modifier {
             game.player2.score += 25;
             game.stats.modifiersCollected++;
 
-            const color = this.type === 'jump' ? '#00d9ff' : '#00ff88';
+            const color = colors[this.type] || '#ffffff';
             if (window.createFloatingText) {
                 window.createFloatingText('+25', this.x + this.width / 2, this.y, color);
             }
@@ -63,15 +79,41 @@ export class Modifier {
 
     applyEffect(player) {
         if (this.type === 'jump') {
-            // Aumentar força do pulo por duração aleatória (2-60s)
+            // Aumentar força do pulo por duração aleatória (2-15s)
             player.jumpBoost = 1.4; // 40% mais forte
             player.jumpBoostTime = this.duration;
             player.jumpBoostMaxTime = this.duration;
         } else if (this.type === 'speed') {
-            // Aumentar velocidade por duração aleatória (2-60s)
+            // Aumentar velocidade por duração aleatória (2-15s)
             player.speedBoost = 1.5; // 50% mais rápido
             player.speedBoostTime = this.duration;
             player.speedBoostMaxTime = this.duration;
+        } else if (this.type === 'shield') {
+            // Escudo que absorve 1 hit
+            player.shield = true;
+            player.shieldTime = this.duration;
+            player.shieldMaxTime = this.duration;
+        } else if (this.type === 'reverse') {
+            // Controles invertidos
+            player.reverseControls = true;
+            player.reverseControlsTime = this.duration;
+            player.reverseControlsMaxTime = this.duration;
+        } else if (this.type === 'ice') {
+            // Fricção muito reduzida (efeito de gelo)
+            player.icyFloor = true;
+            player.icyFloorTime = this.duration;
+            player.icyFloorMaxTime = this.duration;
+        } else if (this.type === 'doublejump') {
+            // Permite double jump no ar
+            player.doubleJumpEnabled = true;
+            player.doubleJumpTime = this.duration;
+            player.doubleJumpMaxTime = this.duration;
+            player.hasDoubleJump = true;
+        } else if (this.type === 'magnet') {
+            // Atrai moedas e modificadores automaticamente
+            player.magnetActive = true;
+            player.magnetTime = this.duration;
+            player.magnetMaxTime = this.duration;
         }
     }
 
@@ -96,29 +138,36 @@ export class Modifier {
         ctx.translate(screenX, screenY);
         ctx.rotate(this.rotation);
 
-        // Cor baseada no tipo
-        if (this.type === 'jump') {
-            // Azul brilhante
-            ctx.fillStyle = '#00d9ff';
-            ctx.shadowColor = '#00d9ff';
-            ctx.shadowBlur = 15;
-        } else {
-            // Verde brilhante
-            ctx.fillStyle = '#00ff88';
-            ctx.shadowColor = '#00ff88';
-            ctx.shadowBlur = 15;
-        }
+        // Visual único - gradiente arco-íris animado
+        const gradientRotation = this.pulseTime * 0.5;
+        const gradient = ctx.createLinearGradient(
+            Math.cos(gradientRotation) * size,
+            Math.sin(gradientRotation) * size,
+            -Math.cos(gradientRotation) * size,
+            -Math.sin(gradientRotation) * size
+        );
+
+        gradient.addColorStop(0, '#ff00ff');    // Magenta
+        gradient.addColorStop(0.33, '#00d9ff'); // Ciano
+        gradient.addColorStop(0.66, '#00ff88'); // Verde
+        gradient.addColorStop(1, '#ffff00');    // Amarelo
+
+        ctx.fillStyle = gradient;
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = 15;
 
         // Desenhar círculo
         ctx.beginPath();
         ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Anel interno
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-        ctx.beginPath();
-        ctx.arc(0, 0, size / 3, 0, Math.PI * 2);
-        ctx.fill();
+        // Símbolo de interrogação no centro
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('?', 0, 0);
 
         ctx.restore();
     }

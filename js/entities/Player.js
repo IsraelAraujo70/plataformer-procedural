@@ -22,6 +22,22 @@ export class Player {
         this.speedBoost = 1;
         this.speedBoostTime = 0;
         this.speedBoostMaxTime = 0;
+        this.shield = false;
+        this.shieldTime = 0;
+        this.shieldMaxTime = 0;
+        this.reverseControls = false;
+        this.reverseControlsTime = 0;
+        this.reverseControlsMaxTime = 0;
+        this.icyFloor = false;
+        this.icyFloorTime = 0;
+        this.icyFloorMaxTime = 0;
+        this.doubleJumpEnabled = false;
+        this.doubleJumpTime = 0;
+        this.doubleJumpMaxTime = 0;
+        this.hasDoubleJump = false;
+        this.magnetActive = false;
+        this.magnetTime = 0;
+        this.magnetMaxTime = 0;
 
         // Multiplayer: definir número do jogador e controles
         this.playerNumber = playerNumber;
@@ -64,6 +80,47 @@ export class Player {
             }
         }
 
+        if (this.shieldTime > 0) {
+            this.shieldTime--;
+            if (this.shieldTime <= 0) {
+                this.shield = false;
+                this.shieldMaxTime = 0;
+            }
+        }
+
+        if (this.reverseControlsTime > 0) {
+            this.reverseControlsTime--;
+            if (this.reverseControlsTime <= 0) {
+                this.reverseControls = false;
+                this.reverseControlsMaxTime = 0;
+            }
+        }
+
+        if (this.icyFloorTime > 0) {
+            this.icyFloorTime--;
+            if (this.icyFloorTime <= 0) {
+                this.icyFloor = false;
+                this.icyFloorMaxTime = 0;
+            }
+        }
+
+        if (this.doubleJumpTime > 0) {
+            this.doubleJumpTime--;
+            if (this.doubleJumpTime <= 0) {
+                this.doubleJumpEnabled = false;
+                this.doubleJumpMaxTime = 0;
+                this.hasDoubleJump = false;
+            }
+        }
+
+        if (this.magnetTime > 0) {
+            this.magnetTime--;
+            if (this.magnetTime <= 0) {
+                this.magnetActive = false;
+                this.magnetMaxTime = 0;
+            }
+        }
+
         // DEV MODE: Controles especiais
         if (game.devMode.enabled && game.devMode.noclip) {
             const flySpeed = game.devMode.flySpeed;
@@ -89,18 +146,22 @@ export class Player {
             return;
         }
 
-        // Controles normais
+        // Controles normais (com inversão se reverseControls ativo)
         let moveSpeed = CONFIG.MOVE_SPEED * this.speedBoost;
         if (game.devMode.enabled) moveSpeed *= 2; // Velocidade dobrada em dev mode
 
-        if (game.keys[this.controls.left]) {
+        const leftKey = this.reverseControls ? this.controls.right : this.controls.left;
+        const rightKey = this.reverseControls ? this.controls.left : this.controls.right;
+
+        if (game.keys[leftKey]) {
             this.vx = -moveSpeed;
             this.facingRight = false;
-        } else if (game.keys[this.controls.right]) {
+        } else if (game.keys[rightKey]) {
             this.vx = moveSpeed;
             this.facingRight = true;
         } else {
-            this.vx *= CONFIG.FRICTION;
+            // Aplicar fricção (reduzida se icyFloor ativo)
+            this.vx *= this.icyFloor ? 0.98 : CONFIG.FRICTION;
         }
 
         // Atualizar animação de caminhada (quando está se movendo)
@@ -134,8 +195,30 @@ export class Player {
             this.grounded = false;
         }
 
+        // Double Jump (pulo no ar se modificador ativo)
+        if (game.keys[this.controls.up] && !this.grounded && this.doubleJumpEnabled && this.hasDoubleJump && !this.jumping) {
+            let jumpStrength = CONFIG.JUMP_STRENGTH * this.jumpBoost * 0.9; // Double jump um pouco mais fraco
+            if (game.devMode.enabled) jumpStrength *= 1.5;
+            this.vy = jumpStrength;
+            this.hasDoubleJump = false; // Consumir o double jump
+            this.jumping = true;
+        }
+
+        if (game.keys[' '] && !this.grounded && this.doubleJumpEnabled && this.hasDoubleJump && !this.jumping) {
+            let jumpStrength = CONFIG.JUMP_STRENGTH * this.jumpBoost * 0.9;
+            if (game.devMode.enabled) jumpStrength *= 1.5;
+            this.vy = jumpStrength;
+            this.hasDoubleJump = false;
+            this.jumping = true;
+        }
+
         if (!game.keys[this.controls.up] && !game.keys[' ']) {
             this.jumping = false;
+        }
+
+        // Resetar double jump ao tocar o chão
+        if (this.grounded && this.doubleJumpEnabled) {
+            this.hasDoubleJump = true;
         }
 
         // Gravidade (pode ser desativada em dev mode)
@@ -165,6 +248,11 @@ export class Player {
             if (this.invulnerableTime <= 0) {
                 this.invulnerable = false;
             }
+        }
+
+        // Sistema de magnetismo - atrair moedas e modificadores próximos
+        if (this.magnetActive) {
+            this.attractNearbyItems();
         }
 
         // Atualizar distância e pontuar (baseado no jogador mais à direita)
@@ -240,9 +328,87 @@ export class Player {
                this.y + this.height > rect.y;
     }
 
+    attractNearbyItems() {
+        const magnetRange = 150; // Raio de atração em pixels
+        const attractionSpeed = 8; // Velocidade de atração
+
+        // Calcular centro do jogador
+        const playerCenterX = this.x + this.width / 2;
+        const playerCenterY = this.y + this.height / 2;
+
+        // Verificar chunks próximos
+        const startChunk = Math.floor((this.x - magnetRange) / (CONFIG.CHUNK_WIDTH * CONFIG.TILE_SIZE));
+        const endChunk = Math.floor((this.x + magnetRange) / (CONFIG.CHUNK_WIDTH * CONFIG.TILE_SIZE));
+
+        for (let chunkIdx = startChunk; chunkIdx <= endChunk; chunkIdx++) {
+            const chunk = game.chunks.get(chunkIdx);
+            if (!chunk) continue;
+
+            // Atrair moedas
+            chunk.coins.forEach(coin => {
+                if (coin.collected) return;
+
+                const coinCenterX = coin.x + coin.width / 2;
+                const coinCenterY = coin.y + coin.height / 2;
+
+                const dx = playerCenterX - coinCenterX;
+                const dy = playerCenterY - coinCenterY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                // Se dentro do alcance do ímã, mover em direção ao jogador
+                if (distance < magnetRange && distance > 5) {
+                    const moveX = (dx / distance) * attractionSpeed;
+                    const moveY = (dy / distance) * attractionSpeed;
+                    coin.x += moveX;
+                    coin.y += moveY;
+                }
+            });
+
+            // Atrair modificadores (opcional, pode comentar se achar muito OP)
+            chunk.modifiers.forEach(modifier => {
+                if (modifier.collected) return;
+
+                const modCenterX = modifier.x + modifier.width / 2;
+                const modCenterY = modifier.y + modifier.height / 2;
+
+                const dx = playerCenterX - modCenterX;
+                const dy = playerCenterY - modCenterY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                // Se dentro do alcance do ímã, mover em direção ao jogador
+                if (distance < magnetRange && distance > 5) {
+                    const moveX = (dx / distance) * attractionSpeed;
+                    const moveY = (dy / distance) * attractionSpeed;
+                    modifier.x += moveX;
+                    modifier.y += moveY;
+                }
+            });
+        }
+    }
+
     takeDamage() {
         if (this.invulnerable) return;
         if (game.devMode.enabled && game.devMode.invincible) return; // Dev Mode: invencível
+
+        // Shield absorve o dano
+        if (this.shield) {
+            this.shield = false;
+            this.shieldTime = 0;
+            this.shieldMaxTime = 0;
+
+            // Efeito visual de shield quebrado
+            if (window.createParticles) {
+                window.createParticles(this.x + this.width / 2, this.y + this.height / 2, '#ffaa00', 20);
+            }
+            if (window.createFloatingText) {
+                window.createFloatingText('SHIELD!', this.x + this.width / 2, this.y, '#ffaa00');
+            }
+
+            // Aplicar invulnerabilidade temporária após quebrar shield
+            this.invulnerable = true;
+            this.invulnerableTime = 30; // 0.5 segundos a 60fps
+            return; // Não perde vida
+        }
 
         this.lives--;
 
@@ -294,7 +460,7 @@ export class Player {
         const screenX = this.x - game.camera.x;
         const screenY = this.y - game.camera.y;
 
-        // Aura de power-up
+        // Auras de power-ups
         if (this.jumpBoostTime > 0) {
             ctx.fillStyle = 'rgba(0, 217, 255, 0.3)';
             ctx.shadowColor = '#00d9ff';
@@ -308,6 +474,70 @@ export class Player {
             ctx.shadowBlur = 10;
             ctx.fillRect(screenX - 2, screenY - 2, this.width + 4, this.height + 4);
             ctx.shadowBlur = 0;
+        }
+        if (this.shield) {
+            // Aura dourada brilhante do shield
+            ctx.fillStyle = 'rgba(255, 170, 0, 0.4)';
+            ctx.shadowColor = '#ffaa00';
+            ctx.shadowBlur = 15;
+            ctx.fillRect(screenX - 3, screenY - 3, this.width + 6, this.height + 6);
+            ctx.shadowBlur = 0;
+
+            // Borda do shield
+            ctx.strokeStyle = '#ffaa00';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(screenX - 3, screenY - 3, this.width + 6, this.height + 6);
+        }
+        if (this.reverseControls) {
+            // Aura rosa/vermelha pulsante para controles invertidos
+            const pulsate = 0.3 + Math.sin(Date.now() / 200) * 0.15;
+            ctx.fillStyle = `rgba(255, 0, 102, ${pulsate})`;
+            ctx.shadowColor = '#ff0066';
+            ctx.shadowBlur = 12;
+            ctx.fillRect(screenX - 2, screenY - 2, this.width + 4, this.height + 4);
+            ctx.shadowBlur = 0;
+        }
+        if (this.icyFloor) {
+            // Aura azul clara cristalina (efeito de gelo)
+            ctx.fillStyle = 'rgba(102, 255, 255, 0.35)';
+            ctx.shadowColor = '#66ffff';
+            ctx.shadowBlur = 10;
+            ctx.fillRect(screenX - 2, screenY - 2, this.width + 4, this.height + 4);
+            ctx.shadowBlur = 0;
+
+            // Pequenos "cristais de gelo" nos cantos
+            ctx.fillStyle = '#66ffff';
+            ctx.fillRect(screenX - 2, screenY - 2, 4, 4);
+            ctx.fillRect(screenX + this.width - 2, screenY - 2, 4, 4);
+        }
+        if (this.doubleJumpEnabled) {
+            // Aura roxa do double jump
+            ctx.fillStyle = 'rgba(157, 0, 255, 0.35)';
+            ctx.shadowColor = '#9d00ff';
+            ctx.shadowBlur = 10;
+            ctx.fillRect(screenX - 2, screenY - 2, this.width + 4, this.height + 4);
+            ctx.shadowBlur = 0;
+        }
+        if (this.magnetActive) {
+            // Aura dourada com efeito de partículas girando
+            const time = Date.now() / 1000;
+            ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+            ctx.shadowColor = '#ffd700';
+            ctx.shadowBlur = 12;
+            ctx.fillRect(screenX - 2, screenY - 2, this.width + 4, this.height + 4);
+            ctx.shadowBlur = 0;
+
+            // Pequenas partículas girando ao redor
+            for (let i = 0; i < 4; i++) {
+                const angle = time * 2 + (i * Math.PI / 2);
+                const radius = 18;
+                const px = screenX + this.width / 2 + Math.cos(angle) * radius;
+                const py = screenY + this.height / 2 + Math.sin(angle) * radius;
+                ctx.fillStyle = '#ffd700';
+                ctx.beginPath();
+                ctx.arc(px, py, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         // Desenhar pernas animadas (antes do corpo para ficarem atrás)
@@ -396,6 +626,16 @@ export class Player {
             return Math.ceil(this.jumpBoostTime / 60);
         } else if (type === 'speed') {
             return Math.ceil(this.speedBoostTime / 60);
+        } else if (type === 'shield') {
+            return Math.ceil(this.shieldTime / 60);
+        } else if (type === 'reverse') {
+            return Math.ceil(this.reverseControlsTime / 60);
+        } else if (type === 'ice') {
+            return Math.ceil(this.icyFloorTime / 60);
+        } else if (type === 'doublejump') {
+            return Math.ceil(this.doubleJumpTime / 60);
+        } else if (type === 'magnet') {
+            return Math.ceil(this.magnetTime / 60);
         }
         return 0;
     }
@@ -405,6 +645,16 @@ export class Player {
             return this.jumpBoostTime / this.jumpBoostMaxTime;
         } else if (type === 'speed' && this.speedBoostMaxTime > 0) {
             return this.speedBoostTime / this.speedBoostMaxTime;
+        } else if (type === 'shield' && this.shieldMaxTime > 0) {
+            return this.shieldTime / this.shieldMaxTime;
+        } else if (type === 'reverse' && this.reverseControlsMaxTime > 0) {
+            return this.reverseControlsTime / this.reverseControlsMaxTime;
+        } else if (type === 'ice' && this.icyFloorMaxTime > 0) {
+            return this.icyFloorTime / this.icyFloorMaxTime;
+        } else if (type === 'doublejump' && this.doubleJumpMaxTime > 0) {
+            return this.doubleJumpTime / this.doubleJumpMaxTime;
+        } else if (type === 'magnet' && this.magnetMaxTime > 0) {
+            return this.magnetTime / this.magnetMaxTime;
         }
         return 0;
     }

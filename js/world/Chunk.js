@@ -253,8 +253,8 @@ export class Chunk {
             }
         }
 
-        // Adicionar modificadores com frequência (50% de chance por chunk)
-        if (rng.next() > 0.50 && this.index >= 0) {
+        // Adicionar modificadores (100% de chance - um por chunk)
+        if (this.index >= 0) {
             // Criar lista de todos os itens já colocados (para verificar colisões)
             const allItems = [];
 
@@ -286,14 +286,13 @@ export class Chunk {
                 while (attempts < 5 && !placed) {
                     const platform = this.platforms[rng.int(0, this.platforms.length - 1)];
 
-                    // Escolher tipo de modificador aleatoriamente
-                    const type = rng.next() > 0.5 ? 'jump' : 'speed';
                     const modifierX = platform.x + platform.width / 2 - 10;
                     const modifierY = platform.y - 40;
 
                     // Verificar se não colide com outros itens
                     if (canPlaceItem(modifierX, modifierY, 20, 20, allItems)) {
-                        this.modifiers.push(new Modifier(modifierX, modifierY, type));
+                        // Modificador sorteia seu próprio tipo internamente
+                        this.modifiers.push(new Modifier(modifierX, modifierY));
                         placed = true;
                     }
 
