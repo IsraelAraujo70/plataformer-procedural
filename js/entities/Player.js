@@ -38,6 +38,18 @@ export class Player {
         this.magnetActive = false;
         this.magnetTime = 0;
         this.magnetMaxTime = 0;
+        this.tinyPlayer = false;
+        this.tinyPlayerTime = 0;
+        this.tinyPlayerMaxTime = 0;
+        this.heavy = false;
+        this.heavyTime = 0;
+        this.heavyMaxTime = 0;
+        this.bouncy = false;
+        this.bouncyTime = 0;
+        this.bouncyMaxTime = 0;
+        this.timeWarp = false;
+        this.timeWarpTime = 0;
+        this.timeWarpMaxTime = 0;
 
         // Multiplayer: definir número do jogador e controles
         this.playerNumber = playerNumber;
@@ -155,6 +167,45 @@ export class Player {
             }
         }
 
+        if (this.tinyPlayerTime > 0) {
+            this.tinyPlayerTime--;
+            if (this.tinyPlayerTime <= 0) {
+                this.tinyPlayer = false;
+                this.tinyPlayerMaxTime = 0;
+                // Restaurar tamanho original
+                this.width = CONFIG.PLAYER_WIDTH;
+                this.height = CONFIG.PLAYER_HEIGHT;
+            } else if (this.tinyPlayer) {
+                // Manter tamanho reduzido enquanto ativo
+                this.width = CONFIG.PLAYER_WIDTH * 0.5;
+                this.height = CONFIG.PLAYER_HEIGHT * 0.5;
+            }
+        }
+
+        if (this.heavyTime > 0) {
+            this.heavyTime--;
+            if (this.heavyTime <= 0) {
+                this.heavy = false;
+                this.heavyMaxTime = 0;
+            }
+        }
+
+        if (this.bouncyTime > 0) {
+            this.bouncyTime--;
+            if (this.bouncyTime <= 0) {
+                this.bouncy = false;
+                this.bouncyMaxTime = 0;
+            }
+        }
+
+        if (this.timeWarpTime > 0) {
+            this.timeWarpTime--;
+            if (this.timeWarpTime <= 0) {
+                this.timeWarp = false;
+                this.timeWarpMaxTime = 0;
+            }
+        }
+
         // DEV MODE: Controles especiais
         if (game.devMode.enabled && game.devMode.noclip) {
             const flySpeed = game.devMode.flySpeed;
@@ -214,6 +265,7 @@ export class Player {
         // Pulo individual (W ou Seta para cima)
         if (game.keys[this.controls.up] && this.grounded && !this.jumping) {
             let jumpStrength = CONFIG.JUMP_STRENGTH * this.jumpBoost;
+            if (this.heavy) jumpStrength *= 0.7; // Heavy reduz força do pulo em 30%
             if (game.devMode.enabled) jumpStrength *= 1.5; // Super pulo em dev mode
             this.vy = jumpStrength;
             this.jumping = true;
@@ -223,6 +275,7 @@ export class Player {
         // Pulo conjunto (ESPAÇO faz ambos pularem)
         if (game.keys[' '] && this.grounded && !this.jumping) {
             let jumpStrength = CONFIG.JUMP_STRENGTH * this.jumpBoost;
+            if (this.heavy) jumpStrength *= 0.7; // Heavy reduz força do pulo em 30%
             if (game.devMode.enabled) jumpStrength *= 1.5;
             this.vy = jumpStrength;
             this.jumping = true;
@@ -257,7 +310,9 @@ export class Player {
 
         // Gravidade (pode ser desativada em dev mode)
         if (game.devMode.gravityEnabled) {
-            this.vy += CONFIG.GRAVITY;
+            let gravity = CONFIG.GRAVITY;
+            if (this.heavy) gravity *= 1.7; // Heavy aumenta gravidade em 70%
+            this.vy += gravity;
         }
 
         // Limites de velocidade
@@ -268,8 +323,15 @@ export class Player {
         this.y += this.vy;
 
         // Colisões com terreno
+        const wasGrounded = this.grounded; // Salvar estado ANTES de resetar
+        const previousVY = this.vy; // Salvar vy ANTES de handleCollisions zerar
         this.grounded = false;
         this.handleCollisions();
+
+        // Bouncy: dar bounce ao colidir com o chão (usar vy anterior)
+        if (this.bouncy && this.grounded && !wasGrounded && previousVY > 2) {
+            this.vy = -previousVY * 0.5; // Bounce com 50% da velocidade de queda
+        }
 
         // Salvar última posição segura quando está no chão
         if (this.grounded) {
@@ -367,6 +429,7 @@ export class Player {
                this.y < rect.y + rect.height &&
                this.y + this.height > rect.y;
     }
+
 
     attractNearbyItems() {
         const magnetRange = 150; // Raio de atração em pixels
@@ -651,6 +714,60 @@ export class Player {
                 ctx.fill();
             }
         }
+        if (this.tinyPlayer) {
+            // Aura rosa (Tiny Player)
+            ctx.fillStyle = 'rgba(255, 20, 147, 0.35)';
+            ctx.shadowColor = '#ff1493';
+            ctx.shadowBlur = 8;
+            ctx.fillRect(screenX - 2, screenY - 2, this.width + 4, this.height + 4);
+            ctx.shadowBlur = 0;
+        }
+        if (this.heavy) {
+            // Aura marrom escura com efeito de peso
+            ctx.fillStyle = 'rgba(139, 69, 19, 0.4)';
+            ctx.shadowColor = '#8b4513';
+            ctx.shadowBlur = 10;
+            ctx.fillRect(screenX - 2, screenY - 2, this.width + 4, this.height + 4);
+            ctx.shadowBlur = 0;
+
+            // Linhas de gravidade
+            ctx.strokeStyle = '#8b4513';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.moveTo(screenX + this.width / 2, screenY + this.height + 2 + i * 3);
+                ctx.lineTo(screenX + this.width / 2, screenY + this.height + 8 + i * 3);
+                ctx.stroke();
+            }
+        }
+        if (this.bouncy) {
+            // Aura rosa claro pulsante (Bouncy)
+            const bouncePulse = 0.25 + Math.sin(Date.now() / 150) * 0.15;
+            ctx.fillStyle = `rgba(255, 105, 180, ${bouncePulse})`;
+            ctx.shadowColor = '#ff69b4';
+            ctx.shadowBlur = 12;
+            ctx.fillRect(screenX - 2, screenY - 2, this.width + 4, this.height + 4);
+            ctx.shadowBlur = 0;
+        }
+        if (this.timeWarp) {
+            // Aura roxa média com efeito de distorção temporal
+            const timeEffect = Date.now() / 100;
+            ctx.fillStyle = 'rgba(147, 112, 219, 0.4)';
+            ctx.shadowColor = '#9370db';
+            ctx.shadowBlur = 15;
+            ctx.fillRect(screenX - 3, screenY - 3, this.width + 6, this.height + 6);
+            ctx.shadowBlur = 0;
+
+            // Anéis de tempo girando
+            for (let i = 0; i < 2; i++) {
+                ctx.strokeStyle = `rgba(147, 112, 219, ${0.5 - i * 0.2})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                const radius = 15 + i * 8 + Math.sin(timeEffect + i) * 3;
+                ctx.arc(screenX + this.width / 2, screenY + this.height / 2, radius, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
 
         // Desenhar pernas animadas (antes do corpo para ficarem atrás)
         this.drawLegs(ctx, screenX, screenY);
@@ -758,6 +875,14 @@ export class Player {
             return Math.ceil(this.doubleJumpTime / 60);
         } else if (type === 'magnet') {
             return Math.ceil(this.magnetTime / 60);
+        } else if (type === 'tiny') {
+            return Math.ceil(this.tinyPlayerTime / 60);
+        } else if (type === 'heavy') {
+            return Math.ceil(this.heavyTime / 60);
+        } else if (type === 'bouncy') {
+            return Math.ceil(this.bouncyTime / 60);
+        } else if (type === 'timewarp') {
+            return Math.ceil(this.timeWarpTime / 60);
         }
         return 0;
     }
@@ -777,6 +902,14 @@ export class Player {
             return this.doubleJumpTime / this.doubleJumpMaxTime;
         } else if (type === 'magnet' && this.magnetMaxTime > 0) {
             return this.magnetTime / this.magnetMaxTime;
+        } else if (type === 'tiny' && this.tinyPlayerMaxTime > 0) {
+            return this.tinyPlayerTime / this.tinyPlayerMaxTime;
+        } else if (type === 'heavy' && this.heavyMaxTime > 0) {
+            return this.heavyTime / this.heavyMaxTime;
+        } else if (type === 'bouncy' && this.bouncyMaxTime > 0) {
+            return this.bouncyTime / this.bouncyMaxTime;
+        } else if (type === 'timewarp' && this.timeWarpMaxTime > 0) {
+            return this.timeWarpTime / this.timeWarpMaxTime;
         }
         return 0;
     }

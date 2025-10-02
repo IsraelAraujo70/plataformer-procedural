@@ -7,6 +7,127 @@ import { Chunk } from './world/Chunk.js';
 // DEV MODE - Funções
 // ============================================
 
+/**
+ * Aplica um modificador específico via Dev Mode
+ * @param {string} type - Tipo do modificador (jump, speed, shield, etc.)
+ */
+export function applyDevModifier(type) {
+    const duration = 600; // 10 segundos fixos para testes
+
+    // Swap é especial: executar UMA VEZ antes do loop de jogadores
+    if (type === 'swap') {
+        if (game.twoPlayerMode && game.player && game.player2) {
+            const tempX = game.player.x;
+            const tempY = game.player.y;
+            const tempVX = game.player.vx;
+            const tempVY = game.player.vy;
+
+            game.player.x = game.player2.x;
+            game.player.y = game.player2.y;
+            game.player.vx = game.player2.vx;
+            game.player.vy = game.player2.vy;
+
+            game.player2.x = tempX;
+            game.player2.y = tempY;
+            game.player2.vx = tempVX;
+            game.player2.vy = tempVY;
+
+            if (window.createParticles) {
+                window.createParticles(game.player.x + game.player.width / 2, game.player.y + game.player.height / 2, '#ff8c00', 30);
+                window.createParticles(game.player2.x + game.player2.width / 2, game.player2.y + game.player2.height / 2, '#ff8c00', 30);
+            }
+        }
+        return; // Swap executado, não continuar com o forEach
+    }
+
+    const players = [game.player];
+
+    // Em modo 2P, aplicar em ambos
+    if (game.twoPlayerMode && game.player2) {
+        players.push(game.player2);
+    }
+
+    players.forEach(player => {
+        switch(type) {
+            case 'jump':
+                player.jumpBoost = 1.4;
+                player.jumpBoostTime = duration;
+                player.jumpBoostMaxTime = duration;
+                break;
+            case 'speed':
+                player.speedBoost = 1.5;
+                player.speedBoostTime = duration;
+                player.speedBoostMaxTime = duration;
+                break;
+            case 'shield':
+                player.shield = true;
+                player.shieldTime = duration;
+                player.shieldMaxTime = duration;
+                break;
+            case 'reverse':
+                player.reverseControls = true;
+                player.reverseControlsTime = duration;
+                player.reverseControlsMaxTime = duration;
+                break;
+            case 'ice':
+                player.icyFloor = true;
+                player.icyFloorTime = duration;
+                player.icyFloorMaxTime = duration;
+                break;
+            case 'doublejump':
+                player.doubleJumpEnabled = true;
+                player.doubleJumpTime = duration;
+                player.doubleJumpMaxTime = duration;
+                player.hasDoubleJump = true;
+                break;
+            case 'magnet':
+                player.magnetActive = true;
+                player.magnetTime = duration;
+                player.magnetMaxTime = duration;
+                break;
+            case 'tiny':
+                player.tinyPlayer = true;
+                player.tinyPlayerTime = duration;
+                player.tinyPlayerMaxTime = duration;
+                player.width = CONFIG.PLAYER_WIDTH * 0.5;
+                player.height = CONFIG.PLAYER_HEIGHT * 0.5;
+                break;
+            case 'heavy':
+                player.heavy = true;
+                player.heavyTime = duration;
+                player.heavyMaxTime = duration;
+                break;
+            case 'bouncy':
+                player.bouncy = true;
+                player.bouncyTime = duration;
+                player.bouncyMaxTime = duration;
+                break;
+            case 'timewarp':
+                player.timeWarp = true;
+                player.timeWarpTime = duration;
+                player.timeWarpMaxTime = duration;
+                break;
+        }
+    });
+
+    const modifierNames = {
+        jump: 'Jump Boost',
+        speed: 'Speed Boost',
+        shield: 'Shield',
+        reverse: 'Reverse Controls',
+        ice: 'Icy Floor',
+        doublejump: 'Double Jump',
+        magnet: 'Magnet',
+        tiny: 'Tiny Player',
+        heavy: 'Heavy',
+        bouncy: 'Bouncy',
+        timewarp: 'Time Warp',
+        swap: 'Swap'
+    };
+
+    console.log(`✨ Applied: ${modifierNames[type] || type} (10s)`);
+}
+
 export function toggleDevMode() {
     game.devMode.enabled = !game.devMode.enabled;
 
@@ -89,7 +210,167 @@ export function handleDevModeKeys(key) {
             game.devMode.flySpeed = Math.max(2, game.devMode.flySpeed - 2);
             console.log('Fly speed:', game.devMode.flySpeed);
             break;
+
+        case 'x': // Toggle Modifier Menu
+            game.devMode.modifierMenuOpen = !game.devMode.modifierMenuOpen;
+            console.log('Modifier Menu:', game.devMode.modifierMenuOpen ? 'OPEN' : 'CLOSED');
+            break;
+
+        case ']': // Next Page
+            if (game.devMode.modifierMenuOpen) {
+                game.devMode.modifierMenuPage = (game.devMode.modifierMenuPage + 1) % 2;
+                console.log('Menu Page:', game.devMode.modifierMenuPage + 1);
+            }
+            break;
+
+        // Página 1: Modificadores 1-10
+        case '1':
+            if (game.devMode.modifierMenuOpen) {
+                if (game.devMode.modifierMenuPage === 0) applyDevModifier('jump');
+                else applyDevModifier('timewarp');
+            }
+            break;
+        case '2':
+            if (game.devMode.modifierMenuOpen) {
+                if (game.devMode.modifierMenuPage === 0) applyDevModifier('speed');
+                else applyDevModifier('swap');
+            }
+            break;
+        case '3':
+            if (game.devMode.modifierMenuOpen) {
+                if (game.devMode.modifierMenuPage === 0) applyDevModifier('shield');
+            }
+            break;
+        case '4':
+            if (game.devMode.modifierMenuOpen && game.devMode.modifierMenuPage === 0) {
+                applyDevModifier('reverse');
+            }
+            break;
+        case '5':
+            if (game.devMode.modifierMenuOpen && game.devMode.modifierMenuPage === 0) {
+                applyDevModifier('ice');
+            }
+            break;
+        case '6':
+            if (game.devMode.modifierMenuOpen && game.devMode.modifierMenuPage === 0) {
+                applyDevModifier('doublejump');
+            }
+            break;
+        case '7':
+            if (game.devMode.modifierMenuOpen && game.devMode.modifierMenuPage === 0) {
+                applyDevModifier('magnet');
+            }
+            break;
+        case '8':
+            if (game.devMode.modifierMenuOpen && game.devMode.modifierMenuPage === 0) {
+                applyDevModifier('tiny');
+            }
+            break;
+        case '9':
+            if (game.devMode.modifierMenuOpen && game.devMode.modifierMenuPage === 0) {
+                applyDevModifier('heavy');
+            }
+            break;
+        case '0':
+            if (game.devMode.modifierMenuOpen && game.devMode.modifierMenuPage === 0) {
+                applyDevModifier('bouncy');
+            }
+            break;
     }
+}
+
+export function drawModifierMenu(ctx) {
+    if (!game.devMode.enabled || !game.devMode.modifierMenuOpen) return;
+
+    const menuWidth = 500;
+    const menuHeight = 450;
+    const menuX = (game.width - menuWidth) / 2;
+    const menuY = (game.height - menuHeight) / 2;
+
+    ctx.save();
+
+    // Background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+    ctx.fillRect(menuX, menuY, menuWidth, menuHeight);
+
+    // Border
+    ctx.strokeStyle = '#00ffff';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
+
+    // Title
+    ctx.fillStyle = '#00ffff';
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚡ MODIFIER MENU ⚡', menuX + menuWidth / 2, menuY + 35);
+
+    // Modifiers list
+    const modifiers = [
+        // Página 1
+        [
+            { key: '1', icon: '⬆️', name: 'Jump Boost', color: '#00d9ff' },
+            { key: '2', icon: '⚡', name: 'Speed Boost', color: '#00ff88' },
+            { key: '3', icon: '🛡️', name: 'Shield', color: '#ffaa00' },
+            { key: '4', icon: '🔄', name: 'Reverse Controls', color: '#ff0066' },
+            { key: '5', icon: '❄️', name: 'Icy Floor', color: '#66ffff' },
+            { key: '6', icon: '⏫', name: 'Double Jump', color: '#9d00ff' },
+            { key: '7', icon: '🧲', name: 'Magnet', color: '#ffd700' },
+            { key: '8', icon: '🔻', name: 'Tiny Player', color: '#ff1493' },
+            { key: '9', icon: '⬇️', name: 'Heavy', color: '#8b4513' },
+            { key: '0', icon: '⚾', name: 'Bouncy', color: '#ff69b4' }
+        ],
+        // Página 2
+        [
+            { key: '1', icon: '⏰', name: 'Time Warp', color: '#9370db' },
+            { key: '2', icon: '🔀', name: 'Swap (2P only)', color: '#ff8c00' }
+        ]
+    ];
+
+    // Page indicator (only show if there are multiple pages)
+    if (modifiers.length > 1) {
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#ffff00';
+        ctx.fillText(`Page ${game.devMode.modifierMenuPage + 1}/${modifiers.length}`, menuX + menuWidth / 2, menuY + 60);
+    }
+
+    const currentPage = modifiers[game.devMode.modifierMenuPage];
+    const startY = menuY + 90;
+    const lineHeight = 32;
+
+    currentPage.forEach((mod, index) => {
+        const y = startY + index * lineHeight;
+
+        // Key background
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.fillRect(menuX + 20, y - 18, 30, 26);
+
+        // Key number
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 16px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(mod.key, menuX + 35, y);
+
+        // Icon
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(mod.icon, menuX + 60, y);
+
+        // Name
+        ctx.fillStyle = mod.color;
+        ctx.font = 'bold 16px Arial';
+        ctx.fillText(mod.name, menuX + 95, y);
+    });
+
+    // Instructions
+    const instructY = menuY + menuHeight - 60;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Press 1-9 / 0 to activate modifier', menuX + menuWidth / 2, instructY);
+    ctx.fillStyle = '#ffff00';
+    ctx.fillText('[ ] ] Next Page  •  [ X ] Close Menu', menuX + menuWidth / 2, instructY + 25);
+
+    ctx.restore();
 }
 
 export function drawDevModeUI(ctx) {
@@ -99,14 +380,14 @@ export function drawDevModeUI(ctx) {
     if (game.devMode.showInfo) {
         ctx.save();
 
-        // Fundo do painel (aumentado para 330 de altura)
+        // Fundo do painel (aumentado para 350 de altura para nova linha)
         ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        ctx.fillRect(10, 10, 300, 330);
+        ctx.fillRect(10, 10, 300, 350);
 
         // Borda
         ctx.strokeStyle = '#00ffff';
         ctx.lineWidth = 2;
-        ctx.strokeRect(10, 10, 300, 330);
+        ctx.strokeRect(10, 10, 300, 350);
 
         // Text
         ctx.fillStyle = '#00ffff';
@@ -158,6 +439,9 @@ export function drawDevModeUI(ctx) {
         ctx.fillStyle = '#ffff00';
         ctx.fillText(`[M] Teleport  [R] Reset`, 20, y); y += lineHeight;
         ctx.fillText(`[+/-] Speed (${game.devMode.flySpeed})`, 20, y); y += lineHeight;
+        ctx.fillStyle = '#00ff00';
+        ctx.fillText(`[X] Modifier Menu`, 20, y); y += lineHeight;
+        ctx.fillStyle = '#ffff00';
         ctx.fillText(`[F3] Exit Dev Mode`, 20, y);
 
         ctx.restore();
@@ -252,4 +536,7 @@ export function drawDevModeUI(ctx) {
 
         ctx.restore();
     }
+
+    // Desenhar Modifier Menu (por cima de tudo)
+    drawModifierMenu(ctx);
 }

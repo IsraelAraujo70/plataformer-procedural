@@ -44,6 +44,8 @@ export const game = {
         timeScale: 1.0,
         gravityEnabled: true,
         keySequence: [],
-        lastKeyTime: 0
+        lastKeyTime: 0,
+        modifierMenuOpen: false,
+        modifierMenuPage: 0
     }
 };

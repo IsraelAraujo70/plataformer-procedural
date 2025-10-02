@@ -76,6 +76,46 @@ export function drawModifierTimers(ctx) {
                 icon: '🧲'
             });
         }
+
+        if (player.tinyPlayerTime > 0 && !timers.find(t => t.type === 'tiny')) {
+            timers.push({
+                type: 'tiny',
+                time: player.getModifierTimeRemaining('tiny'),
+                progress: player.getModifierProgress('tiny'),
+                color: '#ff1493',
+                icon: '🔻'
+            });
+        }
+
+        if (player.heavyTime > 0 && !timers.find(t => t.type === 'heavy')) {
+            timers.push({
+                type: 'heavy',
+                time: player.getModifierTimeRemaining('heavy'),
+                progress: player.getModifierProgress('heavy'),
+                color: '#8b4513',
+                icon: '⬇️'
+            });
+        }
+
+        if (player.bouncyTime > 0 && !timers.find(t => t.type === 'bouncy')) {
+            timers.push({
+                type: 'bouncy',
+                time: player.getModifierTimeRemaining('bouncy'),
+                progress: player.getModifierProgress('bouncy'),
+                color: '#ff69b4',
+                icon: '⚾'
+            });
+        }
+
+        if (player.timeWarpTime > 0 && !timers.find(t => t.type === 'timewarp')) {
+            timers.push({
+                type: 'timewarp',
+                time: player.getModifierTimeRemaining('timewarp'),
+                progress: player.getModifierProgress('timewarp'),
+                color: '#9370db',
+                icon: '⏰'
+            });
+        }
     });
 
     if (timers.length === 0) return;

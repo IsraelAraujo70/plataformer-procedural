@@ -33,17 +33,25 @@ function gameLoop(currentTime) {
     game.deltaTime = currentTime - game.lastTime;
     game.lastTime = currentTime;
 
-    // Update
-    updateChunks();
-    game.player.update();
-    if (game.twoPlayerMode && game.player2) {
-        game.player2.update();
+    // Time Warp: executar updates múltiplos se algum jogador tiver time warp ativo
+    let updateCount = 1;
+    if ((game.player && game.player.timeWarp) || (game.player2 && game.player2.timeWarp)) {
+        updateCount = 2; // 2x velocidade (acelera 100%)
     }
-    game.coins.forEach(coin => coin.update());
-    game.enemies.forEach(enemy => enemy.update());
-    game.modifiers.forEach(modifier => modifier.update());
-    game.particles.forEach(particle => particle.update());
-    game.floatingTexts.forEach(text => text.update());
+
+    // Update (executar múltiplas vezes se time warp ativo)
+    for (let i = 0; i < updateCount; i++) {
+        updateChunks();
+        game.player.update();
+        if (game.twoPlayerMode && game.player2) {
+            game.player2.update();
+        }
+        game.coins.forEach(coin => coin.update());
+        game.enemies.forEach(enemy => enemy.update());
+        game.modifiers.forEach(modifier => modifier.update());
+        game.particles.forEach(particle => particle.update());
+        game.floatingTexts.forEach(text => text.update());
+    }
 
     // Remover partículas e textos mortos
     game.particles = game.particles.filter(p => p.life > 0);

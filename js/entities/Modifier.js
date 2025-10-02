@@ -14,7 +14,12 @@ export class Modifier {
         this.pulseTime = 0;
 
         // Lista de modificadores disponíveis
-        const availableModifiers = ['jump', 'speed', 'shield', 'reverse', 'ice', 'doublejump', 'magnet'];
+        let availableModifiers = ['jump', 'speed', 'shield', 'reverse', 'ice', 'doublejump', 'magnet', 'tiny', 'heavy', 'bouncy', 'timewarp'];
+
+        // Swap só aparece em modo 2 jogadores
+        if (game.twoPlayerMode) {
+            availableModifiers.push('swap');
+        }
 
         // Sortear tipo aleatoriamente
         this.type = availableModifiers[Math.floor(Math.random() * availableModifiers.length)];
@@ -37,7 +42,12 @@ export class Modifier {
             reverse: '#ff0066',
             ice: '#66ffff',
             doublejump: '#9d00ff',
-            magnet: '#ffd700'
+            magnet: '#ffd700',
+            tiny: '#ff1493',
+            heavy: '#8b4513',
+            bouncy: '#ff69b4',
+            timewarp: '#9370db',
+            swap: '#ff8c00'
         };
 
         // Colisão com Player 1
@@ -46,8 +56,13 @@ export class Modifier {
 
             // Em modo 2 jogadores, aplicar efeito em ambos
             if (game.twoPlayerMode && game.player2) {
-                this.applyEffect(game.player);
-                this.applyEffect(game.player2);
+                // Swap é especial: só precisa ser aplicado uma vez
+                if (this.type === 'swap') {
+                    this.applyEffect(game.player);
+                } else {
+                    this.applyEffect(game.player);
+                    this.applyEffect(game.player2);
+                }
             } else {
                 this.applyEffect(game.player);
             }
@@ -71,8 +86,13 @@ export class Modifier {
 
             // Em modo 2 jogadores, aplicar efeito em ambos
             if (game.twoPlayerMode && game.player) {
-                this.applyEffect(game.player);
-                this.applyEffect(game.player2);
+                // Swap é especial: só precisa ser aplicado uma vez
+                if (this.type === 'swap') {
+                    this.applyEffect(game.player);
+                } else {
+                    this.applyEffect(game.player);
+                    this.applyEffect(game.player2);
+                }
             } else {
                 this.applyEffect(game.player2);
             }
@@ -128,6 +148,56 @@ export class Modifier {
             player.magnetActive = true;
             player.magnetTime = this.duration;
             player.magnetMaxTime = this.duration;
+        } else if (this.type === 'tiny') {
+            // Reduz tamanho do jogador
+            player.tinyPlayer = true;
+            player.tinyPlayerTime = this.duration;
+            player.tinyPlayerMaxTime = this.duration;
+            player.width = player.width * 0.5;
+            player.height = player.height * 0.5;
+        } else if (this.type === 'heavy') {
+            // Aumenta gravidade e reduz pulo
+            player.heavy = true;
+            player.heavyTime = this.duration;
+            player.heavyMaxTime = this.duration;
+        } else if (this.type === 'bouncy') {
+            // Bounce automático ao colidir com plataformas
+            player.bouncy = true;
+            player.bouncyTime = this.duration;
+            player.bouncyMaxTime = this.duration;
+        } else if (this.type === 'timewarp') {
+            // Acelera todo o jogo
+            player.timeWarp = true;
+            player.timeWarpTime = this.duration;
+            player.timeWarpMaxTime = this.duration;
+        } else if (this.type === 'swap') {
+            // Troca posição dos jogadores (apenas em 2P mode)
+            if (game.twoPlayerMode && game.player && game.player2) {
+                const tempX = game.player.x;
+                const tempY = game.player.y;
+                const tempVX = game.player.vx;
+                const tempVY = game.player.vy;
+
+                game.player.x = game.player2.x;
+                game.player.y = game.player2.y;
+                game.player.vx = game.player2.vx;
+                game.player.vy = game.player2.vy;
+
+                game.player2.x = tempX;
+                game.player2.y = tempY;
+                game.player2.vx = tempVX;
+                game.player2.vy = tempVY;
+
+                // Efeitos visuais para swap
+                if (window.createParticles) {
+                    window.createParticles(game.player.x + game.player.width / 2, game.player.y + game.player.height / 2, '#ff8c00', 30);
+                    window.createParticles(game.player2.x + game.player2.width / 2, game.player2.y + game.player2.height / 2, '#ff8c00', 30);
+                }
+                if (window.createFloatingText) {
+                    window.createFloatingText('SWAP!', game.player.x + game.player.width / 2, game.player.y, '#ff8c00');
+                    window.createFloatingText('SWAP!', game.player2.x + game.player2.width / 2, game.player2.y, '#ff8c00');
+                }
+            }
         }
     }
 
