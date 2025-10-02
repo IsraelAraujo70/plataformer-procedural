@@ -5,21 +5,32 @@ import { Particle } from './entities/Particle.js';
 // PARALLAX BACKGROUND
 // ============================================
 export function drawBackground(ctx) {
-    // Gradiente de céu dinâmico baseado na progressão
-    const progression = Math.min(game.distance / 500, 1); // 0 a 1 ao longo de 500m
+    // Ciclo dia/noite cíclico (repete a cada 500m)
+    const progression = (game.distance / 500) % 1; // 0 a 1, depois volta para 0
 
-    // Cores do céu (transição: dia → pôr do sol → noite)
+    // Cores do céu (ciclo completo: dia → tarde → noite → manhã → dia)
     let skyTop, skyBottom;
-    if (progression < 0.5) {
-        // Dia → Pôr do sol
-        const t = progression * 2;
+
+    if (progression < 0.25) {
+        // Fase 1: Dia → Pôr do sol (0.00 - 0.25)
+        const t = progression * 4; // 0 a 1
         skyTop = interpolateColor('#87CEEB', '#FF6B6B', t);
         skyBottom = interpolateColor('#E0F6FF', '#FFB347', t);
-    } else {
-        // Pôr do sol → Noite
-        const t = (progression - 0.5) * 2;
+    } else if (progression < 0.5) {
+        // Fase 2: Pôr do sol → Noite (0.25 - 0.50)
+        const t = (progression - 0.25) * 4; // 0 a 1
         skyTop = interpolateColor('#FF6B6B', '#1a1a2e', t);
         skyBottom = interpolateColor('#FFB347', '#16213e', t);
+    } else if (progression < 0.75) {
+        // Fase 3: Noite → Amanhecer (0.50 - 0.75)
+        const t = (progression - 0.5) * 4; // 0 a 1
+        skyTop = interpolateColor('#1a1a2e', '#FF6B6B', t);
+        skyBottom = interpolateColor('#16213e', '#FFB347', t);
+    } else {
+        // Fase 4: Amanhecer → Dia (0.75 - 1.00)
+        const t = (progression - 0.75) * 4; // 0 a 1
+        skyTop = interpolateColor('#FF6B6B', '#87CEEB', t);
+        skyBottom = interpolateColor('#FFB347', '#E0F6FF', t);
     }
 
     const gradient = ctx.createLinearGradient(0, 0, 0, game.height);
@@ -28,9 +39,17 @@ export function drawBackground(ctx) {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, game.width, game.height);
 
-    // Estrelas (aparecem gradualmente à noite)
-    if (progression > 0.5) {
-        const starOpacity = (progression - 0.5) * 2;
+    // Estrelas (aparecem durante a noite: fase 0.25 - 0.75)
+    if (progression >= 0.25 && progression <= 0.75) {
+        let starOpacity;
+        if (progression < 0.5) {
+            // Aparecendo (0.25 → 0.5)
+            starOpacity = (progression - 0.25) * 4; // 0 a 1
+        } else {
+            // Desaparecendo (0.5 → 0.75)
+            starOpacity = 1 - ((progression - 0.5) * 4); // 1 a 0
+        }
+
         ctx.fillStyle = `rgba(255, 255, 255, ${starOpacity * 0.8})`;
         const starSeed = Math.floor(game.camera.x / 1000);
         for (let i = 0; i < 50; i++) {

@@ -416,13 +416,6 @@ export class Chunk {
     }
 
     drawFloatingPlatform(ctx, x, y, width, height) {
-        // Sombra embaixo da plataforma (efeito 3D)
-        const shadowOffset = 8;
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.beginPath();
-        ctx.ellipse(x + width/2, y + height + shadowOffset, width/2 - 5, 8, 0, 0, Math.PI * 2);
-        ctx.fill();
-
         // Base da plataforma com gradiente cristalino
         const gradient = ctx.createLinearGradient(x, y, x, y + height);
         gradient.addColorStop(0, '#a78bfa');
