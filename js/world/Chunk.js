@@ -5,6 +5,8 @@ import { Coin } from '../entities/Coin.js';
 import { Modifier } from '../entities/Modifier.js';
 import { PATTERNS, getDifficultyConfig, selectPattern, getBiome, BIOMES } from './Patterns.js';
 
+const ABSOLUTE_MAX_GAP = CONFIG.TILE_SIZE * 5.5;
+
 // ============================================
 // HELPERS DE COLISÃO (para geração de itens)
 // ============================================
@@ -30,6 +32,10 @@ function canPlaceItem(newX, newY, newW, newH, existingItems) {
     return true;
 }
 
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
 // Verifica se uma plataforma é alcançável a partir de outra
 function canReachPlatform(fromPlatform, toPlatform) {
     // Distância horizontal (do final da plataforma origem até início da destino)
@@ -49,9 +55,13 @@ function canReachPlatform(fromPlatform, toPlatform) {
     // Tempo para atingir altura máxima: t = v / g
     const timeToMaxHeight = jumpSpeed / CONFIG.GRAVITY;
 
-    // Distância horizontal máxima (considerando velocidade de movimento)
-    // Com margem de 50% para dar mais liberdade ao jogador
-    const maxHorizontalDist = CONFIG.MOVE_SPEED * timeToMaxHeight * 2 * 1.5;
+    const runway = Math.max(0, fromPlatform.width - CONFIG.PLAYER_WIDTH);
+    const runwayFactor = clamp(runway / (CONFIG.TILE_SIZE * 3), 0, 1);
+    const horizontalSpeed = CONFIG.MOVE_SPEED * (0.55 + 0.45 * runwayFactor);
+
+    // Distância horizontal máxima (considerando velocidade efetiva com margem de segurança)
+    const rawHorizontalDist = horizontalSpeed * timeToMaxHeight * 2 * 0.9;
+    const maxHorizontalDist = Math.min(rawHorizontalDist, ABSOLUTE_MAX_GAP);
 
     // Verificar se está dentro do alcance horizontal
     if (dx > maxHorizontalDist) return false;
@@ -72,14 +82,18 @@ function canReachPlatform(fromPlatform, toPlatform) {
     const heightRatio = dy / maxJumpHeight;
     const adjustedMaxDist = maxHorizontalDist * (1 - heightRatio * 0.3);
 
-    return dx <= adjustedMaxDist;
+    return dx <= Math.min(adjustedMaxDist, ABSOLUTE_MAX_GAP);
+}
+
+function getRightEdge(platform) {
+    return platform.x + platform.width;
 }
 
 // ============================================
 // CHUNK (Geração Procedural)
 // ============================================
 export class Chunk {
-    constructor(index, random) {
+    constructor(index, random, previousChunk = null) {
         this.index = index;
         this.x = index * CONFIG.CHUNK_WIDTH * CONFIG.TILE_SIZE;
         this.platforms = [];
@@ -87,11 +101,93 @@ export class Chunk {
         this.enemies = [];
         this.modifiers = [];
         this.decorations = []; // Elementos decorativos
+        this.previousChunk = previousChunk;
+        this.entryPlatform = this.getEntryPlatform();
 
         // Determinar bioma deste chunk
         this.biome = getBiome(index);
 
         this.generate(random);
+
+        this.cacheExitAnchor();
+    }
+
+    getEntryPlatform() {
+        let sourcePlatforms = null;
+
+        if (this.previousChunk && this.previousChunk.platforms && this.previousChunk.platforms.length > 0) {
+            sourcePlatforms = this.previousChunk.platforms;
+        } else {
+            const cachedAnchor = game.chunkAnchors.get(this.index - 1);
+            if (cachedAnchor) {
+                return { ...cachedAnchor };
+            }
+        }
+
+        if (!sourcePlatforms || sourcePlatforms.length === 0) {
+            return null;
+        }
+
+        const candidates = sourcePlatforms.filter(p => p.type === 'ground');
+        const source = candidates.length > 0 ? candidates : sourcePlatforms;
+
+        return source.reduce((best, platform) => {
+            if (!best) return { ...platform };
+
+            const bestRight = getRightEdge(best);
+            const currentRight = getRightEdge(platform);
+
+            if (currentRight > bestRight) return { ...platform };
+            if (currentRight === bestRight && platform.type === 'ground' && best.type !== 'ground') {
+                return { ...platform };
+            }
+
+            return best;
+        }, null);
+    }
+
+    cacheExitAnchor() {
+        const anchor = this.getExitAnchor();
+        if (anchor) {
+            game.chunkAnchors.set(this.index, anchor);
+        }
+    }
+
+    getExitAnchor() {
+        if (!this.platforms || this.platforms.length === 0) {
+            if (this.index === 0 && this.entryPlatform) {
+                return { ...this.entryPlatform };
+            }
+            return null;
+        }
+
+        const groundPlatforms = this.platforms.filter(p => p.type === 'ground');
+        const source = groundPlatforms.length > 0 ? groundPlatforms : this.platforms;
+
+        const result = source.reduce((best, platform) => {
+            if (!best) return platform;
+
+            const bestRight = getRightEdge(best);
+            const currentRight = getRightEdge(platform);
+
+            if (currentRight > bestRight) return platform;
+            if (currentRight === bestRight) {
+                if (platform.type === 'ground' && best.type !== 'ground') return platform;
+                if (platform.y < best.y) return platform;
+            }
+
+            return best;
+        }, null);
+
+        if (!result) return null;
+
+        return {
+            x: result.x,
+            y: result.y,
+            width: result.width,
+            height: result.height,
+            type: result.type
+        };
     }
 
     generate(rng) {
@@ -103,9 +199,103 @@ export class Chunk {
         const diffConfig = getDifficultyConfig(this.index);
         const difficulty = Math.min(this.index / 10, 3);
 
-        // Altura inicial
-        let lastHeight = game.height - 150 - rng.range(-50, 50);
-        let x = startX;
+        const endX = startX + chunkWidth;
+        const jumpSpeed = Math.abs(CONFIG.JUMP_STRENGTH);
+        const maxJumpHeight = (jumpSpeed * jumpSpeed) / (2 * CONFIG.GRAVITY);
+        const maxClimb = maxJumpHeight * 0.65;
+        const maxDrop = tileSize * 6;
+        const totalAirTime = (jumpSpeed / CONFIG.GRAVITY) * 2;
+        const maxHorizontalReachFull = Math.min(CONFIG.MOVE_SPEED * totalAirTime * 0.9, ABSOLUTE_MAX_GAP);
+
+        const minHeight = game.height / 3;
+        const maxHeight = game.height - 100;
+        const heightVariationBase = diffConfig.heightVariation + (this.biome.heightBias || 0) * tileSize;
+
+        const computeMaxReach = (prevPlatform) => {
+            if (!prevPlatform) {
+                return maxHorizontalReachFull;
+            }
+
+            const runway = Math.max(0, prevPlatform.width - CONFIG.PLAYER_WIDTH);
+            const runwayFactor = clamp(runway / (CONFIG.TILE_SIZE * 3), 0, 1);
+            const horizontalSpeed = CONFIG.MOVE_SPEED * (0.55 + 0.45 * runwayFactor);
+
+            return Math.min(horizontalSpeed * totalAirTime * 0.9, ABSOLUTE_MAX_GAP);
+        };
+
+        const computeGap = (prevPlatform) => {
+            if (!prevPlatform) {
+                const maxGapValue = Math.max(diffConfig.minGap, Math.min(diffConfig.maxGap, maxHorizontalReachFull));
+                const minGapValue = Math.min(diffConfig.minGap, maxGapValue);
+                return rng.range(minGapValue, maxGapValue);
+            }
+
+            const safeReach = computeMaxReach(prevPlatform);
+            let minGapValue = diffConfig.minGap;
+            let maxGapValue = Math.min(diffConfig.maxGap, safeReach);
+
+            if (minGapValue > maxGapValue) {
+                const adjusted = Math.max(safeReach * 0.75, diffConfig.minGap * 0.6);
+                minGapValue = Math.min(diffConfig.minGap, adjusted);
+                maxGapValue = Math.max(minGapValue, safeReach * 0.85);
+            }
+
+            const gap = rng.range(minGapValue, maxGapValue);
+            return clamp(gap, minGapValue, maxGapValue);
+        };
+
+        const pickHeightNear = (prevPlatform) => {
+            if (!prevPlatform) {
+                return clamp(game.height - 150 - rng.range(-50, 50), minHeight, maxHeight);
+            }
+
+            const variation = rng.range(-heightVariationBase, heightVariationBase);
+            let candidate = prevPlatform.y + variation;
+            const climb = prevPlatform.y - candidate;
+            if (climb > maxClimb) {
+                candidate = prevPlatform.y - maxClimb;
+            }
+            if (climb < -maxDrop) {
+                candidate = prevPlatform.y + maxDrop;
+            }
+            return clamp(candidate, minHeight, maxHeight);
+        };
+
+        const ensureReachable = (prevPlatform, platform) => {
+            if (!prevPlatform) return true;
+
+            const safeReach = computeMaxReach(prevPlatform);
+            if (safeReach <= CONFIG.TILE_SIZE * 1.5) {
+                return false;
+            }
+
+            const minXGap = Math.min(diffConfig.minGap, safeReach * 0.85);
+            const minX = getRightEdge(prevPlatform) + minXGap;
+            const maxXGap = Math.min(diffConfig.maxGap, safeReach);
+            const maxX = Math.min(endX - diffConfig.minPlatformSize, getRightEdge(prevPlatform) + maxXGap);
+
+            if (minX > maxX) {
+                return false;
+            }
+
+            platform.x = clamp(platform.x, minX, maxX);
+
+            let candidateY = platform.y;
+            const climb = prevPlatform.y - candidateY;
+            if (climb > maxClimb) {
+                candidateY = prevPlatform.y - maxClimb;
+            } else if (climb < -maxDrop) {
+                candidateY = prevPlatform.y + maxDrop;
+            }
+
+            platform.y = clamp(candidateY, minHeight, maxHeight);
+
+            return canReachPlatform(prevPlatform, platform);
+        };
+
+        // Altura e posição iniciais
+        let lastHeight = pickHeightNear(this.entryPlatform);
+        let x = this.entryPlatform ? Math.max(startX, getRightEdge(this.entryPlatform)) : startX;
 
         // CHUNK 0: Criar plataforma inicial garantida para spawn dos jogadores
         if (this.index === 0) {
@@ -118,9 +308,8 @@ export class Chunk {
             };
             this.platforms.push(spawnPlatform);
 
-            const gap = rng.range(tileSize * 3, tileSize * 5);
-            x = spawnPlatform.width + gap;
-            lastHeight = spawnPlatform.y + rng.range(-tileSize * 2, tileSize * 2);
+            x = spawnPlatform.x + spawnPlatform.width;
+            lastHeight = spawnPlatform.y;
         }
 
         // Decidir se usar patterns ou geração simples
@@ -131,219 +320,88 @@ export class Chunk {
             let platformCount = 0;
             const maxPlatformsPerChunk = 15;
 
-            while (x < startX + chunkWidth && platformCount < maxPlatformsPerChunk) {
+            while (x < endX && platformCount < maxPlatformsPerChunk) {
+                const prevPlatform = this.platforms.length > 0 ? this.platforms[this.platforms.length - 1] : this.entryPlatform;
                 const pattern = selectPattern(rng, difficulty);
-                const patternStartX = x;
-                const patternStartY = lastHeight;
+                const firstDef = pattern.platforms[0];
 
-                // Aplicar pattern
-                pattern.platforms.forEach((platDef, index) => {
-                    // Limite de plataformas por chunk
-                    if (platformCount >= maxPlatformsPerChunk) return;
+                let patternStartX = x;
+                let patternStartY = lastHeight;
 
+                if (prevPlatform && firstDef) {
+                    const gap = computeGap(prevPlatform);
+                    const targetFirstX = getRightEdge(prevPlatform) + gap;
+                    const targetFirstY = pickHeightNear(prevPlatform);
+                    patternStartX = targetFirstX - firstDef.offsetX * tileSize;
+                    patternStartY = targetFirstY - firstDef.offsetY * tileSize;
+                }
+
+                let placed = 0;
+                let patternMaxRight = patternStartX;
+
+                for (let index = 0; index < pattern.platforms.length && platformCount < maxPlatformsPerChunk; index++) {
+                    const platDef = pattern.platforms[index];
                     const platform = {
                         x: patternStartX + platDef.offsetX * tileSize,
-                        y: patternStartY + platDef.offsetY * tileSize,
+                        y: clamp(patternStartY + platDef.offsetY * tileSize, minHeight, maxHeight),
                         width: platDef.width * tileSize,
                         height: platDef.type === 'floating' ? tileSize : tileSize * 3,
                         type: platDef.type
                     };
 
-                    // Verificar se plataforma é alcançável (se não for a primeira do pattern)
-                    if (index > 0 && this.platforms.length > 0) {
-                        const prevPlatform = this.platforms[this.platforms.length - 1];
-                        let attempts = 0;
+                    const reachBase = placed > 0 ? this.platforms[this.platforms.length - 1] : prevPlatform;
+                    if (!ensureReachable(reachBase, platform)) {
+                        continue;
+                    }
 
-                        // Tentar ajustar posição até ser alcançável (máx 5 tentativas)
-                        while (!canReachPlatform(prevPlatform, platform) && attempts < 5) {
-                            // Calcular distância atual
-                            const dx = platform.x - (prevPlatform.x + prevPlatform.width);
-
-                            // Reduzir distância horizontal OU altura vertical
-                            if (attempts % 2 === 0 && dx > tileSize * 1.5) {
-                                // Só aproximar se distância > 1.5 tiles
-                                platform.x -= tileSize;
-                            } else {
-                                // Ajustar altura (alternar entre subir e descer)
-                                const direction = Math.floor(attempts / 2) % 2 === 0 ? -1 : 1;
-                                platform.y += direction * tileSize;
-                            }
-                            attempts++;
-                        }
-
-                        // Se ainda não alcançável após ajustes, descartar esta plataforma
-                        if (!canReachPlatform(prevPlatform, platform)) {
-                            return; // Pular esta plataforma
+                    if (platform.x + platform.width > endX) {
+                        platform.width = Math.max(diffConfig.minPlatformSize, endX - platform.x - tileSize);
+                        if (platform.width < diffConfig.minPlatformSize) {
+                            continue;
                         }
                     }
 
-                    // Verificar colisão com plataformas existentes
                     let collides = false;
                     for (let existingPlatform of this.platforms) {
                         if (checkOverlap(
                             platform.x, platform.y, platform.width, platform.height,
                             existingPlatform.x, existingPlatform.y, existingPlatform.width, existingPlatform.height,
-                            48 // Margem de segurança de 1.5 tiles
+                            48
                         )) {
                             collides = true;
                             break;
                         }
                     }
 
-                    // Só adicionar se não colidir
-                    if (!collides) {
-                        this.platforms.push(platform);
-                        platformCount++;
+                    if (collides) {
+                        continue;
                     }
 
-                    // Se este pattern tem recompensa, adicionar
+                    this.platforms.push(platform);
+                    platformCount++;
+                    placed++;
+                    patternMaxRight = Math.max(patternMaxRight, getRightEdge(platform));
+
                     if (pattern.reward === 'modifier' && pattern.rewardPlatform === index) {
                         const modX = platform.x + platform.width / 2 - 10;
                         const modY = platform.y - 40;
                         this.modifiers.push(new Modifier(modX, modY));
                     }
-                });
+                }
 
-                // Atualizar posição e altura
-                // Espaçamento forçado: próximo pattern começa 1.5x a largura do anterior
-                x = patternStartX + (pattern.width * tileSize * 1.5);
-
-                if (this.platforms.length > 0) {
+                if (placed === 0) {
+                    x += tileSize * 2;
+                } else {
+                    x = patternMaxRight;
                     lastHeight = this.platforms[this.platforms.length - 1].y;
                 }
+            }
 
-                // Gap adicional após pattern
-                const gap = rng.range(diffConfig.minGap, diffConfig.maxGap);
-                x += gap;
+            if (platformCount === 0) {
+                this.generateSimpleFallback(rng, diffConfig, lastHeight, x, startX, endX, computeGap, pickHeightNear, ensureReachable);
             }
         } else {
-            // GERAÇÃO SIMPLES (MELHORADA)
-            let platformCount = 0;
-            const maxPlatformsPerChunk = 15;
-
-            while (x < startX + chunkWidth && platformCount < maxPlatformsPerChunk) {
-                const plateauWidth = Math.max(
-                    diffConfig.minPlatformSize,
-                    rng.range(diffConfig.minPlatformSize, diffConfig.maxPlatformSize)
-                );
-
-                const platform = {
-                    x: x,
-                    y: lastHeight,
-                    width: plateauWidth,
-                    height: tileSize * 3,
-                    type: 'ground'
-                };
-
-                // Verificar overlap com plataforma anterior (com margem de segurança)
-                let shouldSkip = false;
-                if (this.platforms.length > 0) {
-                    const lastPlatform = this.platforms[this.platforms.length - 1];
-
-                    if (checkOverlap(
-                        platform.x, platform.y, platform.width, platform.height,
-                        lastPlatform.x, lastPlatform.y, lastPlatform.width, lastPlatform.height,
-                        48 // Margem de 1.5 tiles
-                    )) {
-                        // Tentar ajustar altura
-                        if (lastHeight < lastPlatform.y) {
-                            lastHeight = lastPlatform.y - tileSize * 4;
-                        } else {
-                            lastHeight = lastPlatform.y + lastPlatform.height + tileSize;
-                        }
-                        platform.y = lastHeight;
-
-                        // Verificar novamente se ainda há overlap após ajuste
-                        if (checkOverlap(
-                            platform.x, platform.y, platform.width, platform.height,
-                            lastPlatform.x, lastPlatform.y, lastPlatform.width, lastPlatform.height,
-                            48
-                        )) {
-                            // Se ainda sobrepõe, pular esta posição
-                            x += tileSize * 3;
-                            shouldSkip = true;
-                        }
-                    }
-                }
-
-                // Só adicionar se não deve pular
-                if (!shouldSkip) {
-                    this.platforms.push(platform);
-                    platformCount++;
-
-                // Array para rastrear itens nesta plataforma (evitar colisões)
-                const platformItems = [];
-
-                // Adicionar inimigo com chance baseada em dificuldade
-                let hasEnemy = false;
-                if (rng.next() < diffConfig.enemyChance && this.index >= 1 && plateauWidth > CONFIG.ENEMY_SIZE * 2) {
-                    const enemyX = x + plateauWidth / 2 - CONFIG.ENEMY_SIZE / 2;
-                    const enemyY = lastHeight - CONFIG.ENEMY_SIZE;
-                    const enemy = new Enemy(enemyX, enemyY, plateauWidth, lastHeight);
-
-                    // Aplicar multiplicador de velocidade do bioma (se existir)
-                    if (this.biome.enemySpeedMultiplier) {
-                        enemy.speed *= this.biome.enemySpeedMultiplier;
-                    }
-
-                    this.enemies.push(enemy);
-                    platformItems.push({
-                        x: enemyX,
-                        y: enemyY,
-                        width: CONFIG.ENEMY_SIZE,
-                        height: CONFIG.ENEMY_SIZE
-                    });
-                    hasEnemy = true;
-                }
-
-                // Adicionar moedas com chance baseada em dificuldade
-                if (rng.next() < diffConfig.coinChance) {
-                    const numCoins = rng.int(2, 5);
-                    let coinsPlaced = 0;
-
-                    for (let i = 0; i < numCoins && coinsPlaced < numCoins; i++) {
-                        let coinX;
-                        if (hasEnemy) {
-                            const zone = i % 2;
-                            if (zone === 0) {
-                                coinX = x + rng.range(CONFIG.COIN_SIZE, plateauWidth * 0.4);
-                            } else {
-                                coinX = x + rng.range(plateauWidth * 0.6, plateauWidth - CONFIG.COIN_SIZE);
-                            }
-                        } else {
-                            coinX = x + (i + 1) * (plateauWidth / (numCoins + 1));
-                        }
-
-                        const coinY = lastHeight - tileSize * 2;
-
-                        if (canPlaceItem(coinX, coinY, CONFIG.COIN_SIZE, CONFIG.COIN_SIZE, platformItems)) {
-                            const coin = new Coin(coinX, coinY);
-                            this.coins.push(coin);
-                            platformItems.push({
-                                x: coinX,
-                                y: coinY,
-                                width: CONFIG.COIN_SIZE,
-                                height: CONFIG.COIN_SIZE
-                            });
-                            coinsPlaced++;
-                        }
-                    }
-                }
-
-                    x += plateauWidth;
-
-                    // Gap entre plataformas (baseado em config de dificuldade)
-                    const gap = rng.range(diffConfig.minGap, diffConfig.maxGap);
-                    x += gap;
-
-                    // Próxima altura (com variação aumentada)
-                    const heightVariation = diffConfig.heightVariation + (this.biome.heightBias || 0) * tileSize;
-                    lastHeight += rng.range(-heightVariation, heightVariation);
-
-                    // Limites de altura
-                    lastHeight = Math.max(game.height / 3, Math.min(game.height - 100, lastHeight));
-                }
-            }
+            this.generateSimpleFallback(rng, diffConfig, lastHeight, x, startX, endX, computeGap, pickHeightNear, ensureReachable);
         }
 
         // Adicionar plataformas flutuantes (com verificação de alcançabilidade)
@@ -481,6 +539,170 @@ export class Chunk {
                     }
 
                     attempts++;
+                }
+            }
+        }
+    }
+
+    generateSimpleFallback(rng, diffConfig, seedHeight, currentX, startBoundary, endX, computeGap, pickHeightNear, ensureReachable) {
+        const tileSize = CONFIG.TILE_SIZE;
+        const maxPlatformsPerChunk = 15;
+        const minHeight = game.height / 3;
+        const maxHeight = game.height - 100;
+
+        let platformCount = 0;
+        let x = currentX;
+        let lastHeight = seedHeight;
+
+        while (x < endX && platformCount < maxPlatformsPerChunk) {
+            const prevPlatform = this.platforms.length > 0 ? this.platforms[this.platforms.length - 1] : this.entryPlatform;
+
+            const gap = computeGap(prevPlatform);
+            let platformX = prevPlatform ? getRightEdge(prevPlatform) + gap : x;
+            platformX = Math.max(platformX, startBoundary);
+            if (!prevPlatform) {
+                platformX = Math.max(platformX, x);
+            }
+
+            if (platformX + diffConfig.minPlatformSize >= endX) {
+                break;
+            }
+
+            let platformY = prevPlatform ? pickHeightNear(prevPlatform) : clamp(lastHeight, minHeight, maxHeight);
+
+            let platformWidth = Math.max(diffConfig.minPlatformSize, rng.range(diffConfig.minPlatformSize, diffConfig.maxPlatformSize));
+            if (platformX + platformWidth > endX) {
+                platformWidth = Math.max(diffConfig.minPlatformSize, endX - platformX - tileSize);
+            }
+
+            if (platformWidth < diffConfig.minPlatformSize) {
+                break;
+            }
+
+            const platform = {
+                x: platformX,
+                y: platformY,
+                width: platformWidth,
+                height: tileSize * 3,
+                type: 'ground'
+            };
+
+            if (!ensureReachable(prevPlatform, platform)) {
+                x = platformX + tileSize;
+                lastHeight = platformY;
+                continue;
+            }
+
+            let collides = false;
+            for (let existingPlatform of this.platforms) {
+                if (checkOverlap(
+                    platform.x, platform.y, platform.width, platform.height,
+                    existingPlatform.x, existingPlatform.y, existingPlatform.width, existingPlatform.height,
+                    48
+                )) {
+                    collides = true;
+                    break;
+                }
+            }
+
+            if (collides) {
+                x = platformX + tileSize;
+                lastHeight = platformY;
+                continue;
+            }
+
+            this.platforms.push(platform);
+            platformCount++;
+
+            const platformItems = [];
+            let hasEnemy = false;
+
+            if (rng.next() < diffConfig.enemyChance && this.index >= 1 && platform.width > CONFIG.ENEMY_SIZE * 2) {
+                const enemyX = platform.x + platform.width / 2 - CONFIG.ENEMY_SIZE / 2;
+                const enemyY = platform.y - CONFIG.ENEMY_SIZE;
+                const enemy = new Enemy(enemyX, enemyY, platform.width, platform.y);
+
+                if (this.biome.enemySpeedMultiplier) {
+                    enemy.speed *= this.biome.enemySpeedMultiplier;
+                }
+
+                this.enemies.push(enemy);
+                platformItems.push({
+                    x: enemyX,
+                    y: enemyY,
+                    width: CONFIG.ENEMY_SIZE,
+                    height: CONFIG.ENEMY_SIZE
+                });
+                hasEnemy = true;
+            }
+
+            if (rng.next() < diffConfig.coinChance) {
+                const numCoins = rng.int(2, 5);
+                let coinsPlaced = 0;
+
+                for (let i = 0; i < numCoins && coinsPlaced < numCoins; i++) {
+                    let coinX;
+                    if (hasEnemy) {
+                        const zone = i % 2;
+                        if (zone === 0) {
+                            coinX = platform.x + rng.range(CONFIG.COIN_SIZE, platform.width * 0.4);
+                        } else {
+                            coinX = platform.x + rng.range(platform.width * 0.6, platform.width - CONFIG.COIN_SIZE);
+                        }
+                    } else {
+                        coinX = platform.x + (i + 1) * (platform.width / (numCoins + 1));
+                    }
+
+                    const coinY = platform.y - tileSize * 2;
+
+                    if (canPlaceItem(coinX, coinY, CONFIG.COIN_SIZE, CONFIG.COIN_SIZE, platformItems)) {
+                        const coin = new Coin(coinX, coinY);
+                        this.coins.push(coin);
+                        platformItems.push({
+                            x: coinX,
+                            y: coinY,
+                            width: CONFIG.COIN_SIZE,
+                            height: CONFIG.COIN_SIZE
+                        });
+                        coinsPlaced++;
+                    }
+                }
+            }
+
+            x = getRightEdge(platform);
+            lastHeight = platform.y;
+        }
+
+        if (platformCount === 0) {
+            const prevPlatform = this.platforms.length > 0 ? this.platforms[this.platforms.length - 1] : this.entryPlatform;
+            const startBridge = Math.max(prevPlatform ? getRightEdge(prevPlatform) + diffConfig.minGap : currentX, startBoundary);
+            const availableWidth = endX - startBridge - tileSize;
+
+            if (availableWidth >= diffConfig.minPlatformSize) {
+                const fallback = {
+                    x: startBridge,
+                    y: prevPlatform ? prevPlatform.y : clamp(seedHeight, minHeight, maxHeight),
+                    width: Math.min(diffConfig.maxPlatformSize, availableWidth),
+                    height: tileSize * 3,
+                    type: 'ground'
+                };
+
+                if (ensureReachable(prevPlatform, fallback)) {
+                    let collides = false;
+                    for (let existingPlatform of this.platforms) {
+                        if (checkOverlap(
+                            fallback.x, fallback.y, fallback.width, fallback.height,
+                            existingPlatform.x, existingPlatform.y, existingPlatform.width, existingPlatform.height,
+                            48
+                        )) {
+                            collides = true;
+                            break;
+                        }
+                    }
+
+                    if (!collides) {
+                        this.platforms.push(fallback);
+                    }
                 }
             }
         }

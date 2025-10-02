@@ -35,6 +35,7 @@ export function startGame(twoPlayerMode = false) {
 
     // Inicializar jogo
     game.chunks.clear();
+    game.chunkAnchors.clear();
     game.coins = [];
     game.enemies = [];
     game.modifiers = [];

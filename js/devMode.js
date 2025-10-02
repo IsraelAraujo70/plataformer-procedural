@@ -185,7 +185,8 @@ export function handleDevModeKeys(key) {
             const nextChunk = Math.floor(game.player.x / (CONFIG.CHUNK_WIDTH * CONFIG.TILE_SIZE)) + 1;
             if (!game.chunks.has(nextChunk)) {
                 const chunkRandom = new Random(game.seed + nextChunk * 1000);
-                const chunk = new Chunk(nextChunk, chunkRandom);
+                const previousChunk = game.chunks.get(nextChunk - 1) || null;
+                const chunk = new Chunk(nextChunk, chunkRandom, previousChunk);
                 game.chunks.set(nextChunk, chunk);
                 game.coins.push(...chunk.coins);
                 game.enemies.push(...chunk.enemies);

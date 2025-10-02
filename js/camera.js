@@ -24,7 +24,8 @@ export function updateChunks() {
         if (!game.chunks.has(i)) {
             // Criar seed única para este chunk baseada na seed global
             const chunkRandom = new Random(game.seed + i * 1000);
-            const chunk = new Chunk(i, chunkRandom);
+            const previousChunk = game.chunks.get(i - 1) || null;
+            const chunk = new Chunk(i, chunkRandom, previousChunk);
             game.chunks.set(i, chunk);
 
             // Adicionar entidades do chunk às listas globais

@@ -15,6 +15,7 @@ export const game = {
     player2: null,
     twoPlayerMode: false,
     chunks: new Map(),
+    chunkAnchors: new Map(),
     entities: [],
     coins: [],
     enemies: [],
