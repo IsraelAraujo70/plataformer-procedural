@@ -3,6 +3,7 @@ import { game } from '../game.js';
 import { Enemy } from '../entities/Enemy.js';
 import { Coin } from '../entities/Coin.js';
 import { Modifier } from '../entities/Modifier.js';
+import { PATTERNS, getDifficultyConfig, selectPattern, getBiome, BIOMES } from './Patterns.js';
 
 // ============================================
 // HELPERS DE COLISÃO (para geração de itens)
@@ -29,6 +30,51 @@ function canPlaceItem(newX, newY, newW, newH, existingItems) {
     return true;
 }
 
+// Verifica se uma plataforma é alcançável a partir de outra
+function canReachPlatform(fromPlatform, toPlatform) {
+    // Distância horizontal (do final da plataforma origem até início da destino)
+    const dx = toPlatform.x - (fromPlatform.x + fromPlatform.width);
+
+    // Se plataformas se sobrepõem horizontalmente, sempre alcançável
+    if (dx < 0) return true;
+
+    // Diferença de altura (positivo = subir, negativo = descer)
+    const dy = fromPlatform.y - toPlatform.y;
+
+    // Física do pulo (baseada nas constantes do jogo)
+    // Altura máxima do pulo: v² = 2 * g * h  =>  h = v² / (2 * g)
+    const jumpSpeed = Math.abs(CONFIG.JUMP_STRENGTH);
+    const maxJumpHeight = (jumpSpeed * jumpSpeed) / (2 * CONFIG.GRAVITY);
+
+    // Tempo para atingir altura máxima: t = v / g
+    const timeToMaxHeight = jumpSpeed / CONFIG.GRAVITY;
+
+    // Distância horizontal máxima (considerando velocidade de movimento)
+    // Com margem de 50% para dar mais liberdade ao jogador
+    const maxHorizontalDist = CONFIG.MOVE_SPEED * timeToMaxHeight * 2 * 1.5;
+
+    // Verificar se está dentro do alcance horizontal
+    if (dx > maxHorizontalDist) return false;
+
+    // Se está descendo (dy < 0), é sempre mais fácil
+    if (dy <= 0) {
+        return dx <= maxHorizontalDist;
+    }
+
+    // Se está subindo (dy > 0), verificar se consegue alcançar a altura
+    // Margem de 80% da altura máxima para ser mais permissivo
+    if (dy > maxJumpHeight * 0.8) {
+        return false;
+    }
+
+    // Calcular se consegue alcançar tanto horizontal quanto verticalmente
+    // Quanto mais alto, menos distância horizontal alcança
+    const heightRatio = dy / maxJumpHeight;
+    const adjustedMaxDist = maxHorizontalDist * (1 - heightRatio * 0.3);
+
+    return dx <= adjustedMaxDist;
+}
+
 // ============================================
 // CHUNK (Geração Procedural)
 // ============================================
@@ -42,6 +88,9 @@ export class Chunk {
         this.modifiers = [];
         this.decorations = []; // Elementos decorativos
 
+        // Determinar bioma deste chunk
+        this.biome = getBiome(index);
+
         this.generate(random);
     }
 
@@ -50,20 +99,11 @@ export class Chunk {
         const chunkWidth = CONFIG.CHUNK_WIDTH * tileSize;
         const startX = this.x;
 
-        // Dificuldade baseada no índice do chunk
+        // Obter configuração de dificuldade
+        const diffConfig = getDifficultyConfig(this.index);
         const difficulty = Math.min(this.index / 10, 3);
 
-        // Dificuldade progressiva para tamanho das plataformas
-        // Reduz de 8 tiles até 1.5x o tamanho do jogador ao longo de 20 chunks
-        const minPlatformSize = CONFIG.PLAYER_WIDTH * 1.5; // 36 pixels (1.5x jogador)
-        const maxPlatformSize = tileSize * 8; // 256 pixels
-        const progressionRate = Math.min(this.index / 20, 1); // 0 a 1 ao longo de 20 chunks (mais rápido!)
-
-        // Interpolar entre max e min baseado na progressão
-        const currentMaxSize = maxPlatformSize - (maxPlatformSize - minPlatformSize) * progressionRate;
-        const currentMinSize = Math.max(minPlatformSize, tileSize * 3 - (tileSize * 1.5 * progressionRate));
-
-        // Gerar terreno base
+        // Altura inicial
         let lastHeight = game.height - 150 - rng.range(-50, 50);
         let x = startX;
 
@@ -78,140 +118,244 @@ export class Chunk {
             };
             this.platforms.push(spawnPlatform);
 
-            // Adicionar gap após a plataforma inicial antes de gerar próximas
             const gap = rng.range(tileSize * 3, tileSize * 5);
-            x = spawnPlatform.width + gap; // Próxima plataforma começa após gap
-            lastHeight = spawnPlatform.y + rng.range(-tileSize * 2, tileSize * 2); // Variar altura
+            x = spawnPlatform.width + gap;
+            lastHeight = spawnPlatform.y + rng.range(-tileSize * 2, tileSize * 2);
         }
 
-        while (x < startX + chunkWidth) {
-            // Tamanho do próximo platô (progressivamente menor)
-            const plateauWidth = Math.max(
-                minPlatformSize,
-                rng.range(currentMinSize, currentMaxSize)
-            );
+        // Decidir se usar patterns ou geração simples
+        const usePatterns = rng.next() < diffConfig.patternChance && this.index > 0;
 
-            // Criar plataforma
-            const platform = {
-                x: x,
-                y: lastHeight,
-                width: plateauWidth,
-                height: tileSize * 3,
-                type: 'ground'
-            };
+        if (usePatterns) {
+            // GERAÇÃO BASEADA EM PATTERNS
+            let platformCount = 0;
+            const maxPlatformsPerChunk = 15;
 
-            // Verificar se não colide com a plataforma anterior (casos extremos de altura)
-            let canPlace = true;
-            if (this.platforms.length > 0) {
-                const lastPlatform = this.platforms[this.platforms.length - 1];
-                // Apenas verificar se estão muito próximas horizontalmente
-                if (Math.abs(platform.x - lastPlatform.x) < plateauWidth + lastPlatform.width) {
+            while (x < startX + chunkWidth && platformCount < maxPlatformsPerChunk) {
+                const pattern = selectPattern(rng, difficulty);
+                const patternStartX = x;
+                const patternStartY = lastHeight;
+
+                // Aplicar pattern
+                pattern.platforms.forEach((platDef, index) => {
+                    // Limite de plataformas por chunk
+                    if (platformCount >= maxPlatformsPerChunk) return;
+
+                    const platform = {
+                        x: patternStartX + platDef.offsetX * tileSize,
+                        y: patternStartY + platDef.offsetY * tileSize,
+                        width: platDef.width * tileSize,
+                        height: platDef.type === 'floating' ? tileSize : tileSize * 3,
+                        type: platDef.type
+                    };
+
+                    // Verificar se plataforma é alcançável (se não for a primeira do pattern)
+                    if (index > 0 && this.platforms.length > 0) {
+                        const prevPlatform = this.platforms[this.platforms.length - 1];
+                        let attempts = 0;
+
+                        // Tentar ajustar posição até ser alcançável (máx 5 tentativas)
+                        while (!canReachPlatform(prevPlatform, platform) && attempts < 5) {
+                            // Calcular distância atual
+                            const dx = platform.x - (prevPlatform.x + prevPlatform.width);
+
+                            // Reduzir distância horizontal OU altura vertical
+                            if (attempts % 2 === 0 && dx > tileSize * 1.5) {
+                                // Só aproximar se distância > 1.5 tiles
+                                platform.x -= tileSize;
+                            } else {
+                                // Ajustar altura (alternar entre subir e descer)
+                                const direction = Math.floor(attempts / 2) % 2 === 0 ? -1 : 1;
+                                platform.y += direction * tileSize;
+                            }
+                            attempts++;
+                        }
+
+                        // Se ainda não alcançável após ajustes, descartar esta plataforma
+                        if (!canReachPlatform(prevPlatform, platform)) {
+                            return; // Pular esta plataforma
+                        }
+                    }
+
+                    // Verificar colisão com plataformas existentes
+                    let collides = false;
+                    for (let existingPlatform of this.platforms) {
+                        if (checkOverlap(
+                            platform.x, platform.y, platform.width, platform.height,
+                            existingPlatform.x, existingPlatform.y, existingPlatform.width, existingPlatform.height,
+                            48 // Margem de segurança de 1.5 tiles
+                        )) {
+                            collides = true;
+                            break;
+                        }
+                    }
+
+                    // Só adicionar se não colidir
+                    if (!collides) {
+                        this.platforms.push(platform);
+                        platformCount++;
+                    }
+
+                    // Se este pattern tem recompensa, adicionar
+                    if (pattern.reward === 'modifier' && pattern.rewardPlatform === index) {
+                        const modX = platform.x + platform.width / 2 - 10;
+                        const modY = platform.y - 40;
+                        this.modifiers.push(new Modifier(modX, modY));
+                    }
+                });
+
+                // Atualizar posição e altura
+                // Espaçamento forçado: próximo pattern começa 1.5x a largura do anterior
+                x = patternStartX + (pattern.width * tileSize * 1.5);
+
+                if (this.platforms.length > 0) {
+                    lastHeight = this.platforms[this.platforms.length - 1].y;
+                }
+
+                // Gap adicional após pattern
+                const gap = rng.range(diffConfig.minGap, diffConfig.maxGap);
+                x += gap;
+            }
+        } else {
+            // GERAÇÃO SIMPLES (MELHORADA)
+            let platformCount = 0;
+            const maxPlatformsPerChunk = 15;
+
+            while (x < startX + chunkWidth && platformCount < maxPlatformsPerChunk) {
+                const plateauWidth = Math.max(
+                    diffConfig.minPlatformSize,
+                    rng.range(diffConfig.minPlatformSize, diffConfig.maxPlatformSize)
+                );
+
+                const platform = {
+                    x: x,
+                    y: lastHeight,
+                    width: plateauWidth,
+                    height: tileSize * 3,
+                    type: 'ground'
+                };
+
+                // Verificar overlap com plataforma anterior (com margem de segurança)
+                let shouldSkip = false;
+                if (this.platforms.length > 0) {
+                    const lastPlatform = this.platforms[this.platforms.length - 1];
+
                     if (checkOverlap(
                         platform.x, platform.y, platform.width, platform.height,
                         lastPlatform.x, lastPlatform.y, lastPlatform.width, lastPlatform.height,
-                        0 // Sem margem, apenas detectar overlap real
+                        48 // Margem de 1.5 tiles
                     )) {
-                        // Se colidir, ajustar altura para não sobrepor
+                        // Tentar ajustar altura
                         if (lastHeight < lastPlatform.y) {
-                            lastHeight = lastPlatform.y - tileSize * 4; // Forçar ficar acima
+                            lastHeight = lastPlatform.y - tileSize * 4;
                         } else {
-                            lastHeight = lastPlatform.y + lastPlatform.height + tileSize; // Forçar ficar abaixo
+                            lastHeight = lastPlatform.y + lastPlatform.height + tileSize;
                         }
                         platform.y = lastHeight;
-                    }
-                }
-            }
 
-            this.platforms.push(platform);
-
-            // Array para rastrear itens nesta plataforma (evitar colisões)
-            const platformItems = [];
-
-            // Adicionar inimigo primeiro (começa no chunk 1, 50% de chance)
-            let hasEnemy = false;
-            if (rng.next() > 0.5 && this.index >= 1 && plateauWidth > CONFIG.ENEMY_SIZE * 2) {
-                const enemyX = x + plateauWidth / 2 - CONFIG.ENEMY_SIZE / 2;
-                const enemyY = lastHeight - CONFIG.ENEMY_SIZE;
-                const enemy = new Enemy(enemyX, enemyY, plateauWidth, lastHeight);
-                this.enemies.push(enemy);
-                // Adicionar ao rastreador de colisões
-                platformItems.push({
-                    x: enemyX,
-                    y: enemyY,
-                    width: CONFIG.ENEMY_SIZE,
-                    height: CONFIG.ENEMY_SIZE
-                });
-                hasEnemy = true;
-            }
-
-            // Adicionar moedas na plataforma (evitando inimigo)
-            if (rng.next() > 0.5) {
-                const numCoins = rng.int(2, 5);
-                let coinsPlaced = 0;
-
-                // Tentar colocar moedas
-                for (let i = 0; i < numCoins && coinsPlaced < numCoins; i++) {
-                    // Se tem inimigo, evitar centro (usar laterais)
-                    let coinX;
-                    if (hasEnemy) {
-                        // Dividir plataforma em zonas laterais
-                        const zone = i % 2; // Alterna entre esquerda e direita
-                        if (zone === 0) {
-                            // Zona esquerda (0-40%)
-                            coinX = x + rng.range(CONFIG.COIN_SIZE, plateauWidth * 0.4);
-                        } else {
-                            // Zona direita (60-100%)
-                            coinX = x + rng.range(plateauWidth * 0.6, plateauWidth - CONFIG.COIN_SIZE);
+                        // Verificar novamente se ainda há overlap após ajuste
+                        if (checkOverlap(
+                            platform.x, platform.y, platform.width, platform.height,
+                            lastPlatform.x, lastPlatform.y, lastPlatform.width, lastPlatform.height,
+                            48
+                        )) {
+                            // Se ainda sobrepõe, pular esta posição
+                            x += tileSize * 3;
+                            shouldSkip = true;
                         }
-                    } else {
-                        // Sem inimigo, distribuir uniformemente
-                        coinX = x + (i + 1) * (plateauWidth / (numCoins + 1));
-                    }
-
-                    const coinY = lastHeight - tileSize * 2;
-
-                    // Verificar se não colide com outros itens
-                    if (canPlaceItem(coinX, coinY, CONFIG.COIN_SIZE, CONFIG.COIN_SIZE, platformItems)) {
-                        const coin = new Coin(coinX, coinY);
-                        this.coins.push(coin);
-                        platformItems.push({
-                            x: coinX,
-                            y: coinY,
-                            width: CONFIG.COIN_SIZE,
-                            height: CONFIG.COIN_SIZE
-                        });
-                        coinsPlaced++;
                     }
                 }
+
+                // Só adicionar se não deve pular
+                if (!shouldSkip) {
+                    this.platforms.push(platform);
+                    platformCount++;
+
+                // Array para rastrear itens nesta plataforma (evitar colisões)
+                const platformItems = [];
+
+                // Adicionar inimigo com chance baseada em dificuldade
+                let hasEnemy = false;
+                if (rng.next() < diffConfig.enemyChance && this.index >= 1 && plateauWidth > CONFIG.ENEMY_SIZE * 2) {
+                    const enemyX = x + plateauWidth / 2 - CONFIG.ENEMY_SIZE / 2;
+                    const enemyY = lastHeight - CONFIG.ENEMY_SIZE;
+                    const enemy = new Enemy(enemyX, enemyY, plateauWidth, lastHeight);
+
+                    // Aplicar multiplicador de velocidade do bioma (se existir)
+                    if (this.biome.enemySpeedMultiplier) {
+                        enemy.speed *= this.biome.enemySpeedMultiplier;
+                    }
+
+                    this.enemies.push(enemy);
+                    platformItems.push({
+                        x: enemyX,
+                        y: enemyY,
+                        width: CONFIG.ENEMY_SIZE,
+                        height: CONFIG.ENEMY_SIZE
+                    });
+                    hasEnemy = true;
+                }
+
+                // Adicionar moedas com chance baseada em dificuldade
+                if (rng.next() < diffConfig.coinChance) {
+                    const numCoins = rng.int(2, 5);
+                    let coinsPlaced = 0;
+
+                    for (let i = 0; i < numCoins && coinsPlaced < numCoins; i++) {
+                        let coinX;
+                        if (hasEnemy) {
+                            const zone = i % 2;
+                            if (zone === 0) {
+                                coinX = x + rng.range(CONFIG.COIN_SIZE, plateauWidth * 0.4);
+                            } else {
+                                coinX = x + rng.range(plateauWidth * 0.6, plateauWidth - CONFIG.COIN_SIZE);
+                            }
+                        } else {
+                            coinX = x + (i + 1) * (plateauWidth / (numCoins + 1));
+                        }
+
+                        const coinY = lastHeight - tileSize * 2;
+
+                        if (canPlaceItem(coinX, coinY, CONFIG.COIN_SIZE, CONFIG.COIN_SIZE, platformItems)) {
+                            const coin = new Coin(coinX, coinY);
+                            this.coins.push(coin);
+                            platformItems.push({
+                                x: coinX,
+                                y: coinY,
+                                width: CONFIG.COIN_SIZE,
+                                height: CONFIG.COIN_SIZE
+                            });
+                            coinsPlaced++;
+                        }
+                    }
+                }
+
+                    x += plateauWidth;
+
+                    // Gap entre plataformas (baseado em config de dificuldade)
+                    const gap = rng.range(diffConfig.minGap, diffConfig.maxGap);
+                    x += gap;
+
+                    // Próxima altura (com variação aumentada)
+                    const heightVariation = diffConfig.heightVariation + (this.biome.heightBias || 0) * tileSize;
+                    lastHeight += rng.range(-heightVariation, heightVariation);
+
+                    // Limites de altura
+                    lastHeight = Math.max(game.height / 3, Math.min(game.height - 100, lastHeight));
+                }
             }
-
-            x += plateauWidth;
-
-            // Gap entre plataformas
-            const gap = rng.range(
-                tileSize * (2 + difficulty * 0.5),
-                tileSize * (4 + difficulty)
-            );
-            x += gap;
-
-            // Próxima altura (limitada para ser alcançável)
-            const maxHeightDiff = tileSize * 2; // Diferença máxima de altura
-            lastHeight += rng.range(-maxHeightDiff, maxHeightDiff);
-
-            // Limites de altura
-            lastHeight = Math.max(game.height / 3, Math.min(game.height - 100, lastHeight));
         }
 
-        // Adicionar algumas plataformas flutuantes (sem sobreposição)
-        if (rng.next() > 0.6) {
-            const numFloating = rng.int(1, 3);
+        // Adicionar plataformas flutuantes (com verificação de alcançabilidade)
+        if (rng.next() < diffConfig.floatingChance) {
+            const numFloating = diffConfig.floatingCount;
             let floatingAttempts = 0;
             let floatingPlaced = 0;
 
-            while (floatingPlaced < numFloating && floatingAttempts < numFloating * 5) {
+            while (floatingPlaced < numFloating && floatingAttempts < numFloating * 10) {
                 const floatingX = startX + rng.range(tileSize * 5, chunkWidth - tileSize * 5);
                 const floatingY = game.height * 0.3 + rng.range(0, game.height * 0.3);
-                const floatingWidth = tileSize * rng.int(3, 6);
+                const floatingWidth = tileSize * rng.int(2, 5);
 
                 const newFloating = {
                     x: floatingX,
@@ -221,32 +365,58 @@ export class Chunk {
                     type: 'floating'
                 };
 
-                // Verificar se não colide com outras plataformas
+                // Verificar se não colide com outras plataformas (margem aumentada)
                 let collides = false;
                 for (let platform of this.platforms) {
-                    // Adicionar margem de segurança de 20px
                     if (checkOverlap(
                         newFloating.x, newFloating.y, newFloating.width, newFloating.height,
                         platform.x, platform.y, platform.width, platform.height,
-                        20
+                        48 // Margem de 1.5 tiles
                     )) {
                         collides = true;
                         break;
                     }
                 }
 
-                if (!collides) {
+                // Verificar se é alcançável de ALGUMA plataforma
+                let reachable = false;
+                if (!collides && this.platforms.length > 0) {
+                    // Verificar as últimas 5 plataformas (mais eficiente)
+                    const platformsToCheck = this.platforms.slice(-5);
+
+                    for (let platform of platformsToCheck) {
+                        if (canReachPlatform(platform, newFloating)) {
+                            reachable = true;
+                            break;
+                        }
+                    }
+
+                    // Se não alcançável das últimas, tentar alcançável PARA alguma plataforma futura
+                    if (!reachable) {
+                        for (let platform of platformsToCheck) {
+                            if (canReachPlatform(newFloating, platform)) {
+                                reachable = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!collides && reachable) {
                     this.platforms.push(newFloating);
                     floatingPlaced++;
 
-                    // Adicionar apenas 1 item por plataforma flutuante
-                    // Escolher aleatoriamente: moeda OU nada (50% de chance)
-                    if (rng.next() > 0.5) {
+                    // 60% de chance de ter moeda/modificador
+                    if (rng.next() < 0.6) {
                         const itemX = floatingX + floatingWidth / 2 - CONFIG.COIN_SIZE / 2;
                         const itemY = floatingY - tileSize * 1.5;
 
-                        // Sempre moeda em plataforma flutuante
-                        this.coins.push(new Coin(itemX, itemY));
+                        // 20% chance de modificador, senão moeda
+                        if (rng.next() < 0.2 && this.modifiers.length < 2) {
+                            this.modifiers.push(new Modifier(itemX, itemY));
+                        } else {
+                            this.coins.push(new Coin(itemX, itemY));
+                        }
                     }
                 }
 
@@ -254,32 +424,30 @@ export class Chunk {
             }
         }
 
-        // Adicionar decorações nas plataformas
+        // Adicionar decorações nas plataformas baseadas no bioma
         this.platforms.forEach(platform => {
-            // Apenas adicionar decorações em plataformas ground
-            if (platform.type === 'ground') {
-                const numDecorations = rng.int(2, 5);
+            if (platform.type === 'ground' && this.biome.decorations && this.biome.decorations.length > 0) {
+                const numDecorations = rng.int(1, 4);
                 for (let i = 0; i < numDecorations; i++) {
-                    const decorationType = rng.next() > 0.5 ? 'flower' : (rng.next() > 0.5 ? 'rock' : 'bush');
-                    const decorX = platform.x + rng.range(10, platform.width - 10);
+                    // Escolher tipo de decoração do bioma
+                    const decorationType = rng.choice(this.biome.decorations);
+                    const decorX = platform.x + rng.range(10, Math.max(10, platform.width - 10));
                     const decorY = platform.y;
 
                     this.decorations.push({
                         x: decorX,
                         y: decorY,
                         type: decorationType,
-                        variant: rng.int(0, 2) // Variação visual (0, 1, ou 2)
+                        variant: rng.int(0, 2)
                     });
                 }
             }
         });
 
-        // Adicionar modificadores (100% de chance - um por chunk)
-        if (this.index >= 0) {
-            // Criar lista de todos os itens já colocados (para verificar colisões)
+        // Adicionar modificador adicional se não veio de pattern
+        if (this.index >= 1 && this.modifiers.length === 0) {
             const allItems = [];
 
-            // Adicionar todas as moedas
             this.coins.forEach(coin => {
                 allItems.push({
                     x: coin.x,
@@ -289,7 +457,6 @@ export class Chunk {
                 });
             });
 
-            // Adicionar todos os inimigos
             this.enemies.forEach(enemy => {
                 allItems.push({
                     x: enemy.x,
@@ -299,20 +466,16 @@ export class Chunk {
                 });
             });
 
-            // Tentar encontrar uma plataforma válida (sem inimigos)
             if (this.platforms.length > 0) {
                 let attempts = 0;
                 let placed = false;
 
-                while (attempts < 5 && !placed) {
+                while (attempts < 10 && !placed) {
                     const platform = this.platforms[rng.int(0, this.platforms.length - 1)];
-
                     const modifierX = platform.x + platform.width / 2 - 10;
                     const modifierY = platform.y - 40;
 
-                    // Verificar se não colide com outros itens
                     if (canPlaceItem(modifierX, modifierY, 20, 20, allItems)) {
-                        // Modificador sorteia seu próprio tipo internamente
                         this.modifiers.push(new Modifier(modifierX, modifierY));
                         placed = true;
                     }
@@ -329,10 +492,8 @@ export class Chunk {
             const screenY = platform.y - game.camera.y;
 
             if (platform.type === 'floating') {
-                // Plataformas flutuantes com efeito cristal/mágico
                 this.drawFloatingPlatform(ctx, screenX, screenY, platform.width, platform.height);
             } else {
-                // Plataformas ground com textura de terra/grama
                 this.drawGroundPlatform(ctx, screenX, screenY, platform.width, platform.height);
             }
         });
@@ -348,34 +509,71 @@ export class Chunk {
                 this.drawRock(ctx, screenX, screenY, decor.variant);
             } else if (decor.type === 'bush') {
                 this.drawBush(ctx, screenX, screenY, decor.variant);
+            } else if (decor.type === 'stalactite') {
+                this.drawStalactite(ctx, screenX, screenY, decor.variant);
+            } else if (decor.type === 'crystal') {
+                this.drawCrystal(ctx, screenX, screenY, decor.variant);
+            } else if (decor.type === 'mushroom') {
+                this.drawMushroom(ctx, screenX, screenY, decor.variant);
+            } else if (decor.type === 'snowflake') {
+                this.drawSnowflake(ctx, screenX, screenY, decor.variant);
+            } else if (decor.type === 'icicle') {
+                this.drawIcicle(ctx, screenX, screenY, decor.variant);
+            } else if (decor.type === 'cloud') {
+                this.drawCloud(ctx, screenX, screenY, decor.variant);
+            } else if (decor.type === 'snowpile') {
+                this.drawSnowpile(ctx, screenX, screenY, decor.variant);
+            } else if (decor.type === 'bird') {
+                this.drawBird(ctx, screenX, screenY, decor.variant);
+            } else if (decor.type === 'star') {
+                this.drawStar(ctx, screenX, screenY, decor.variant);
             }
         });
     }
 
     drawGroundPlatform(ctx, x, y, width, height) {
-        const tileSize = 16; // Tamanho dos "blocos" da textura
+        const tileSize = 16;
+        const colors = this.biome.colors;
 
-        // Fundo base com gradiente
+        // Fundo base com gradiente (usar cores do bioma)
         const gradient = ctx.createLinearGradient(x, y, x, y + height);
-        gradient.addColorStop(0, '#8b6914');
-        gradient.addColorStop(0.5, '#654321');
-        gradient.addColorStop(1, '#3d2812');
+
+        if (colors.ground && colors.groundDark) {
+            gradient.addColorStop(0, colors.ground);
+            gradient.addColorStop(0.5, colors.ground);
+            gradient.addColorStop(1, colors.groundDark);
+        } else {
+            // Fallback para cores padrão
+            gradient.addColorStop(0, '#8b6914');
+            gradient.addColorStop(0.5, '#654321');
+            gradient.addColorStop(1, '#3d2812');
+        }
+
         ctx.fillStyle = gradient;
         ctx.fillRect(x, y, width, height);
 
-        // Camada de grama no topo
+        // Definir altura da camada de grama/topo
         const grassHeight = 8;
-        const grassGradient = ctx.createLinearGradient(x, y, x, y + grassHeight);
-        grassGradient.addColorStop(0, '#52d681');
-        grassGradient.addColorStop(1, '#2ecc71');
-        ctx.fillStyle = grassGradient;
-        ctx.fillRect(x, y, width, grassHeight);
 
-        // Detalhes de grama (tufos)
-        ctx.fillStyle = '#52d681';
-        for (let i = 0; i < width; i += 8) {
-            const tuftHeight = 3 + (i % 3);
-            ctx.fillRect(x + i, y - tuftHeight, 3, tuftHeight);
+        // Camada de grama/topo (se bioma tiver)
+        if (colors.grass || colors.cloud) {
+            const topColor = colors.grass || colors.cloud;
+            const topDark = colors.grassDark || colors.cloudDark;
+
+            const grassGradient = ctx.createLinearGradient(x, y, x, y + grassHeight);
+            grassGradient.addColorStop(0, topColor);
+            grassGradient.addColorStop(1, topDark || topColor);
+            ctx.fillStyle = grassGradient;
+            ctx.fillRect(x, y, width, grassHeight);
+
+            // Detalhes de grama/tufos (apenas em Plains)
+            if (this.biome.name === 'Plains') {
+                ctx.fillStyle = topColor;
+                for (let i = 0; i < width; i += 8) {
+                    const tuftHeight = 3 + (i % 3);
+                    ctx.fillRect(x + i, y - tuftHeight, 3, tuftHeight);
+                }
+            }
         }
 
         // Textura de blocos na lateral (padrão de tijolos)
@@ -561,6 +759,245 @@ export class Chunk {
         ctx.fillStyle = colors[2];
         ctx.beginPath();
         ctx.arc(x, y - 8, size/2.2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Decorações do bioma CAVE
+    drawStalactite(ctx, x, y, variant) {
+        const heights = [12, 16, 10];
+        const height = heights[variant];
+
+        // Sombra
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.beginPath();
+        ctx.moveTo(x - 4, y);
+        ctx.lineTo(x + 4, y);
+        ctx.lineTo(x, y + height);
+        ctx.closePath();
+        ctx.fill();
+
+        // Estalactite com gradiente
+        const gradient = ctx.createLinearGradient(x, y, x, y + height);
+        gradient.addColorStop(0, '#7f8c8d');
+        gradient.addColorStop(1, '#34495e');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.moveTo(x - 3, y);
+        ctx.lineTo(x + 3, y);
+        ctx.lineTo(x, y + height);
+        ctx.closePath();
+        ctx.fill();
+
+        // Highlight
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.beginPath();
+        ctx.moveTo(x - 2, y + 2);
+        ctx.lineTo(x, y + 6);
+        ctx.lineTo(x - 1, y + 2);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    drawCrystal(ctx, x, y, variant) {
+        const colors = ['#8b5cf6', '#a78bfa', '#c4b5fd'];
+        const sizes = [8, 10, 6];
+        const size = sizes[variant];
+
+        // Brilho ao redor
+        ctx.fillStyle = `${colors[variant]}40`;
+        ctx.beginPath();
+        ctx.arc(x, y - size/2, size * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cristal
+        ctx.fillStyle = colors[variant];
+        ctx.beginPath();
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x + size/2, y);
+        ctx.lineTo(x, y - size/4);
+        ctx.lineTo(x - size/2, y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Highlight
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.beginPath();
+        ctx.moveTo(x - 1, y - size * 0.7);
+        ctx.lineTo(x + 1, y - size * 0.7);
+        ctx.lineTo(x, y - size * 0.5);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    drawMushroom(ctx, x, y, variant) {
+        const colors = ['#e74c3c', '#e67e22', '#9b59b6'];
+        const sizes = [8, 10, 7];
+        const size = sizes[variant];
+
+        // Caule
+        ctx.fillStyle = '#ecf0f1';
+        ctx.fillRect(x - 2, y - size, 4, size);
+
+        // Chapéu
+        ctx.fillStyle = colors[variant];
+        ctx.beginPath();
+        ctx.ellipse(x, y - size, size/2, size/3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pontos brancos no chapéu
+        ctx.fillStyle = '#ecf0f1';
+        for (let i = 0; i < 3; i++) {
+            const px = x + (i - 1) * 3;
+            const py = y - size - 1;
+            ctx.beginPath();
+            ctx.arc(px, py, 1, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // Decorações do bioma ICE
+    drawSnowflake(ctx, x, y, variant) {
+        const sizes = [6, 8, 5];
+        const size = sizes[variant];
+
+        ctx.strokeStyle = '#ecf0f1';
+        ctx.lineWidth = 1.5;
+
+        // 6 raios do floco
+        for (let i = 0; i < 6; i++) {
+            const angle = (i * Math.PI / 3);
+            ctx.beginPath();
+            ctx.moveTo(x, y - size);
+            ctx.lineTo(x + Math.cos(angle) * size, y - size + Math.sin(angle) * size);
+            ctx.stroke();
+        }
+
+        // Centro brilhante
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(x, y - size, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawIcicle(ctx, x, y, variant) {
+        const heights = [10, 14, 8];
+        const height = heights[variant];
+
+        // Gelo com gradiente
+        const gradient = ctx.createLinearGradient(x, y, x, y + height);
+        gradient.addColorStop(0, '#ecf0f1');
+        gradient.addColorStop(1, '#3498db');
+        ctx.fillStyle = gradient;
+
+        ctx.beginPath();
+        ctx.moveTo(x - 3, y);
+        ctx.lineTo(x + 3, y);
+        ctx.lineTo(x, y + height);
+        ctx.closePath();
+        ctx.fill();
+
+        // Brilho
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.beginPath();
+        ctx.moveTo(x - 2, y + 2);
+        ctx.lineTo(x, y + 8);
+        ctx.lineTo(x - 1, y + 2);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // Decorações do bioma SKY
+    drawCloud(ctx, x, y, variant) {
+        const sizes = [12, 16, 10];
+        const size = sizes[variant];
+
+        ctx.fillStyle = 'rgba(236, 240, 241, 0.8)';
+
+        // 3 círculos formando nuvem
+        ctx.beginPath();
+        ctx.arc(x - size/3, y - 5, size/2.5, 0, Math.PI * 2);
+        ctx.arc(x, y - 7, size/2, 0, Math.PI * 2);
+        ctx.arc(x + size/3, y - 5, size/2.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawSnowpile(ctx, x, y, variant) {
+        const sizes = [10, 14, 8];
+        const size = sizes[variant];
+
+        // Pilha de neve (semi-círculo)
+        ctx.fillStyle = '#ecf0f1';
+        ctx.beginPath();
+        ctx.arc(x, y, size/2, 0, Math.PI, true);
+        ctx.fill();
+
+        // Brilho no topo
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.beginPath();
+        ctx.arc(x - 2, y - 2, size/4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawBird(ctx, x, y, variant) {
+        const time = Date.now() / 500;
+        const wingFlap = Math.sin(time + variant) * 2;
+
+        ctx.strokeStyle = '#34495e';
+        ctx.lineWidth = 2;
+
+        // Asa esquerda
+        ctx.beginPath();
+        ctx.moveTo(x, y - 6);
+        ctx.quadraticCurveTo(x - 4, y - 8 + wingFlap, x - 6, y - 6);
+        ctx.stroke();
+
+        // Asa direita
+        ctx.beginPath();
+        ctx.moveTo(x, y - 6);
+        ctx.quadraticCurveTo(x + 4, y - 8 + wingFlap, x + 6, y - 6);
+        ctx.stroke();
+
+        // Corpo (ponto)
+        ctx.fillStyle = '#34495e';
+        ctx.beginPath();
+        ctx.arc(x, y - 6, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawStar(ctx, x, y, variant) {
+        const sizes = [4, 6, 5];
+        const size = sizes[variant];
+        const time = Date.now() / 1000;
+        const twinkle = 0.5 + Math.sin(time * 3 + variant) * 0.5;
+
+        ctx.fillStyle = `rgba(255, 215, 0, ${twinkle})`;
+
+        // Estrela de 5 pontas
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+            const angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+            const px = x + Math.cos(angle) * size;
+            const py = y - 8 + Math.sin(angle) * size;
+
+            if (i === 0) {
+                ctx.moveTo(px, py);
+            } else {
+                ctx.lineTo(px, py);
+            }
+
+            // Ponto interno (para formar estrela)
+            const innerAngle = angle + Math.PI / 5;
+            const innerPx = x + Math.cos(innerAngle) * (size / 2);
+            const innerPy = y - 8 + Math.sin(innerAngle) * (size / 2);
+            ctx.lineTo(innerPx, innerPy);
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        // Brilho central
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(x, y - 8, 1, 0, Math.PI * 2);
         ctx.fill();
     }
 }
