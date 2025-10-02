@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procedural Platformer</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="menu">
+        <h1>🌟 PROCEDURAL PLATFORMER 🌟</h1>
+        <button id="start1PBtn">🎮 1 Jogador</button>
+        <button id="start2PBtn">👥 2 Jogadores</button>
+        <button id="instructionsBtn">📖 Instruções</button>
+        <div id="instructions" class="hidden">
+            <p><strong>Controles 1 Jogador:</strong></p>
+            <p>A D / ← → : Mover</p>
+            <p>W / ↑ / ESPAÇO : Pular</p>
+            <p><strong>Controles 2 Jogadores:</strong></p>
+            <p>P1 (Azul): A D W</p>
+            <p>P2 (Vermelho): ← → ↑</p>
+            <p>ESPAÇO: Ambos pulam juntos!</p>
+            <p>P : Pausar</p>
+            <p><strong>Objetivo:</strong></p>
+            <p>Colete moedas e chegue o mais longe possível!</p>
+            <p>Derrote inimigos pulando sobre eles.</p>
+            <p>Evite contato lateral com inimigos!</p>
+            <p><strong>Power-ups:</strong></p>
+            <p>🔵 Azul: Pulo mais alto (10s)</p>
+            <p>🟢 Verde: Velocidade aumentada (10s)</p>
+        </div>
+    </div>
+
+    <div id="hud" class="hidden">
+        <div id="p1-hud">P1 🏆: <span id="p1-score">0</span> | 💖: <span id="p1-lives">3</span></div>
+        <div id="p2-hud" style="display:none;">P2 🏆: <span id="p2-score">0</span> | 💖: <span id="p2-lives">3</span></div>
+        <div>📏 Distância: <span id="distance">0</span>m</div>
+    </div>
+
+    <canvas id="gameCanvas" width="1280" height="720"></canvas>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
