@@ -552,11 +552,16 @@ export class Player {
         ctx.fillRect(screenX + 6, screenY + 8, 4, 4);
         ctx.fillRect(screenX + 14, screenY + 8, 4, 4);
 
-        // Pupilas (olhando na direção do movimento)
+        // Pupilas (olhando na direção do movimento ou centro quando parado)
         ctx.fillStyle = '#000000';
-        const pupilOffsetX = this.facingRight ? 1 : -1;
-        ctx.fillRect(screenX + 8 + pupilOffsetX, screenY + 9, 2, 2);
-        ctx.fillRect(screenX + 16 + pupilOffsetX, screenY + 9, 2, 2);
+        let pupilOffsetX = 0; // Centro quando parado
+        if (Math.abs(this.vx) > 0.5) {
+            // Se está se movendo, olhar na direção do movimento
+            pupilOffsetX = this.facingRight ? 1 : -1;
+        }
+        // Pupilas centralizadas: olho começa em 6 (largura 4), centro é 6+1=7
+        ctx.fillRect(screenX + 7 + pupilOffsetX, screenY + 9, 2, 2);
+        ctx.fillRect(screenX + 15 + pupilOffsetX, screenY + 9, 2, 2);
 
         // Boca - oval quando pulando/caindo
         ctx.fillStyle = '#000000';
