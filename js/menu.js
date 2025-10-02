@@ -49,42 +49,19 @@ export function startGame(twoPlayerMode = false) {
         lastDistance: 0
     };
 
-    // Criar jogador(es)
-    game.player = new Player(100, 100, 1);
+    // Criar jogador(es) - começar no ar e cair sobre a plataforma inicial do chunk 0
+    const spawnY = game.height - 400; // Bem acima da plataforma para cair
+
+    game.player = new Player(100, spawnY, 1);
 
     if (twoPlayerMode) {
-        game.player2 = new Player(150, 100, 2);
+        game.player2 = new Player(200, spawnY, 2);
         document.getElementById('p2-hud').style.display = 'block';
         console.log('Modo 2 jogadores ativado!');
     } else {
         game.player2 = null;
         document.getElementById('p2-hud').style.display = 'none';
     }
-
-    // Criar plataforma inicial sob os jogadores (chunk -1)
-    const startChunk = {
-        index: -1,
-        x: -CONFIG.CHUNK_WIDTH * CONFIG.TILE_SIZE,
-        platforms: [{
-            x: 0,
-            y: game.height - 100,
-            width: 300,
-            height: CONFIG.TILE_SIZE * 3,
-            type: 'ground'
-        }],
-        coins: [],
-        enemies: [],
-        powerups: [],
-        draw: function(ctx) {
-            this.platforms.forEach(platform => {
-                const screenX = platform.x - game.camera.x;
-                const screenY = platform.y - game.camera.y;
-                ctx.fillStyle = '#2ecc71';
-                ctx.fillRect(screenX, screenY, platform.width, platform.height);
-            });
-        }
-    };
-    game.chunks.set(-1, startChunk);
 
     // Atualizar HUD
     document.getElementById('p1-score').textContent = game.player.score;

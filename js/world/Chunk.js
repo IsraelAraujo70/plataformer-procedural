@@ -66,6 +66,23 @@ export class Chunk {
         let lastHeight = game.height - 150 - rng.range(-50, 50);
         let x = startX;
 
+        // CHUNK 0: Criar plataforma inicial garantida para spawn dos jogadores
+        if (this.index === 0) {
+            const spawnPlatform = {
+                x: 0,
+                y: game.height - 150,
+                width: 400,
+                height: tileSize * 3,
+                type: 'ground'
+            };
+            this.platforms.push(spawnPlatform);
+
+            // Adicionar gap após a plataforma inicial antes de gerar próximas
+            const gap = rng.range(tileSize * 3, tileSize * 5);
+            x = spawnPlatform.width + gap; // Próxima plataforma começa após gap
+            lastHeight = spawnPlatform.y + rng.range(-tileSize * 2, tileSize * 2); // Variar altura
+        }
+
         while (x < startX + chunkWidth) {
             // Tamanho do próximo platô (progressivamente menor)
             const plateauWidth = Math.max(

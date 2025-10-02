@@ -40,6 +40,11 @@ export class Player {
     }
 
     update() {
+        // Jogador morto não pode se mover
+        if (this.lives <= 0) {
+            return;
+        }
+
         // Atualizar power-ups
         if (this.jumpBoostTime > 0) {
             this.jumpBoostTime--;
