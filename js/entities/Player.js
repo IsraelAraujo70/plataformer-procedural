@@ -31,6 +31,12 @@ export class Player {
         // Stats individuais por jogador
         this.lives = 3;
         this.score = 0;
+
+        // Animação de caminhada
+        this.animFrame = 0;
+        this.animCounter = 0;
+        this.animSpeed = 4; // Frames de jogo entre cada frame de animação (mais rápido = mais fluido)
+        this.facingRight = true;
     }
 
     update() {
@@ -80,10 +86,25 @@ export class Player {
 
         if (game.keys[this.controls.left]) {
             this.vx = -moveSpeed;
+            this.facingRight = false;
         } else if (game.keys[this.controls.right]) {
             this.vx = moveSpeed;
+            this.facingRight = true;
         } else {
             this.vx *= CONFIG.FRICTION;
+        }
+
+        // Atualizar animação de caminhada (quando está se movendo)
+        if (Math.abs(this.vx) > 0.5) {
+            const currentAnimSpeed = this.speedBoost > 1 ? Math.floor(this.animSpeed / 1.5) : this.animSpeed;
+            this.animCounter++;
+            if (this.animCounter >= currentAnimSpeed) {
+                this.animFrame = (this.animFrame + 1) % 4;
+                this.animCounter = 0;
+            }
+        } else {
+            this.animFrame = 0;
+            this.animCounter = 0;
         }
 
         // Pulo individual (W ou Seta para cima)
@@ -280,6 +301,9 @@ export class Player {
             ctx.shadowBlur = 0;
         }
 
+        // Desenhar pernas animadas (antes do corpo para ficarem atrás)
+        this.drawLegs(ctx, screenX, screenY);
+
         // Corpo do jogador (cor baseada no número do jogador)
         ctx.fillStyle = this.color;
         ctx.fillRect(screenX, screenY, this.width, this.height);
@@ -289,10 +313,11 @@ export class Player {
         ctx.fillRect(screenX + 6, screenY + 8, 4, 4);
         ctx.fillRect(screenX + 14, screenY + 8, 4, 4);
 
-        // Pupilas
+        // Pupilas (olhando na direção do movimento)
         ctx.fillStyle = '#000000';
-        ctx.fillRect(screenX + 8, screenY + 9, 2, 2);
-        ctx.fillRect(screenX + 16, screenY + 9, 2, 2);
+        const pupilOffsetX = this.facingRight ? 1 : -1;
+        ctx.fillRect(screenX + 8 + pupilOffsetX, screenY + 9, 2, 2);
+        ctx.fillRect(screenX + 16 + pupilOffsetX, screenY + 9, 2, 2);
 
         // Boca - oval quando pulando/caindo
         ctx.fillStyle = '#000000';
@@ -311,5 +336,49 @@ export class Player {
             // Boca normal (linha)
             ctx.fillRect(screenX + 8, screenY + 18, 8, 2);
         }
+    }
+
+    drawLegs(ctx, screenX, screenY) {
+        ctx.fillStyle = this.color;
+
+        // Parâmetros das pernas
+        const legWidth = 6;
+        const bodyBottom = screenY + this.height;
+
+        // Se estiver no ar, pernas juntas
+        if (!this.grounded) {
+            ctx.fillRect(screenX + 5, bodyBottom, legWidth, 8);
+            ctx.fillRect(screenX + 13, bodyBottom, legWidth, 8);
+            return;
+        }
+
+        // Animação de caminhada - 4 frames
+        let leftLegY = bodyBottom;
+        let rightLegY = bodyBottom;
+        let leftLegHeight = 8;
+        let rightLegHeight = 8;
+
+        switch(this.animFrame) {
+            case 0: // Neutro
+                leftLegHeight = 8;
+                rightLegHeight = 8;
+                break;
+            case 1: // Perna esquerda levantada, direita abaixada
+                leftLegHeight = 6;
+                rightLegHeight = 10;
+                break;
+            case 2: // Neutro
+                leftLegHeight = 8;
+                rightLegHeight = 8;
+                break;
+            case 3: // Perna direita levantada, esquerda abaixada
+                leftLegHeight = 10;
+                rightLegHeight = 6;
+                break;
+        }
+
+        // Desenhar pernas
+        ctx.fillRect(screenX + 5, leftLegY, legWidth, leftLegHeight);
+        ctx.fillRect(screenX + 13, rightLegY, legWidth, rightLegHeight);
     }
 }
