@@ -76,6 +76,11 @@ export class Player {
         this.dying = false;
         this.deathAnimTime = 0;
         this.deathAnimDuration = 60; // 1 segundo a 60fps
+
+        // Animação squash & stretch (efeito cartoon)
+        this.squashStretch = 1.0; // 1.0 = normal, > 1 = esticado, < 1 = comprimido
+        this.wasGroundedLastFrame = false;
+        this.justJumped = false;
     }
 
     update() {
@@ -270,6 +275,7 @@ export class Player {
             this.vy = jumpStrength;
             this.jumping = true;
             this.grounded = false;
+            this.justJumped = true; // Trigger animação de stretch
         }
 
         // Pulo conjunto (ESPAÇO faz ambos pularem)
@@ -280,6 +286,7 @@ export class Player {
             this.vy = jumpStrength;
             this.jumping = true;
             this.grounded = false;
+            this.justJumped = true; // Trigger animação de stretch
         }
 
         // Double Jump (pulo no ar se modificador ativo)
@@ -289,6 +296,7 @@ export class Player {
             this.vy = jumpStrength;
             this.hasDoubleJump = false; // Consumir o double jump
             this.jumping = true;
+            this.justJumped = true; // Trigger animação de stretch
         }
 
         if (game.keys[' '] && !this.grounded && this.doubleJumpEnabled && this.hasDoubleJump && !this.jumping) {
@@ -297,6 +305,7 @@ export class Player {
             this.vy = jumpStrength;
             this.hasDoubleJump = false;
             this.jumping = true;
+            this.justJumped = true; // Trigger animação de stretch
         }
 
         if (!game.keys[this.controls.up] && !game.keys[' ']) {
@@ -332,6 +341,33 @@ export class Player {
         if (this.bouncy && this.grounded && !wasGrounded && previousVY > 2) {
             this.vy = -previousVY * 0.5; // Bounce com 50% da velocidade de queda
         }
+
+        // ============================================
+        // SQUASH & STRETCH ANIMATION
+        // ============================================
+
+        // Detectar pouso (chegou no chão agora)
+        if (this.grounded && !wasGrounded && previousVY > 3) {
+            this.squashStretch = 0.6; // Comprimir ao pousar
+        }
+
+        // Esticar ao pular
+        if (this.justJumped) {
+            this.squashStretch = 1.4; // Esticar ao iniciar pulo
+            this.justJumped = false;
+        }
+
+        // Retornar suavemente ao normal
+        if (this.squashStretch < 1.0) {
+            this.squashStretch += 0.08; // Recuperação rápida da compressão
+            if (this.squashStretch > 1.0) this.squashStretch = 1.0;
+        } else if (this.squashStretch > 1.0) {
+            this.squashStretch -= 0.06; // Recuperação do esticamento
+            if (this.squashStretch < 1.0) this.squashStretch = 1.0;
+        }
+
+        // Atualizar estado do frame anterior
+        this.wasGroundedLastFrame = this.grounded;
 
         // Salvar última posição segura quando está no chão
         if (this.grounded) {
@@ -617,10 +653,31 @@ export class Player {
         const screenX = this.x - game.camera.x;
         const screenY = this.y - game.camera.y;
 
+        // Salvar contexto para aplicar transformações
+        ctx.save();
+
+        // ============================================
+        // APLICAR SQUASH & STRETCH
+        // ============================================
+        if (!this.dying) {
+            // Centro de transformação: base do personagem (pés)
+            const centerX = screenX + this.width / 2;
+            const centerY = screenY + this.height; // Base (pés)
+
+            // Mover origem para base do personagem
+            ctx.translate(centerX, centerY);
+
+            // Aplicar escala vertical e compensar horizontalmente
+            // (Princípio de conservação de volume da animação cartoon)
+            const horizontalSquash = 1.0 + (1.0 - this.squashStretch) * 0.5;
+            ctx.scale(horizontalSquash, this.squashStretch);
+
+            // Retornar origem
+            ctx.translate(-centerX, -centerY);
+        }
+
         // Aplicar transparência e rotação durante animação de morte
         if (this.dying) {
-            ctx.save();
-
             // Calcular opacidade (fade out)
             const opacity = 1 - (this.deathAnimTime / this.deathAnimDuration);
             ctx.globalAlpha = opacity;
@@ -810,10 +867,8 @@ export class Player {
             ctx.fillRect(screenX + 8, screenY + 18, 8, 2);
         }
 
-        // Restaurar contexto se estava na animação de morte
-        if (this.dying) {
-            ctx.restore();
-        }
+        // Restaurar contexto (sempre restaurar ao final)
+        ctx.restore();
     }
 
     drawLegs(ctx, screenX, screenY) {
