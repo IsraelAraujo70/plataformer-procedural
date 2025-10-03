@@ -582,9 +582,6 @@ export class Player {
             if (window.createParticles) {
                 window.createParticles(this.x + this.width / 2, this.y, '#8b4513', 15);
             }
-            if (window.createFloatingText) {
-                window.createFloatingText('LOST THE HAT!', this.x + this.width / 2, this.y - 20, '#ff6b6b');
-            }
 
             // Teleportar para última posição segura
             this.x = this.lastSafeX;
@@ -644,9 +641,6 @@ export class Player {
             // Efeitos visuais
             if (window.createParticles) {
                 window.createParticles(this.x + this.width / 2, this.y, '#8b4513', 15);
-            }
-            if (window.createFloatingText) {
-                window.createFloatingText('LOST THE HAT!', this.x + this.width / 2, this.y - 20, '#ff6b6b');
             }
 
             // Invulnerabilidade temporária
@@ -746,19 +740,27 @@ export class Player {
             ctx.translate(-centerX, -centerY);
         }
 
-        // Auras de power-ups
+        // Auras de power-ups (circulares para combinar com o formato blob)
+        const centerX = screenX + this.width / 2;
+        const centerY = screenY + this.height / 2;
+        const auraRadius = Math.max(this.width, this.height) / 2 + 4;
+
         if (this.jumpBoostTime > 0) {
             ctx.fillStyle = 'rgba(0, 217, 255, 0.3)';
             ctx.shadowColor = '#00d9ff';
             ctx.shadowBlur = 10;
-            ctx.fillRect(screenX - 2, screenY - 2, this.width + 4, this.height + 4);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, auraRadius, 0, Math.PI * 2);
+            ctx.fill();
             ctx.shadowBlur = 0;
         }
         if (this.speedBoostTime > 0) {
             ctx.fillStyle = 'rgba(0, 255, 136, 0.3)';
             ctx.shadowColor = '#00ff88';
             ctx.shadowBlur = 10;
-            ctx.fillRect(screenX - 2, screenY - 2, this.width + 4, this.height + 4);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, auraRadius, 0, Math.PI * 2);
+            ctx.fill();
             ctx.shadowBlur = 0;
         }
         if (this.shield) {
@@ -766,13 +768,17 @@ export class Player {
             ctx.fillStyle = 'rgba(255, 170, 0, 0.4)';
             ctx.shadowColor = '#ffaa00';
             ctx.shadowBlur = 15;
-            ctx.fillRect(screenX - 3, screenY - 3, this.width + 6, this.height + 6);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, auraRadius + 2, 0, Math.PI * 2);
+            ctx.fill();
             ctx.shadowBlur = 0;
 
-            // Borda do shield
+            // Borda circular do shield
             ctx.strokeStyle = '#ffaa00';
             ctx.lineWidth = 2;
-            ctx.strokeRect(screenX - 3, screenY - 3, this.width + 6, this.height + 6);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, auraRadius + 2, 0, Math.PI * 2);
+            ctx.stroke();
         }
         if (this.reverseControls) {
             // Aura rosa/vermelha pulsante para controles invertidos
@@ -780,7 +786,9 @@ export class Player {
             ctx.fillStyle = `rgba(255, 0, 102, ${pulsate})`;
             ctx.shadowColor = '#ff0066';
             ctx.shadowBlur = 12;
-            ctx.fillRect(screenX - 2, screenY - 2, this.width + 4, this.height + 4);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, auraRadius, 0, Math.PI * 2);
+            ctx.fill();
             ctx.shadowBlur = 0;
         }
         if (this.icyFloor) {
@@ -788,20 +796,30 @@ export class Player {
             ctx.fillStyle = 'rgba(102, 255, 255, 0.35)';
             ctx.shadowColor = '#66ffff';
             ctx.shadowBlur = 10;
-            ctx.fillRect(screenX - 2, screenY - 2, this.width + 4, this.height + 4);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, auraRadius, 0, Math.PI * 2);
+            ctx.fill();
             ctx.shadowBlur = 0;
 
-            // Pequenos "cristais de gelo" nos cantos
+            // Pequenos "cristais de gelo" ao redor
             ctx.fillStyle = '#66ffff';
-            ctx.fillRect(screenX - 2, screenY - 2, 4, 4);
-            ctx.fillRect(screenX + this.width - 2, screenY - 2, 4, 4);
+            for (let i = 0; i < 4; i++) {
+                const angle = (i * Math.PI / 2) + Math.PI / 4;
+                const px = centerX + Math.cos(angle) * auraRadius;
+                const py = centerY + Math.sin(angle) * auraRadius;
+                ctx.beginPath();
+                ctx.arc(px, py, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
         if (this.doubleJumpEnabled) {
             // Aura roxa do double jump
             ctx.fillStyle = 'rgba(157, 0, 255, 0.35)';
             ctx.shadowColor = '#9d00ff';
             ctx.shadowBlur = 10;
-            ctx.fillRect(screenX - 2, screenY - 2, this.width + 4, this.height + 4);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, auraRadius, 0, Math.PI * 2);
+            ctx.fill();
             ctx.shadowBlur = 0;
         }
         if (this.magnetActive) {
@@ -810,15 +828,17 @@ export class Player {
             ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
             ctx.shadowColor = '#ffd700';
             ctx.shadowBlur = 12;
-            ctx.fillRect(screenX - 2, screenY - 2, this.width + 4, this.height + 4);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, auraRadius, 0, Math.PI * 2);
+            ctx.fill();
             ctx.shadowBlur = 0;
 
             // Pequenas partículas girando ao redor
             for (let i = 0; i < 4; i++) {
                 const angle = time * 2 + (i * Math.PI / 2);
-                const radius = 18;
-                const px = screenX + this.width / 2 + Math.cos(angle) * radius;
-                const py = screenY + this.height / 2 + Math.sin(angle) * radius;
+                const radius = auraRadius + 6;
+                const px = centerX + Math.cos(angle) * radius;
+                const py = centerY + Math.sin(angle) * radius;
                 ctx.fillStyle = '#ffd700';
                 ctx.beginPath();
                 ctx.arc(px, py, 2, 0, Math.PI * 2);
@@ -830,7 +850,9 @@ export class Player {
             ctx.fillStyle = 'rgba(255, 20, 147, 0.35)';
             ctx.shadowColor = '#ff1493';
             ctx.shadowBlur = 8;
-            ctx.fillRect(screenX - 2, screenY - 2, this.width + 4, this.height + 4);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, auraRadius, 0, Math.PI * 2);
+            ctx.fill();
             ctx.shadowBlur = 0;
         }
         if (this.heavy) {
@@ -838,16 +860,21 @@ export class Player {
             ctx.fillStyle = 'rgba(139, 69, 19, 0.4)';
             ctx.shadowColor = '#8b4513';
             ctx.shadowBlur = 10;
-            ctx.fillRect(screenX - 2, screenY - 2, this.width + 4, this.height + 4);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, auraRadius, 0, Math.PI * 2);
+            ctx.fill();
             ctx.shadowBlur = 0;
 
-            // Linhas de gravidade
+            // Linhas de gravidade (setas verticais para baixo)
             ctx.strokeStyle = '#8b4513';
             ctx.lineWidth = 1;
             for (let i = 0; i < 3; i++) {
+                const angle = (i * Math.PI * 2 / 3) + Math.PI / 2;
+                const startRadius = auraRadius - 5;
+                const endRadius = auraRadius + 8;
                 ctx.beginPath();
-                ctx.moveTo(screenX + this.width / 2, screenY + this.height + 2 + i * 3);
-                ctx.lineTo(screenX + this.width / 2, screenY + this.height + 8 + i * 3);
+                ctx.moveTo(centerX + Math.cos(angle) * startRadius, centerY + Math.sin(angle) * startRadius);
+                ctx.lineTo(centerX + Math.cos(angle) * endRadius, centerY + Math.sin(angle) * endRadius);
                 ctx.stroke();
             }
         }
@@ -857,7 +884,9 @@ export class Player {
             ctx.fillStyle = `rgba(255, 105, 180, ${bouncePulse})`;
             ctx.shadowColor = '#ff69b4';
             ctx.shadowBlur = 12;
-            ctx.fillRect(screenX - 2, screenY - 2, this.width + 4, this.height + 4);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, auraRadius, 0, Math.PI * 2);
+            ctx.fill();
             ctx.shadowBlur = 0;
         }
         if (this.timeWarp) {
@@ -866,16 +895,18 @@ export class Player {
             ctx.fillStyle = 'rgba(147, 112, 219, 0.4)';
             ctx.shadowColor = '#9370db';
             ctx.shadowBlur = 15;
-            ctx.fillRect(screenX - 3, screenY - 3, this.width + 6, this.height + 6);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, auraRadius + 2, 0, Math.PI * 2);
+            ctx.fill();
             ctx.shadowBlur = 0;
 
-            // Anéis de tempo girando
+            // Anéis de tempo girando (circulares)
             for (let i = 0; i < 2; i++) {
                 ctx.strokeStyle = `rgba(147, 112, 219, ${0.5 - i * 0.2})`;
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                const radius = 15 + i * 8 + Math.sin(timeEffect + i) * 3;
-                ctx.arc(screenX + this.width / 2, screenY + this.height / 2, radius, 0, Math.PI * 2);
+                const radius = auraRadius + i * 8 + Math.sin(timeEffect + i) * 3;
+                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
                 ctx.stroke();
             }
         }

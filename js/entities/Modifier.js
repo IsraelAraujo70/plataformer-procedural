@@ -238,6 +238,15 @@ export class Modifier {
         ctx.translate(screenX, screenY);
         ctx.rotate(this.rotation);
 
+        // Aura/outline circular externo
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(0, 0, size / 2 + 2, 0, Math.PI * 2);
+        ctx.stroke();
+
         // Visual único - gradiente arco-íris animado
         const gradientRotation = this.pulseTime * 0.5;
         const gradient = ctx.createLinearGradient(
@@ -253,8 +262,7 @@ export class Modifier {
         gradient.addColorStop(1, '#ffff00');    // Amarelo
 
         ctx.fillStyle = gradient;
-        ctx.shadowColor = '#ffffff';
-        ctx.shadowBlur = 15;
+        ctx.shadowBlur = 0;
 
         // Desenhar círculo
         ctx.beginPath();
