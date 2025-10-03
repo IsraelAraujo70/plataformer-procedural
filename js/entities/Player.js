@@ -88,6 +88,11 @@ export class Player {
         this.antennaVelocity = 0;    // Velocidade angular da antena
         this.antennaLength = 8;      // Comprimento da antena
         this.antennaWidth = 3;       // Largura da antena
+
+        // Sistema secreto de movimento avançado
+        this.bhopCombo = 0;           // Contador de pulos bem-sucedidos (0-3)
+        this.bhopScore = 0;           // Pontos acumulados (0-300)
+        this.framesSinceGrounded = 0; // Frames desde que tocou o chão
     }
 
     update() {
@@ -279,6 +284,37 @@ export class Player {
             let jumpStrength = CONFIG.JUMP_STRENGTH * this.jumpBoost;
             if (this.heavy) jumpStrength *= 0.7; // Heavy reduz força do pulo em 30%
             if (game.devMode.enabled) jumpStrength *= 1.5; // Super pulo em dev mode
+
+            // Sistema secreto: detectar timing e acumular pontos
+            if (this.framesSinceGrounded >= 1 && this.framesSinceGrounded <= 5) {
+                // Calcular pontos baseado na precisão (frame 3 = perfeito)
+                let points = 0;
+                if (this.framesSinceGrounded === 3) {
+                    points = 100; // Centro perfeito
+                } else if (this.framesSinceGrounded === 2 || this.framesSinceGrounded === 4) {
+                    points = 75;  // Bom
+                } else if (this.framesSinceGrounded === 1 || this.framesSinceGrounded === 5) {
+                    points = 50;  // Ok
+                }
+
+                this.bhopCombo++;
+                this.bhopScore += points;
+                this.spawnBhopDust(points);
+
+                // 4º pulo: aplicar super boost baseado no score acumulado
+                if (this.bhopCombo === 4) {
+                    const scoreMultiplier = 1.0 + (this.bhopScore / 300) * 0.8;
+                    jumpStrength *= scoreMultiplier;
+                    // Reset após o super pulo
+                    this.bhopCombo = 0;
+                    this.bhopScore = 0;
+                }
+            } else if (this.framesSinceGrounded > 5) {
+                // Errou a janela: reset completo
+                this.bhopCombo = 0;
+                this.bhopScore = 0;
+            }
+
             this.vy = jumpStrength;
             this.jumping = true;
             this.grounded = false;
@@ -290,6 +326,37 @@ export class Player {
             let jumpStrength = CONFIG.JUMP_STRENGTH * this.jumpBoost;
             if (this.heavy) jumpStrength *= 0.7; // Heavy reduz força do pulo em 30%
             if (game.devMode.enabled) jumpStrength *= 1.5;
+
+            // Sistema secreto: detectar timing e acumular pontos
+            if (this.framesSinceGrounded >= 1 && this.framesSinceGrounded <= 5) {
+                // Calcular pontos baseado na precisão (frame 3 = perfeito)
+                let points = 0;
+                if (this.framesSinceGrounded === 3) {
+                    points = 100; // Centro perfeito
+                } else if (this.framesSinceGrounded === 2 || this.framesSinceGrounded === 4) {
+                    points = 75;  // Bom
+                } else if (this.framesSinceGrounded === 1 || this.framesSinceGrounded === 5) {
+                    points = 50;  // Ok
+                }
+
+                this.bhopCombo++;
+                this.bhopScore += points;
+                this.spawnBhopDust(points);
+
+                // 4º pulo: aplicar super boost baseado no score acumulado
+                if (this.bhopCombo === 4) {
+                    const scoreMultiplier = 1.0 + (this.bhopScore / 300) * 0.8;
+                    jumpStrength *= scoreMultiplier;
+                    // Reset após o super pulo
+                    this.bhopCombo = 0;
+                    this.bhopScore = 0;
+                }
+            } else if (this.framesSinceGrounded > 5) {
+                // Errou a janela: reset completo
+                this.bhopCombo = 0;
+                this.bhopScore = 0;
+            }
+
             this.vy = jumpStrength;
             this.jumping = true;
             this.grounded = false;
@@ -375,6 +442,18 @@ export class Player {
 
         // Atualizar estado do frame anterior
         this.wasGroundedLastFrame = this.grounded;
+
+        // Sistema secreto: rastreamento de frames e reset
+        if (this.grounded) {
+            this.framesSinceGrounded++;
+            // Reset automático se ficar parado no chão
+            if (this.framesSinceGrounded > 10) {
+                this.bhopCombo = 0;
+                this.bhopScore = 0;
+            }
+        } else {
+            this.framesSinceGrounded = 0;
+        }
 
         // ============================================
         // FÍSICA DE PÊNDULO: BRAÇOS E ANTENA
@@ -1051,6 +1130,85 @@ export class Player {
         // Brilho no topo (highlight)
         ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.fillRect(hatCenterX - 4, hatBaseY, 3, 4);
+    }
+
+    spawnBhopDust(points) {
+        // Partículas baseadas na precisão do timing
+        if (window.createParticles) {
+            // Spawnar nos pés (base do personagem)
+            const footY = this.y + this.height;
+            const footLeftX = this.x + 6;
+            const footRightX = this.x + this.width - 6;
+
+            // Quantidade de partículas baseada nos pontos
+            let particleCount = 0;
+            if (points === 100) particleCount = 10;      // Frame 3 (perfeito)
+            else if (points === 75) particleCount = 7;   // Frame 2/4 (bom)
+            else if (points === 50) particleCount = 4;   // Frame 1/5 (ok)
+
+            // Cor baseada no combo (4º pulo tem partículas especiais)
+            let isSuper = this.bhopCombo === 4;
+
+            for (let i = 0; i < particleCount; i++) {
+                // Alternar entre pé esquerdo e direito
+                const footX = i % 2 === 0 ? footLeftX : footRightX;
+
+                game.particles.push({
+                    x: footX + (Math.random() - 0.5) * 10,
+                    y: footY + (Math.random() - 0.5) * 3,
+                    vx: (Math.random() - 0.5) * 5,
+                    vy: Math.random() * -4 - 2,
+                    life: 25 + Math.random() * 15,
+                    maxLife: 40,
+                    size: 4 + Math.random() * 3,
+                    isSuper: isSuper,
+                    superScore: isSuper ? this.bhopScore : 0,
+                    update() {
+                        this.x += this.vx;
+                        this.y += this.vy;
+                        this.vy += 0.25;
+                        this.vx *= 0.96;
+                        this.life--;
+                    },
+                    draw(ctx) {
+                        const screenX = this.x - game.camera.x;
+                        const screenY = this.y - game.camera.y;
+                        const alpha = Math.min((this.life / this.maxLife) * 1.2, 0.9);
+
+                        let fillColor, strokeColor;
+
+                        if (this.isSuper) {
+                            // Partículas especiais para o 4º pulo
+                            if (this.superScore >= 250) {
+                                // Dourado (score alto)
+                                fillColor = `rgba(255, 215, 0, ${alpha})`;
+                                strokeColor = `rgba(218, 165, 32, ${alpha * 0.8})`;
+                            } else if (this.superScore >= 200) {
+                                // Laranja (score médio)
+                                fillColor = `rgba(255, 140, 0, ${alpha})`;
+                                strokeColor = `rgba(255, 100, 0, ${alpha * 0.8})`;
+                            } else {
+                                // Marrom (score baixo)
+                                fillColor = `rgba(139, 90, 43, ${alpha})`;
+                                strokeColor = `rgba(101, 67, 33, ${alpha * 0.7})`;
+                            }
+                        } else {
+                            // Partículas normais (marrom)
+                            fillColor = `rgba(139, 90, 43, ${alpha})`;
+                            strokeColor = `rgba(101, 67, 33, ${alpha * 0.7})`;
+                        }
+
+                        ctx.fillStyle = fillColor;
+                        ctx.strokeStyle = strokeColor;
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.arc(screenX, screenY, this.size / 2, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                    }
+                });
+            }
+        }
     }
 
     drawAntenna(ctx, screenX, screenY) {
