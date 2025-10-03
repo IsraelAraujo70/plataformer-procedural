@@ -81,6 +81,12 @@ export class Player {
         this.squashStretch = 1.0; // 1.0 = normal, > 1 = esticado, < 1 = comprimido
         this.wasGroundedLastFrame = false;
         this.justJumped = false;
+
+        // Antena/topete com física de pêndulo
+        this.antennaAngle = 0;       // Ângulo da antena (em radianos)
+        this.antennaVelocity = 0;    // Velocidade angular da antena
+        this.antennaLength = 8;      // Comprimento da antena
+        this.antennaWidth = 3;       // Largura da antena
     }
 
     update() {
@@ -369,6 +375,11 @@ export class Player {
         // Atualizar estado do frame anterior
         this.wasGroundedLastFrame = this.grounded;
 
+        // ============================================
+        // FÍSICA DE PÊNDULO: BRAÇOS E ANTENA
+        // ============================================
+        this.updatePendulumPhysics();
+
         // Salvar última posição segura quando está no chão
         if (this.grounded) {
             this.lastSafeX = this.x;
@@ -414,6 +425,29 @@ export class Player {
             game.distance = newDistance;
         }
         game.difficulty = Math.floor(game.distance / 100); // Aumenta a cada 100 tiles
+    }
+
+    updatePendulumPhysics() {
+        // Constantes da física de pêndulo
+        const damping = 0.88;        // Amortecimento (quanto maior, mais suave)
+        const restoring = 0.12;      // Força restauradora (retorna à posição neutra)
+        const maxAngle = 0.785;      // Ângulo máximo (45 graus em radianos)
+
+        // ============================================
+        // ANTENA/TOPETE
+        // ============================================
+        // Antena balança OPOSTO ao movimento (inércia) - invertido com sinal negativo
+        const antennaForce = -this.vx * 0.05 + this.vy * 0.03;
+
+        this.antennaVelocity += antennaForce - this.antennaAngle * restoring;
+        this.antennaVelocity *= damping;
+        this.antennaAngle += this.antennaVelocity;
+        this.antennaAngle = Math.max(-maxAngle, Math.min(maxAngle, this.antennaAngle));
+
+        // Efeito extra: antena balança mais ao pousar
+        if (this.grounded && !this.wasGroundedLastFrame) {
+            this.antennaVelocity += 0.3; // Impulso ao pousar
+        }
     }
 
     handleCollisions() {
@@ -829,25 +863,58 @@ export class Player {
         // Desenhar pernas animadas (antes do corpo para ficarem atrás)
         this.drawLegs(ctx, screenX, screenY);
 
-        // Corpo do jogador (cor baseada no número do jogador)
-        ctx.fillStyle = this.color;
-        ctx.fillRect(screenX, screenY, this.width, this.height);
+        // Desenhar antena antes do corpo
+        this.drawAntenna(ctx, screenX, screenY);
 
-        // Olhos
+        // Corpo do jogador em formato BLOB (arredondado)
+        this.drawBlobBody(ctx, screenX, screenY);
+
+        // Sobrancelhas expressivas (arredondadas para combinar com blob)
+        ctx.fillStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+
+        let eyebrowY = screenY + 7;
+        if (!this.grounded && this.vy < 0) {
+            eyebrowY = screenY + 6; // Levantadas ao pular
+        } else if (!this.grounded && this.vy > 3) {
+            eyebrowY = screenY + 8; // Abaixadas ao cair
+        }
+
+        // Sobrancelhas como linhas arredondadas
+        ctx.strokeStyle = '#000000';
+        ctx.beginPath();
+        ctx.moveTo(screenX + 6, eyebrowY);
+        ctx.lineTo(screenX + 11, eyebrowY);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(screenX + 13, eyebrowY);
+        ctx.lineTo(screenX + 18, eyebrowY);
+        ctx.stroke();
+
+        // Olhos arredondados (círculos brancos)
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(screenX + 6, screenY + 8, 4, 4);
-        ctx.fillRect(screenX + 14, screenY + 8, 4, 4);
+        ctx.beginPath();
+        ctx.arc(screenX + 8, screenY + 11, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 16, screenY + 11, 3, 0, Math.PI * 2);
+        ctx.fill();
 
         // Pupilas (olhando na direção do movimento ou centro quando parado)
         ctx.fillStyle = '#000000';
-        let pupilOffsetX = 0; // Centro quando parado
+        let pupilOffsetX = 0;
         if (Math.abs(this.vx) > 0.5) {
-            // Se está se movendo, olhar na direção do movimento
             pupilOffsetX = this.facingRight ? 1 : -1;
         }
-        // Pupilas centralizadas: olho começa em 6 (largura 4), centro é 6+1=7
-        ctx.fillRect(screenX + 7 + pupilOffsetX, screenY + 9, 2, 2);
-        ctx.fillRect(screenX + 15 + pupilOffsetX, screenY + 9, 2, 2);
+
+        ctx.beginPath();
+        ctx.arc(screenX + 8 + pupilOffsetX, screenY + 11, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 16 + pupilOffsetX, screenY + 11, 1.5, 0, Math.PI * 2);
+        ctx.fill();
 
         // Boca - oval quando pulando/caindo
         ctx.fillStyle = '#000000';
@@ -871,48 +938,105 @@ export class Player {
         ctx.restore();
     }
 
+    drawBlobBody(ctx, screenX, screenY) {
+        ctx.fillStyle = this.color;
+
+        // Desenhar corpo blob usando arcos e curvas para forma orgânica
+        // Criar forma arredondada/oval semelhante a um blob cartoon
+        const centerX = screenX + this.width / 2;
+        const centerY = screenY + this.height / 2;
+        const radiusX = this.width / 2;
+        const radiusY = this.height / 2;
+
+        // Desenhar elipse (blob)
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawAntenna(ctx, screenX, screenY) {
+        // Posição base da antena (topo da cabeça, centro)
+        const baseX = screenX + this.width / 2;
+        const baseY = screenY;
+
+        // Calcular posição final da antena usando ângulo
+        const antennaEndX = baseX + Math.sin(this.antennaAngle) * this.antennaLength;
+        const antennaEndY = baseY - Math.cos(this.antennaAngle) * this.antennaLength;
+
+        // Desenhar haste da antena
+        ctx.lineWidth = this.antennaWidth;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = this.color;
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.lineTo(antennaEndX, antennaEndY);
+        ctx.stroke();
+
+        // Bolinha na ponta da antena
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(antennaEndX, antennaEndY, this.antennaWidth * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Brilho na bolinha
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.beginPath();
+        ctx.arc(antennaEndX - 1, antennaEndY - 1, this.antennaWidth * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
     drawLegs(ctx, screenX, screenY) {
         ctx.fillStyle = this.color;
 
-        // Parâmetros das pernas
-        const legWidth = 6;
+        // Parâmetros das pernas (mais próximas do centro)
+        const legWidth = 5;
         const bodyBottom = screenY + this.height;
+        const leftLegX = screenX + 7;  // Mais perto do centro
+        const rightLegX = screenX + 12; // Mais perto do centro
 
         // Se estiver no ar, pernas juntas
         if (!this.grounded) {
-            ctx.fillRect(screenX + 5, bodyBottom, legWidth, 8);
-            ctx.fillRect(screenX + 13, bodyBottom, legWidth, 8);
+            ctx.fillRect(leftLegX, bodyBottom, legWidth, 5);
+            ctx.fillRect(rightLegX, bodyBottom, legWidth, 5);
+
+            // Pezinhos no ar
+            ctx.fillRect(leftLegX, bodyBottom + 5, legWidth, 2);
+            ctx.fillRect(rightLegX, bodyBottom + 5, legWidth, 2);
             return;
         }
 
-        // Animação de caminhada - 4 frames
+        // Animação de caminhada - 4 frames (movimento mais exagerado)
         let leftLegY = bodyBottom;
         let rightLegY = bodyBottom;
-        let leftLegHeight = 8;
-        let rightLegHeight = 8;
+        let leftLegHeight = 5;
+        let rightLegHeight = 5;
 
         switch(this.animFrame) {
             case 0: // Neutro
-                leftLegHeight = 8;
-                rightLegHeight = 8;
+                leftLegHeight = 5;
+                rightLegHeight = 5;
                 break;
             case 1: // Perna esquerda levantada, direita abaixada
-                leftLegHeight = 6;
-                rightLegHeight = 10;
+                leftLegHeight = 3;
+                rightLegHeight = 7;
                 break;
             case 2: // Neutro
-                leftLegHeight = 8;
-                rightLegHeight = 8;
+                leftLegHeight = 5;
+                rightLegHeight = 5;
                 break;
             case 3: // Perna direita levantada, esquerda abaixada
-                leftLegHeight = 10;
-                rightLegHeight = 6;
+                leftLegHeight = 7;
+                rightLegHeight = 3;
                 break;
         }
 
         // Desenhar pernas
-        ctx.fillRect(screenX + 5, leftLegY, legWidth, leftLegHeight);
-        ctx.fillRect(screenX + 13, rightLegY, legWidth, rightLegHeight);
+        ctx.fillRect(leftLegX, leftLegY, legWidth, leftLegHeight);
+        ctx.fillRect(rightLegX, rightLegY, legWidth, rightLegHeight);
+
+        // Pezinhos (pequenos retângulos nas pontas das pernas)
+        ctx.fillRect(leftLegX, leftLegY + leftLegHeight, legWidth, 2);
+        ctx.fillRect(rightLegX, rightLegY + rightLegHeight, legWidth, 2);
     }
 
     getModifierTimeRemaining(type) {
