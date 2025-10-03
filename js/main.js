@@ -50,6 +50,13 @@ function gameLoop(currentTime) {
         game.enemies.forEach(enemy => enemy.update());
         game.modifiers.forEach(modifier => modifier.update());
 
+        // Atualizar projéteis
+        if (game.projectiles) {
+            game.projectiles.forEach(projectile => projectile.update());
+            // Remover projéteis mortos
+            game.projectiles = game.projectiles.filter(p => p.alive);
+        }
+
         // Atualizar chapéus dos chunks
         game.chunks.forEach(chunk => {
             chunk.hats.forEach(hat => hat.update());
@@ -114,6 +121,11 @@ function gameLoop(currentTime) {
     game.coins.forEach(coin => coin.draw(ctx));
     game.enemies.forEach(enemy => enemy.draw(ctx));
     game.modifiers.forEach(modifier => modifier.draw(ctx));
+
+    // Projéteis
+    if (game.projectiles) {
+        game.projectiles.forEach(projectile => projectile.draw(ctx));
+    }
 
     // Chapéus dos chunks (coletáveis)
     game.chunks.forEach(chunk => {

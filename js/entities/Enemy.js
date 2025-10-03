@@ -2,10 +2,10 @@ import { CONFIG } from '../config.js';
 import { game } from '../game.js';
 
 // ============================================
-// ENEMY
+// ENEMY BASE CLASS
 // ============================================
 export class Enemy {
-    constructor(x, y, platformWidth, platformY) {
+    constructor(x, y, platformWidth, platformY, type = 'walker') {
         this.x = x;
         this.y = y;
         this.width = CONFIG.ENEMY_SIZE;
@@ -14,70 +14,20 @@ export class Enemy {
         this.vy = 0;
         this.platformX = x;
         this.platformWidth = platformWidth;
-        this.platformY = platformY; // Guardar Y da plataforma
+        this.platformY = platformY;
         this.alive = true;
         this.grounded = false;
+        this.type = type;
+
+        // Pontos por derrotar (pode ser modificado por subclasses)
+        this.points = 50;
+
+        // Cor padrão (pode ser modificado por subclasses)
+        this.color = '#ff8800';
     }
 
     update() {
         if (!this.alive) return;
-
-        // Detectar borda antes de cair (edge detection)
-        const checkDistance = 5; // pixels à frente para verificar
-        const futureX = this.vx > 0 ? this.x + this.width + checkDistance : this.x - checkDistance;
-        const futureY = this.y + this.height + 5; // Um pouco abaixo dos pés
-
-        // Verificar se há chão à frente
-        let hasGroundAhead = false;
-        const startChunk = Math.floor((futureX - 50) / (CONFIG.CHUNK_WIDTH * CONFIG.TILE_SIZE));
-        const endChunk = Math.floor((futureX + 50) / (CONFIG.CHUNK_WIDTH * CONFIG.TILE_SIZE));
-
-        for (let chunkIdx = startChunk; chunkIdx <= endChunk; chunkIdx++) {
-            const chunk = game.chunks.get(chunkIdx);
-            if (!chunk) continue;
-
-            for (let platform of chunk.platforms) {
-                // Verificar se há plataforma à frente e abaixo dos pés
-                if (futureX > platform.x &&
-                    futureX < platform.x + platform.width &&
-                    futureY > platform.y - 10 &&
-                    futureY < platform.y + platform.height) {
-                    hasGroundAhead = true;
-                    break;
-                }
-            }
-            if (hasGroundAhead) break;
-        }
-
-        // Virar se não houver chão à frente (evitar cair)
-        if (!hasGroundAhead) {
-            this.vx *= -1;
-        }
-
-        // Movimento horizontal
-        this.x += this.vx;
-
-        // Patrulha na plataforma (inverter direção nas bordas)
-        if (this.x <= this.platformX || this.x + this.width >= this.platformX + this.platformWidth) {
-            this.vx *= -1;
-            this.x = Math.max(this.platformX, Math.min(this.x, this.platformX + this.platformWidth - this.width));
-        }
-
-        // Gravidade
-        this.vy += CONFIG.GRAVITY;
-        this.y += this.vy;
-
-        // Colisão com plataformas
-        this.grounded = false;
-        this.handlePlatformCollisions();
-
-        // Limitar vy
-        if (this.vy > 10) this.vy = 10;
-
-        // Remover se cair do mundo
-        if (this.y > game.height + 100) {
-            this.alive = false;
-        }
 
         // Colisão com Player 1
         if (this.intersects(game.player)) {
@@ -98,15 +48,15 @@ export class Enemy {
             player.vy = CONFIG.JUMP_STRENGTH * 0.5; // Mini bounce
 
             // Adicionar pontos por derrotar inimigo
-            player.score += 50;
+            player.score += this.points;
             game.stats.enemiesDefeated++;
 
             // createFloatingText e createParticles serão importados no main.js
             if (window.createFloatingText) {
-                window.createFloatingText('+50', this.x + this.width / 2, this.y, '#ffff00');
+                window.createFloatingText(`+${this.points}`, this.x + this.width / 2, this.y, '#ffff00');
             }
             if (window.createParticles) {
-                window.createParticles(this.x + this.width / 2, this.y + this.height / 2, '#ff8800', 8);
+                window.createParticles(this.x + this.width / 2, this.y + this.height / 2, this.color, 8);
             }
         } else {
             // Jogador toma dano
@@ -156,30 +106,8 @@ export class Enemy {
                this.y + this.height > player.y;
     }
 
+    // Método para ser sobrescrito pelas subclasses
     draw(ctx) {
-        if (!this.alive) return;
-
-        const screenX = this.x - game.camera.x;
-        const screenY = this.y - game.camera.y;
-
-        // Corpo do inimigo (laranja)
-        ctx.fillStyle = '#ff8800';
-        ctx.fillRect(screenX, screenY, this.width, this.height);
-
-        // Olhos
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(screenX + 6, screenY + 8, 4, 6);
-        ctx.fillRect(screenX + 18, screenY + 8, 4, 6);
-
-        // Pupilas
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(screenX + 8, screenY + 10, 2, 2);
-        ctx.fillRect(screenX + 20, screenY + 10, 2, 2);
-
-        // Dentes
-        ctx.fillStyle = '#ffffff';
-        for (let i = 0; i < 4; i++) {
-            ctx.fillRect(screenX + 6 + i * 4, screenY + 20, 3, 4);
-        }
+        // Implementação base - será sobrescrita
     }
 }

@@ -1,12 +1,53 @@
 import { CONFIG } from '../config.js';
 import { game } from '../game.js';
-import { Enemy } from '../entities/Enemy.js';
+import { WalkerEnemy } from '../entities/enemies/WalkerEnemy.js';
+import { FlyerEnemy } from '../entities/enemies/FlyerEnemy.js';
+import { JumperEnemy } from '../entities/enemies/JumperEnemy.js';
+import { ChaserEnemy } from '../entities/enemies/ChaserEnemy.js';
+import { ShooterEnemy } from '../entities/enemies/ShooterEnemy.js';
 import { Coin } from '../entities/Coin.js';
 import { Modifier } from '../entities/Modifier.js';
 import { Hat } from '../entities/Hat.js';
 import { PATTERNS, getDifficultyConfig, selectPattern, getBiome, BIOMES } from './Patterns.js';
 
 const ABSOLUTE_MAX_GAP = CONFIG.TILE_SIZE * 5.5;
+
+// ============================================
+// ENEMY TYPE SELECTION
+// ============================================
+function selectEnemyType(chunkIndex, platformType, rng) {
+    // Todos os tipos disponíveis desde o início (chances iguais)
+    const availableTypes = ['walker', 'flyer', 'jumper', 'chaser', 'shooter'];
+
+    // Preferências baseadas no tipo de plataforma
+    if (platformType === 'floating') {
+        // Plataformas flutuantes preferem flyers
+        const floatingPreferred = availableTypes.filter(t => t === 'flyer' || t === 'shooter');
+        if (floatingPreferred.length > 0) {
+            return floatingPreferred[rng.int(0, floatingPreferred.length - 1)];
+        }
+    }
+
+    // Seleção aleatória com chances iguais
+    return availableTypes[rng.int(0, availableTypes.length - 1)];
+}
+
+function createEnemyByType(type, x, y, platformWidth, platformY) {
+    switch (type) {
+        case 'walker':
+            return new WalkerEnemy(x, y, platformWidth, platformY);
+        case 'flyer':
+            return new FlyerEnemy(x, y, platformWidth, platformY);
+        case 'jumper':
+            return new JumperEnemy(x, y, platformWidth, platformY);
+        case 'chaser':
+            return new ChaserEnemy(x, y, platformWidth, platformY);
+        case 'shooter':
+            return new ShooterEnemy(x, y, platformWidth, platformY);
+        default:
+            return new WalkerEnemy(x, y, platformWidth, platformY);
+    }
+}
 
 // ============================================
 // HELPERS DE COLISÃO (para geração de itens)
@@ -665,10 +706,14 @@ export class Chunk {
             if (rng.next() < diffConfig.enemyChance && this.index >= 1 && platform.width > CONFIG.ENEMY_SIZE * 2) {
                 const enemyX = platform.x + platform.width / 2 - CONFIG.ENEMY_SIZE / 2;
                 const enemyY = platform.y - CONFIG.ENEMY_SIZE;
-                const enemy = new Enemy(enemyX, enemyY, platform.width, platform.y);
 
-                if (this.biome.enemySpeedMultiplier) {
-                    enemy.speed *= this.biome.enemySpeedMultiplier;
+                // Selecionar tipo de inimigo baseado na dificuldade e tipo de plataforma
+                const enemyType = selectEnemyType(this.index, platform.type, rng);
+                const enemy = createEnemyByType(enemyType, enemyX, enemyY, platform.width, platform.y);
+
+                // Aplicar modificador de velocidade do bioma (se existir)
+                if (this.biome.enemySpeedMultiplier && enemy.vx !== 0) {
+                    enemy.vx *= this.biome.enemySpeedMultiplier;
                 }
 
                 this.enemies.push(enemy);

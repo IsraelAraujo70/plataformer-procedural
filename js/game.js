@@ -19,6 +19,7 @@ export const game = {
     entities: [],
     coins: [],
     enemies: [],
+    projectiles: [], // Projéteis disparados por inimigos
     modifiers: [],
     droppingHats: [], // Chapéus em animação de queda (temporários)
     particles: [],
