@@ -49,6 +49,19 @@ function gameLoop(currentTime) {
         game.coins.forEach(coin => coin.update());
         game.enemies.forEach(enemy => enemy.update());
         game.modifiers.forEach(modifier => modifier.update());
+
+        // Atualizar chapéus dos chunks
+        game.chunks.forEach(chunk => {
+            chunk.hats.forEach(hat => hat.update());
+        });
+
+        // Atualizar chapéus temporários (dropping)
+        if (game.droppingHats) {
+            game.droppingHats.forEach(hat => hat.update());
+            // Remover chapéus coletados/expirados
+            game.droppingHats = game.droppingHats.filter(hat => !hat.collected);
+        }
+
         game.particles.forEach(particle => particle.update());
         game.floatingTexts.forEach(text => text.update());
 
@@ -63,8 +76,20 @@ function gameLoop(currentTime) {
 
     // Atualizar HUD
     document.getElementById('p1-score').textContent = game.player.score;
+    document.getElementById('p1-hat').textContent = game.player.hatCount;
+    // Cores baseadas na quantidade: 0=cinza, 1=vermelho, 2=amarelo, 3+=verde
+    const p1Color = game.player.hatCount === 0 ? '#999' :
+                    game.player.hatCount === 1 ? '#f44336' :
+                    game.player.hatCount === 2 ? '#FFC107' : '#4CAF50';
+    document.getElementById('p1-hat').style.color = p1Color;
+
     if (game.twoPlayerMode && game.player2) {
         document.getElementById('p2-score').textContent = game.player2.score;
+        document.getElementById('p2-hat').textContent = game.player2.hatCount;
+        const p2Color = game.player2.hatCount === 0 ? '#999' :
+                        game.player2.hatCount === 1 ? '#f44336' :
+                        game.player2.hatCount === 2 ? '#FFC107' : '#4CAF50';
+        document.getElementById('p2-hat').style.color = p2Color;
     }
     document.getElementById('distance').textContent = game.distance;
 
@@ -89,6 +114,17 @@ function gameLoop(currentTime) {
     game.coins.forEach(coin => coin.draw(ctx));
     game.enemies.forEach(enemy => enemy.draw(ctx));
     game.modifiers.forEach(modifier => modifier.draw(ctx));
+
+    // Chapéus dos chunks (coletáveis)
+    game.chunks.forEach(chunk => {
+        chunk.hats.forEach(hat => hat.draw(ctx));
+    });
+
+    // Chapéus temporários (dropping)
+    if (game.droppingHats) {
+        game.droppingHats.forEach(hat => hat.draw(ctx));
+    }
+
     game.particles.forEach(particle => particle.draw(ctx));
 
     // Players

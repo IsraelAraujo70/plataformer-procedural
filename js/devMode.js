@@ -217,6 +217,34 @@ export function handleDevModeKeys(key) {
             console.log('Modifier Menu:', game.devMode.modifierMenuOpen ? 'OPEN' : 'CLOSED');
             break;
 
+        case 'o': // Add Hat (+1)
+            [game.player, game.player2].filter(p => p).forEach(player => {
+                if (player.hatCount < player.maxHats) {
+                    player.hatCount++;
+                    console.log(`Player ${player.playerNumber} Hats: ${player.hatCount}/${player.maxHats}`);
+                    if (window.createFloatingText) {
+                        window.createFloatingText('+1 HAT!', player.x + player.width / 2, player.y - 20, '#ffd700');
+                    }
+                } else {
+                    console.log(`Player ${player.playerNumber} already at MAX HATS (${player.maxHats})`);
+                }
+            });
+            break;
+
+        case 'l': // Remove Hat (-1)
+            [game.player, game.player2].filter(p => p).forEach(player => {
+                if (player.hatCount > 0) {
+                    player.hatCount--;
+                    console.log(`Player ${player.playerNumber} Hats: ${player.hatCount}/${player.maxHats}`);
+                    if (window.createFloatingText) {
+                        window.createFloatingText('-1 HAT!', player.x + player.width / 2, player.y - 20, '#ff6b6b');
+                    }
+                } else {
+                    console.log(`Player ${player.playerNumber} has NO HATS`);
+                }
+            });
+            break;
+
         case ']': // Next Page
             if (game.devMode.modifierMenuOpen) {
                 game.devMode.modifierMenuPage = (game.devMode.modifierMenuPage + 1) % 2;
@@ -381,14 +409,14 @@ export function drawDevModeUI(ctx) {
     if (game.devMode.showInfo) {
         ctx.save();
 
-        // Fundo do painel (aumentado para 350 de altura para nova linha)
+        // Fundo do painel (aumentado para acomodar nova linha de chapéus)
         ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        ctx.fillRect(10, 10, 300, 350);
+        ctx.fillRect(10, 10, 320, 370);
 
         // Borda
         ctx.strokeStyle = '#00ffff';
         ctx.lineWidth = 2;
-        ctx.strokeRect(10, 10, 300, 350);
+        ctx.strokeRect(10, 10, 320, 370);
 
         // Text
         ctx.fillStyle = '#00ffff';
@@ -398,7 +426,7 @@ export function drawDevModeUI(ctx) {
         ctx.strokeStyle = '#00ffff';
         ctx.beginPath();
         ctx.moveTo(20, 45);
-        ctx.lineTo(290, 45);
+        ctx.lineTo(310, 45);
         ctx.stroke();
 
         ctx.fillStyle = '#ffffff';
@@ -413,12 +441,15 @@ export function drawDevModeUI(ctx) {
         ctx.fillText(`Enemies: ${game.enemies.filter(e => e.alive).length}/${game.enemies.length}`, 20, y); y += lineHeight;
         ctx.fillText(`Coins: ${game.coins.filter(c => !c.collected).length}/${game.coins.length}`, 20, y); y += lineHeight;
         ctx.fillText(`Modifiers: ${game.modifiers.filter(m => !m.collected).length}/${game.modifiers.length}`, 20, y); y += lineHeight;
+        ctx.fillStyle = '#ffd700';
+        ctx.fillText(`🎩 Hats: ${game.player.hatCount}/${game.player.maxHats}`, 20, y); y += lineHeight;
+        ctx.fillStyle = '#ffffff';
 
         y += 10;
         ctx.strokeStyle = '#555555';
         ctx.beginPath();
         ctx.moveTo(20, y - 5);
-        ctx.lineTo(290, y - 5);
+        ctx.lineTo(310, y - 5);
         ctx.stroke();
 
         ctx.fillStyle = game.devMode.noclip ? '#00ff00' : '#ff0000';
@@ -440,6 +471,8 @@ export function drawDevModeUI(ctx) {
         ctx.fillStyle = '#ffff00';
         ctx.fillText(`[M] Teleport  [R] Reset`, 20, y); y += lineHeight;
         ctx.fillText(`[+/-] Speed (${game.devMode.flySpeed})`, 20, y); y += lineHeight;
+        ctx.fillStyle = '#ffd700';
+        ctx.fillText(`[O] +Hat  [L] -Hat`, 20, y); y += lineHeight;
         ctx.fillStyle = '#00ff00';
         ctx.fillText(`[X] Modifier Menu`, 20, y); y += lineHeight;
         ctx.fillStyle = '#ffff00';

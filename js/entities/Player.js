@@ -59,7 +59,8 @@ export class Player {
             { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp' };
 
         // Stats individuais por jogador
-        this.lives = 3;
+        this.hatCount = 1; // Sistema de chapéus empilháveis: cada chapéu = 1 hit extra
+        this.maxHats = 5; // Limite máximo de chapéus
         this.score = 0;
 
         // Sistema de checkpoint
@@ -115,8 +116,8 @@ export class Player {
             return;
         }
 
-        // Jogador morto não pode se mover
-        if (this.lives <= 0) {
+        // Jogador morto não pode se mover (verificar com dying flag)
+        if (this.dying) {
             return;
         }
 
@@ -562,37 +563,41 @@ export class Player {
     respawn() {
         if (game.devMode.enabled && game.devMode.invincible) return; // Dev Mode: não perde vida
 
-        this.lives--;
+        // Cair do mapa funciona como tomar dano
+        if (this.hatCount > 0) {
+            // Perde 1 chapéu ao cair
+            this.hatCount--;
 
-        // Atualizar HUD apropriado
-        if (this.playerNumber === 1) {
-            document.getElementById('p1-lives').textContent = this.lives;
+            // Criar chapéu "dropping" (animação de cair e sumir)
+            const hatX = this.x + this.width / 2 - 10;
+            const hatY = this.y - 8;
+
+            import('./Hat.js').then(module => {
+                const droppingHat = new module.Hat(hatX, hatY, 'dropping');
+                if (!game.droppingHats) game.droppingHats = [];
+                game.droppingHats.push(droppingHat);
+            });
+
+            // Efeitos visuais
+            if (window.createParticles) {
+                window.createParticles(this.x + this.width / 2, this.y, '#8b4513', 15);
+            }
+            if (window.createFloatingText) {
+                window.createFloatingText('LOST THE HAT!', this.x + this.width / 2, this.y - 20, '#ff6b6b');
+            }
+
+            // Teleportar para última posição segura
+            this.x = this.lastSafeX;
+            this.y = this.lastSafeY;
+            this.vx = 0;
+            this.vy = 0;
+
+            // Invulnerabilidade temporária
+            this.invulnerable = true;
+            this.invulnerableTime = 90; // 1.5 segundos a 60fps
         } else {
-            document.getElementById('p2-lives').textContent = this.lives;
-        }
-
-        // Game over se não tem mais vidas
-        if (this.lives <= 0) {
+            // Sem chapéu = morte imediata
             this.die();
-            return;
-        }
-
-        // Respawn na última posição segura
-        this.x = this.lastSafeX;
-        this.y = this.lastSafeY;
-        this.vx = 0;
-        this.vy = 0;
-
-        // Invulnerabilidade temporária
-        this.invulnerable = true;
-        this.invulnerableTime = 120; // 2 segundos a 60fps
-
-        // Efeito visual de respawn
-        if (window.createParticles) {
-            window.createParticles(this.x + this.width / 2, this.y + this.height / 2, this.color, 30);
-        }
-        if (window.createFloatingText) {
-            window.createFloatingText('RESPAWN!', this.x + this.width / 2, this.y, this.color);
         }
     }
 
@@ -617,24 +622,40 @@ export class Player {
             // Aplicar invulnerabilidade temporária após quebrar shield
             this.invulnerable = true;
             this.invulnerableTime = 30; // 0.5 segundos a 60fps
-            return; // Não perde vida
+            return; // Shield protegeu
         }
 
-        this.lives--;
+        // Sistema de chapéus empilháveis
+        if (this.hatCount > 0) {
+            // Perde 1 chapéu do topo da pilha
+            this.hatCount--;
 
-        // Atualizar HUD apropriado
-        if (this.playerNumber === 1) {
-            document.getElementById('p1-lives').textContent = this.lives;
-        } else {
-            document.getElementById('p2-lives').textContent = this.lives;
-        }
+            // Criar chapéu "dropping" (animação de cair e sumir)
+            const hatX = this.x + this.width / 2 - 10;
+            const hatY = this.y - 8; // Posição da antena
 
-        if (this.lives <= 0) {
-            this.die();
-        } else {
+            // Importar Hat dinamicamente e criar instância tipo 'dropping'
+            import('./Hat.js').then(module => {
+                const droppingHat = new module.Hat(hatX, hatY, 'dropping');
+                if (!game.droppingHats) game.droppingHats = [];
+                game.droppingHats.push(droppingHat);
+            });
+
+            // Efeitos visuais
+            if (window.createParticles) {
+                window.createParticles(this.x + this.width / 2, this.y, '#8b4513', 15);
+            }
+            if (window.createFloatingText) {
+                window.createFloatingText('LOST THE HAT!', this.x + this.width / 2, this.y - 20, '#ff6b6b');
+            }
+
+            // Invulnerabilidade temporária
             this.invulnerable = true;
             this.invulnerableTime = 90; // 1.5 segundos a 60fps
-            this.vy = CONFIG.JUMP_STRENGTH * 0.7;
+            this.vy = CONFIG.JUMP_STRENGTH * 0.7; // Knockback
+        } else {
+            // Sem chapéus: morte imediata
+            this.die();
         }
     }
 
@@ -658,10 +679,9 @@ export class Player {
         // Em modo 2 jogadores, verificar se o outro ainda está vivo
         if (game.twoPlayerMode) {
             const otherPlayer = this.playerNumber === 1 ? game.player2 : game.player;
-            if (otherPlayer && otherPlayer.lives > 0) {
+            if (otherPlayer && !otherPlayer.dying && !otherPlayer.completelyDead) {
                 // Other player still alive, no game over
                 console.log(`Player ${this.playerNumber} died, but Player ${otherPlayer.playerNumber} continues!`);
-                this.lives = 0;
                 this.shouldTriggerGameOver = false;
                 // Dead player continues in game but can no longer be controlled
                 // Animation will play and then player disappears
@@ -863,8 +883,10 @@ export class Player {
         // Desenhar pernas animadas (antes do corpo para ficarem atrás)
         this.drawLegs(ctx, screenX, screenY);
 
-        // Desenhar antena antes do corpo
-        this.drawAntenna(ctx, screenX, screenY);
+        // Desenhar antena (se não tiver chapéus) - ANTES do corpo
+        if (this.hatCount === 0) {
+            this.drawAntenna(ctx, screenX, screenY);
+        }
 
         // Corpo do jogador em formato BLOB (arredondado)
         this.drawBlobBody(ctx, screenX, screenY);
@@ -934,6 +956,11 @@ export class Player {
             ctx.fillRect(screenX + 8, screenY + 18, 8, 2);
         }
 
+        // Desenhar chapéus POR CIMA de tudo (empilhados)
+        if (this.hatCount > 0) {
+            this.drawHats(ctx, screenX, screenY);
+        }
+
         // Restaurar contexto (sempre restaurar ao final)
         ctx.restore();
     }
@@ -952,6 +979,47 @@ export class Player {
         ctx.beginPath();
         ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
         ctx.fill();
+    }
+
+    drawHats(ctx, screenX, screenY) {
+        // Desenhar múltiplos chapéus empilhados
+        const hatCenterX = screenX + this.width / 2;
+        const hatSpacing = 7; // Espaçamento vertical entre chapéus
+        const startY = screenY - 8; // Posição do primeiro chapéu
+
+        // Desenhar cada chapéu da pilha (de baixo para cima)
+        for (let i = 0; i < this.hatCount; i++) {
+            const hatBaseY = startY - (i * hatSpacing);
+            this.drawSingleHat(ctx, hatCenterX, hatBaseY);
+        }
+    }
+
+    drawSingleHat(ctx, hatCenterX, hatBaseY) {
+        const hatColor = '#2c1810'; // Marrom escuro
+        const bandColor = '#8b4513'; // Faixa marrom
+
+        // Aba do chapéu (oval achatado)
+        ctx.fillStyle = hatColor;
+        ctx.beginPath();
+        ctx.ellipse(hatCenterX, hatBaseY + 13, 10, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Copa do chapéu (cilindro)
+        ctx.fillStyle = hatColor;
+        ctx.fillRect(hatCenterX - 6, hatBaseY - 2, 12, 14);
+
+        // Topo do chapéu (oval)
+        ctx.beginPath();
+        ctx.ellipse(hatCenterX, hatBaseY - 2, 6, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Faixa decorativa
+        ctx.fillStyle = bandColor;
+        ctx.fillRect(hatCenterX - 6, hatBaseY + 9, 12, 3);
+
+        // Brilho no topo (highlight)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillRect(hatCenterX - 4, hatBaseY, 3, 4);
     }
 
     drawAntenna(ctx, screenX, screenY) {

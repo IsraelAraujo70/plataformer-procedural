@@ -4,7 +4,7 @@ export function drawModifierTimers(ctx) {
     const timers = [];
 
     // Coletar timers ativos de todos os jogadores
-    const players = [game.player, game.player2].filter(p => p && p.lives > 0);
+    const players = [game.player, game.player2].filter(p => p && !p.dying && !p.completelyDead);
 
     players.forEach(player => {
         if (player.jumpBoostTime > 0 && !timers.find(t => t.type === 'jump')) {

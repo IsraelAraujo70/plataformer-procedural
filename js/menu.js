@@ -39,10 +39,10 @@ export function startGame(twoPlayerMode = false) {
     game.coins = [];
     game.enemies = [];
     game.modifiers = [];
+    game.droppingHats = [];
     game.particles = [];
     game.floatingTexts = [];
     game.score = 0;
-    game.lives = 3;
     game.distance = 0;
     game.difficulty = 0;
     game.stats = {
@@ -68,10 +68,12 @@ export function startGame(twoPlayerMode = false) {
 
     // Atualizar HUD
     document.getElementById('p1-score').textContent = game.player.score;
-    document.getElementById('p1-lives').textContent = game.player.lives;
+    document.getElementById('p1-hat').textContent = game.player.hatCount;
+    document.getElementById('p1-hat').style.color = '#4CAF50';
     if (twoPlayerMode) {
         document.getElementById('p2-score').textContent = game.player2.score;
-        document.getElementById('p2-lives').textContent = game.player2.lives;
+        document.getElementById('p2-hat').textContent = game.player2.hatCount;
+        document.getElementById('p2-hat').style.color = '#4CAF50';
     }
     document.getElementById('distance').textContent = game.distance;
 

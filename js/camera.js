@@ -8,11 +8,14 @@ import { Chunk } from './world/Chunk.js';
 // ============================================
 export function updateChunks() {
     // No modo 2 jogadores, considerar apenas jogadores vivos
-    let referenceX = game.player.lives > 0 ? game.player.x : 0;
+    let referenceX = !game.player.dying && !game.player.completelyDead ? game.player.x : 0;
     if (game.twoPlayerMode && game.player2) {
-        if (game.player.lives > 0 && game.player2.lives > 0) {
+        const p1Alive = !game.player.dying && !game.player.completelyDead;
+        const p2Alive = !game.player2.dying && !game.player2.completelyDead;
+
+        if (p1Alive && p2Alive) {
             referenceX = Math.max(game.player.x, game.player2.x);
-        } else if (game.player2.lives > 0) {
+        } else if (p2Alive) {
             referenceX = game.player2.x;
         }
     }
@@ -59,13 +62,15 @@ export function updateChunks() {
 export function updateCamera() {
     // Modo 2 jogadores: seguir apenas jogadores vivos
     if (game.twoPlayerMode && game.player2) {
-        // Considerar apenas jogadores vivos
-        if (game.player.lives > 0 && game.player2.lives > 0) {
+        const p1Alive = !game.player.dying && !game.player.completelyDead;
+        const p2Alive = !game.player2.dying && !game.player2.completelyDead;
+
+        if (p1Alive && p2Alive) {
             const rightmostX = Math.max(game.player.x, game.player2.x);
             game.camera.targetX = rightmostX - game.width / 3;
-        } else if (game.player.lives > 0) {
+        } else if (p1Alive) {
             game.camera.targetX = game.player.x - game.width / 3;
-        } else if (game.player2.lives > 0) {
+        } else if (p2Alive) {
             game.camera.targetX = game.player2.x - game.width / 3;
         }
     } else {

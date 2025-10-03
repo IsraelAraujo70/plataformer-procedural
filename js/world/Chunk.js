@@ -3,6 +3,7 @@ import { game } from '../game.js';
 import { Enemy } from '../entities/Enemy.js';
 import { Coin } from '../entities/Coin.js';
 import { Modifier } from '../entities/Modifier.js';
+import { Hat } from '../entities/Hat.js';
 import { PATTERNS, getDifficultyConfig, selectPattern, getBiome, BIOMES } from './Patterns.js';
 
 const ABSOLUTE_MAX_GAP = CONFIG.TILE_SIZE * 5.5;
@@ -100,6 +101,7 @@ export class Chunk {
         this.coins = [];
         this.enemies = [];
         this.modifiers = [];
+        this.hats = []; // Chapéus coletáveis
         this.decorations = []; // Elementos decorativos
         this.previousChunk = previousChunk;
         this.entryPlatform = this.getEntryPlatform();
@@ -501,6 +503,49 @@ export class Chunk {
                 }
             }
         });
+
+        // Adicionar chapéu com 15% de chance (apenas em chunks >= 1)
+        if (this.index >= 1 && rng.next() < 0.15 && this.platforms.length > 0) {
+            // Escolher plataforma aleatória para spawnar o chapéu
+            const platform = this.platforms[rng.int(0, this.platforms.length - 1)];
+            const hatX = platform.x + platform.width / 2 - 10;
+            const hatY = platform.y - 40; // Um pouco acima da plataforma
+
+            // Verificar se não colide com outros itens
+            const allItems = [];
+
+            this.coins.forEach(coin => {
+                allItems.push({
+                    x: coin.x,
+                    y: coin.y,
+                    width: CONFIG.COIN_SIZE,
+                    height: CONFIG.COIN_SIZE
+                });
+            });
+
+            this.enemies.forEach(enemy => {
+                allItems.push({
+                    x: enemy.x,
+                    y: enemy.y,
+                    width: CONFIG.ENEMY_SIZE,
+                    height: CONFIG.ENEMY_SIZE
+                });
+            });
+
+            this.modifiers.forEach(modifier => {
+                allItems.push({
+                    x: modifier.x,
+                    y: modifier.y,
+                    width: 20,
+                    height: 20
+                });
+            });
+
+            // Só adicionar se não colidir com outros itens
+            if (canPlaceItem(hatX, hatY, 20, 20, allItems)) {
+                this.hats.push(new Hat(hatX, hatY, 'collectable'));
+            }
+        }
 
         // Adicionar modificador adicional se não veio de pattern
         if (this.index >= 1 && this.modifiers.length === 0) {

@@ -20,10 +20,10 @@ export const game = {
     coins: [],
     enemies: [],
     modifiers: [],
+    droppingHats: [], // Chapéus em animação de queda (temporários)
     particles: [],
     floatingTexts: [],
     score: 0,
-    lives: 3,
     distance: 0,
     difficulty: 0,
     stats: {

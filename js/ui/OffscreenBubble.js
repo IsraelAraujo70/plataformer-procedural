@@ -31,7 +31,7 @@ const BUBBLE_CONFIG = {
  * Verifica se um jogador está fora da tela
  */
 function isPlayerOffscreen(player) {
-    if (!player || player.lives <= 0 || player.completelyDead) return false;
+    if (!player || player.dying || player.completelyDead) return false;
 
     const screenX = player.x - game.camera.x;
     const playerRight = screenX + player.width;
