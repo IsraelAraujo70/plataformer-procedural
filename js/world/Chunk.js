@@ -584,7 +584,7 @@ export class Chunk {
 
             // Só adicionar se não colidir com outros itens
             if (canPlaceItem(hatX, hatY, 20, 20, allItems)) {
-                this.hats.push(new Hat(hatX, hatY, 'collectable'));
+                this.hats.push(new Hat(hatX, hatY, 'collectable', this.biome.name.toLowerCase()));
             }
         }
 

@@ -1,5 +1,6 @@
 import { CONFIG } from '../config.js';
 import { game } from '../game.js';
+import { HAT_TYPES } from './Hat.js';
 
 // ============================================
 // PLAYER
@@ -61,6 +62,7 @@ export class Player {
         // Stats individuais por jogador
         this.hatCount = 1; // Sistema de chapéus empilháveis: cada chapéu = 1 hit extra
         this.maxHats = 5; // Limite máximo de chapéus
+        this.hatTypes = ['plains']; // Tipos de chapéus coletados (biomas)
         this.score = 0;
         this.lastDistance = 0; // Rastrear última distância para pontuação individual
 
@@ -225,6 +227,38 @@ export class Player {
 
         // TimeWarp é atualizado no main.js para evitar decremento duplo durante aceleração
 
+        // Aplicar efeito de aura de calor (turbante) - reduzir velocidade dos inimigos próximos
+        if (this.heatAura) {
+            const heatRange = 150; // Raio da aura de calor
+
+            // Verificar todos os inimigos no chunk atual e próximos
+            game.chunks.forEach(chunk => {
+                chunk.enemies.forEach(enemy => {
+                    const dx = enemy.x - this.x;
+                    const dy = enemy.y - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance <= heatRange) {
+                        // Reduzir velocidade do inimigo (efeito de calor)
+                        enemy.vx *= 0.85;
+                        enemy.vy *= 0.85;
+
+                        // Efeito visual opcional (partículas de calor)
+                        if (Math.random() < 0.05) { // 5% de chance por frame
+                            if (window.createParticles) {
+                                window.createParticles(
+                                    enemy.x + enemy.width / 2,
+                                    enemy.y + enemy.height / 2,
+                                    '#FFD700',
+                                    2
+                                );
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
         // DEV MODE: Controles especiais
         if (game.devMode.enabled && game.devMode.noclip) {
             const flySpeed = game.devMode.flySpeed;
@@ -264,8 +298,10 @@ export class Player {
             this.vx = moveSpeed;
             this.facingRight = true;
         } else {
-            // Aplicar fricção (reduzida se icyFloor ativo)
-            this.vx *= this.icyFloor ? 0.98 : CONFIG.FRICTION;
+            // Aplicar fricção (reduzida se icyFloor ativo ou chapéu de pele equipado)
+            const baseFriction = this.icyFloor ? 0.98 : CONFIG.FRICTION;
+            const hatFriction = this.iceFrictionMultiplier !== undefined ? this.iceFrictionMultiplier : 1;
+            this.vx *= baseFriction * hatFriction;
         }
 
         // Atualizar animação de caminhada (quando está se movendo)
@@ -283,7 +319,7 @@ export class Player {
 
         // Pulo individual (W ou Seta para cima)
         if (game.keys[this.controls.up] && this.grounded && !this.jumping) {
-            let jumpStrength = CONFIG.JUMP_STRENGTH * this.jumpBoost;
+            let jumpStrength = CONFIG.JUMP_STRENGTH * this.jumpBoost * (this.jumpMultiplier || 1);
             if (this.heavy) jumpStrength *= 0.7; // Heavy reduz força do pulo em 30%
             if (game.devMode.enabled) jumpStrength *= 1.5; // Super pulo em dev mode
 
@@ -395,7 +431,7 @@ export class Player {
 
         // Gravidade (pode ser desativada em dev mode)
         if (game.devMode.gravityEnabled) {
-            let gravity = CONFIG.GRAVITY;
+            let gravity = CONFIG.GRAVITY * (this.gravityMultiplier || 1);
             if (this.heavy) gravity *= 1.7; // Heavy aumenta gravidade em 70%
             this.vy += gravity;
         }
@@ -680,9 +716,12 @@ export class Player {
         }
     }
 
-    takeDamage() {
+    takeDamage(damageAmount = 1) {
         if (this.invulnerable) return;
         if (game.devMode.enabled && game.devMode.invincible) return; // Dev Mode: invencível
+
+        // Aplicar redução de dano dos chapéus (capacete militar)
+        const actualDamage = damageAmount * (1 - (this.damageReduction || 0));
 
         // Shield absorve o dano
         if (this.shield) {
@@ -709,16 +748,22 @@ export class Player {
             // Perde 1 chapéu do topo da pilha
             this.hatCount--;
 
-            // Criar chapéu "dropping" (animação de cair e sumir)
+            // Remover o tipo do chapéu mais recente da lista
+            const lostHatType = this.hatTypes.pop();
+
+            // Criar chapéu "dropping" (animação de cair e sumir) com o tipo perdido
             const hatX = this.x + this.width / 2 - 10;
             const hatY = this.y - 8; // Posição da antena
 
             // Importar Hat dinamicamente e criar instância tipo 'dropping'
             import('./Hat.js').then(module => {
-                const droppingHat = new module.Hat(hatX, hatY, 'dropping');
+                const droppingHat = new module.Hat(hatX, hatY, 'dropping', lostHatType);
                 if (!game.droppingHats) game.droppingHats = [];
                 game.droppingHats.push(droppingHat);
             });
+
+            // Aplicar efeitos especiais baseado no tipo perdido
+            this.applyHatEffect(lostHatType, 'lose');
 
             // Efeitos visuais
             if (window.createParticles) {
@@ -733,6 +778,123 @@ export class Player {
             // Sem chapéus: morte imediata
             this.die();
         }
+    }
+
+    applyHatEffect(biomeType, action) {
+        // Importar dinamicamente os tipos de chapéus
+        import('./Hat.js').then(module => {
+            const HAT_TYPES = module.HAT_TYPES;
+            const hatData = HAT_TYPES[biomeType.toUpperCase()];
+
+            if (!hatData || !hatData.effect) return;
+
+            const effect = hatData.effect;
+
+            if (action === 'gain') {
+                // Aplicar efeito ao ganhar o chapéu
+                switch (effect) {
+                    case 'light':
+                        // Capacete de mineiro: iluminação extra
+                        this.lightRadius = (this.lightRadius || 100) + 50;
+                        if (window.createFloatingText) {
+                            window.createFloatingText('LAMP ON!', this.x + this.width / 2, this.y - 20, '#F1C40F');
+                        }
+                        break;
+
+                    case 'warmth':
+                        // Chapéu de pele: reduz atrito no gelo
+                        this.iceFrictionMultiplier = 0.3; // Muito menos escorregadio
+                        if (window.createFloatingText) {
+                            window.createFloatingText('WARM!', this.x + this.width / 2, this.y - 20, '#87CEEB');
+                        }
+                        break;
+
+                    case 'heat_resistance':
+                        // Turbante: reduz velocidade dos inimigos próximos
+                        this.heatAura = true;
+                        if (window.createFloatingText) {
+                            window.createFloatingText('HEAT WAVE!', this.x + this.width / 2, this.y - 20, '#FFD700');
+                        }
+                        break;
+
+                    case 'jump_boost':
+                        // Quepe de piloto: boost no pulo
+                        this.jumpMultiplier = (this.jumpMultiplier || 1) * 1.2;
+                        if (window.createFloatingText) {
+                            window.createFloatingText('JET FUEL!', this.x + this.width / 2, this.y - 20, '#4682B4');
+                        }
+                        break;
+
+                    case 'damage_reduction':
+                        // Capacete militar: reduz dano
+                        this.damageReduction = (this.damageReduction || 0) + 0.25;
+                        if (window.createFloatingText) {
+                            window.createFloatingText('ARMOR UP!', this.x + this.width / 2, this.y - 20, '#8B0000');
+                        }
+                        break;
+
+                    case 'low_gravity':
+                        // Capacete astronauta: melhor controle em baixa gravidade
+                        this.gravityMultiplier = (this.gravityMultiplier || 1) * 0.8;
+                        if (window.createFloatingText) {
+                            window.createFloatingText('MOON WALK!', this.x + this.width / 2, this.y - 20, '#4169E1');
+                        }
+                        break;
+
+                    case 'ultimate':
+                        // Coroa do vazio: todos os efeitos + invencibilidade temporária
+                        this.lightRadius = (this.lightRadius || 100) + 100;
+                        this.iceFrictionMultiplier = 0.1;
+                        this.heatAura = true;
+                        this.jumpMultiplier = (this.jumpMultiplier || 1) * 1.5;
+                        this.damageReduction = (this.damageReduction || 0) + 0.5;
+                        this.gravityMultiplier = (this.gravityMultiplier || 1) * 0.6;
+                        this.invulnerable = true;
+                        this.invulnerableTime = 180; // 3 segundos
+                        if (window.createFloatingText) {
+                            window.createFloatingText('VOID POWER!', this.x + this.width / 2, this.y - 20, '#FF6B35');
+                        }
+                        break;
+                }
+            } else if (action === 'lose') {
+                // Remover efeito ao perder o chapéu
+                switch (effect) {
+                    case 'light':
+                        this.lightRadius = Math.max((this.lightRadius || 100) - 50, 100);
+                        break;
+
+                    case 'warmth':
+                        this.iceFrictionMultiplier = 1.0;
+                        break;
+
+                    case 'heat_resistance':
+                        this.heatAura = false;
+                        break;
+
+                    case 'jump_boost':
+                        this.jumpMultiplier = (this.jumpMultiplier || 1) / 1.2;
+                        break;
+
+                    case 'damage_reduction':
+                        this.damageReduction = Math.max((this.damageReduction || 0) - 0.25, 0);
+                        break;
+
+                    case 'low_gravity':
+                        this.gravityMultiplier = (this.gravityMultiplier || 1) / 0.8;
+                        break;
+
+                    case 'ultimate':
+                        // Remover todos os efeitos
+                        this.lightRadius = 100;
+                        this.iceFrictionMultiplier = 1.0;
+                        this.heatAura = false;
+                        this.jumpMultiplier = 1.0;
+                        this.damageReduction = 0;
+                        this.gravityMultiplier = 1.0;
+                        break;
+                }
+            }
+        });
     }
 
     die() {
@@ -1132,44 +1294,244 @@ export class Player {
     }
 
     drawHats(ctx, screenX, screenY) {
-        // Desenhar múltiplos chapéus empilhados
+        // Desenhar chapéus únicos empilhados (cada tipo diferente coletado)
         const hatCenterX = screenX + this.width / 2;
-        const hatSpacing = 7; // Espaçamento vertical entre chapéus
-        const startY = screenY - 8; // Posição do primeiro chapéu
+        const hatSpacing = 5; // Espaçamento vertical entre chapéus
+        const startY = screenY - 6; // Posição do primeiro chapéu (acima dos olhos)
 
-        // Desenhar cada chapéu da pilha (de baixo para cima)
-        for (let i = 0; i < this.hatCount; i++) {
+        // Obter tipos únicos de chapéus coletados
+        const uniqueHatTypes = [...new Set(this.hatTypes)];
+
+        // Desenhar cada tipo único de chapéu (de baixo para cima)
+        for (let i = 0; i < uniqueHatTypes.length && i < this.hatCount; i++) {
             const hatBaseY = startY - (i * hatSpacing);
-            this.drawSingleHat(ctx, hatCenterX, hatBaseY);
+            const hatType = uniqueHatTypes[i];
+            this.drawHatByType(ctx, hatCenterX, hatBaseY, hatType);
         }
     }
 
-    drawSingleHat(ctx, hatCenterX, hatBaseY) {
-        const hatColor = '#2c1810'; // Marrom escuro
-        const bandColor = '#8b4513'; // Faixa marrom
+    drawHatByType(ctx, hatCenterX, hatBaseY, biomeType) {
+        // Usar HAT_TYPES importado diretamente
+        const hatData = HAT_TYPES[biomeType.toUpperCase()] || HAT_TYPES.PLAINS;
+        const colors = hatData.colors;
 
-        // Aba do chapéu (oval achatado)
+        // Escalar para tamanho maior no jogador (80% do tamanho original)
+        const scale = 0.8;
+        const scaledWidth = 20 * scale;
+        const scaledHeight = 16 * scale;
+
+        // Ajustar posições para o tamanho menor e posicionar acima da cabeça
+        const offsetX = hatCenterX - scaledWidth/2;
+        const offsetY = hatBaseY - scaledHeight/2;
+
+        // Desenhar baseado no tipo de bioma
+        switch (biomeType.toUpperCase()) {
+            case 'PLAINS':
+                this.drawCowboyHatSmall(ctx, offsetX, offsetY, colors, scale);
+                break;
+            case 'CAVE':
+                this.drawMinerHelmetSmall(ctx, offsetX, offsetY, colors, scale);
+                break;
+            case 'ICE':
+                this.drawFurHatSmall(ctx, offsetX, offsetY, colors, scale);
+                break;
+            case 'DESERT':
+                this.drawTurbanSmall(ctx, offsetX, offsetY, colors, scale);
+                break;
+            case 'SKY':
+                this.drawPilotCapSmall(ctx, offsetX, offsetY, colors, scale);
+                break;
+            case 'APOCALYPSE':
+                this.drawCombatHelmetSmall(ctx, offsetX, offsetY, colors, scale);
+                break;
+            case 'MOON':
+                this.drawAstronautHelmetSmall(ctx, offsetX, offsetY, colors, scale);
+                break;
+            case 'BLACK_HOLE':
+                this.drawVoidCrownSmall(ctx, offsetX, offsetY, colors, scale);
+                break;
+            default:
+                this.drawDefaultHatSmall(ctx, offsetX, offsetY, colors, scale);
+        }
+    }
+
+    drawDefaultHatSmall(ctx, x, y, colors, scale) {
+        const hatColor = colors.main || '#2c1810';
+        const bandColor = colors.band || '#8b4513';
+
+        // Aba do chapéu (oval achatado) - maior
         ctx.fillStyle = hatColor;
         ctx.beginPath();
-        ctx.ellipse(hatCenterX, hatBaseY + 13, 10, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 8, y + 13, 8, 2.4, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Copa do chapéu (cilindro)
+        // Copa do chapéu (cilindro) - maior
         ctx.fillStyle = hatColor;
-        ctx.fillRect(hatCenterX - 6, hatBaseY - 2, 12, 14);
+        ctx.fillRect(x + 4.8, y + 2, 6.4, 10);
 
-        // Topo do chapéu (oval)
+        // Topo do chapéu (oval) - maior
         ctx.beginPath();
-        ctx.ellipse(hatCenterX, hatBaseY - 2, 6, 2, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 8, y + 2, 3.2, 1.6, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Faixa decorativa
+        // Faixa decorativa - maior
         ctx.fillStyle = bandColor;
-        ctx.fillRect(hatCenterX - 6, hatBaseY + 9, 12, 3);
+        ctx.fillRect(x + 4.8, y + 9, 6.4, 2);
+    }
 
-        // Brilho no topo (highlight)
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.fillRect(hatCenterX - 4, hatBaseY, 3, 4);
+    drawCowboyHatSmall(ctx, x, y, colors, scale) {
+        // Chapéu de cowboy com aba larga - maior
+        ctx.fillStyle = colors.main;
+        ctx.beginPath();
+        ctx.ellipse(x + 8, y + 13, 9, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Copa alta - maior
+        ctx.fillStyle = colors.main;
+        ctx.fillRect(x + 4, y + 2, 8, 10);
+
+        // Topo pontudo - maior
+        ctx.beginPath();
+        ctx.ellipse(x + 8, y + 2, 4, 1.6, 0, 0, Math.PI);
+        ctx.fill();
+
+        // Faixa dourada - maior
+        ctx.fillStyle = colors.accent;
+        ctx.fillRect(x + 4, y + 9, 8, 1.6);
+    }
+
+    drawMinerHelmetSmall(ctx, x, y, colors, scale) {
+        // Capacete de mineiro com lanterna - maior
+        ctx.fillStyle = colors.main;
+        ctx.fillRect(x + 3, y + 2, 10, 11);
+
+        // Topo arredondado - maior
+        ctx.beginPath();
+        ctx.ellipse(x + 8, y + 2, 5, 1.6, 0, 0, Math.PI);
+        ctx.fill();
+
+        // Lanterna frontal - maior
+        ctx.fillStyle = colors.accent;
+        ctx.fillRect(x + 13, y + 4, 2.5, 4);
+        ctx.fillStyle = colors.light || '#FFF8DC';
+        ctx.fillRect(x + 13.5, y + 5, 1.5, 3);
+    }
+
+    drawFurHatSmall(ctx, x, y, colors, scale) {
+        // Chapéu de pele com pelos - maior
+        ctx.fillStyle = colors.main;
+        ctx.beginPath();
+        ctx.ellipse(x + 8, y + 13, 8, 2.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Copa - maior
+        ctx.fillStyle = colors.main;
+        ctx.fillRect(x + 4, y + 3, 8, 9);
+
+        // Pelo na borda (simplificado) - maior
+        ctx.fillStyle = colors.fur || '#FFFACD';
+        ctx.fillRect(x + 4, y + 9, 8, 1.6);
+
+        // Faixa azul - maior
+        ctx.fillStyle = colors.accent;
+        ctx.fillRect(x + 4, y + 9, 8, 1.6);
+    }
+
+    drawTurbanSmall(ctx, x, y, colors, scale) {
+        // Turbante enrolado - maior
+        ctx.fillStyle = colors.main;
+        // Camadas do turbante
+        for (let i = 0; i < 2; i++) {
+            ctx.beginPath();
+            ctx.ellipse(x + 8, y + 12 - i * 1.6, 8 - i, 2.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Nó do turbante - maior
+        ctx.fillStyle = colors.band;
+        ctx.beginPath();
+        ctx.ellipse(x + 10.5, y + 8, 3, 2.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawPilotCapSmall(ctx, x, y, colors, scale) {
+        // Quepe de piloto - maior
+        ctx.fillStyle = colors.main;
+        ctx.beginPath();
+        ctx.ellipse(x + 8, y + 12, 8.5, 2.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Copa baixa - maior
+        ctx.fillStyle = colors.main;
+        ctx.fillRect(x + 4, y + 3, 8, 8);
+
+        // Óculos - maior
+        ctx.fillStyle = colors.goggles || '#000000';
+        ctx.beginPath();
+        ctx.ellipse(x + 6, y + 5.5, 1.5, 1.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x + 10, y + 5.5, 1.5, 1.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawCombatHelmetSmall(ctx, x, y, colors, scale) {
+        // Capacete militar - maior
+        ctx.fillStyle = colors.main;
+        ctx.fillRect(x + 3.5, y + 1, 9, 12);
+
+        // Topo arredondado - maior
+        ctx.beginPath();
+        ctx.ellipse(x + 8, y + 1, 4.5, 1.6, 0, 0, Math.PI);
+        ctx.fill();
+
+        // Detalhes vermelhos - maior
+        ctx.fillStyle = colors.accent;
+        ctx.fillRect(x + 4, y + 1, 8, 0.8);
+        ctx.fillRect(x + 4, y + 11, 8, 0.8);
+    }
+
+    drawAstronautHelmetSmall(ctx, x, y, colors, scale) {
+        // Capacete de astronauta com visor - maior
+        ctx.fillStyle = colors.main;
+        ctx.fillRect(x + 3.5, y + 2, 9, 10);
+
+        // Topo arredondado - maior
+        ctx.beginPath();
+        ctx.ellipse(x + 8, y + 2, 4.5, 1.6, 0, 0, Math.PI);
+        ctx.fill();
+
+        // Visor - maior
+        ctx.fillStyle = colors.visor || colors.accent;
+        ctx.fillRect(x + 5, y + 4, 6, 4.5);
+    }
+
+    drawVoidCrownSmall(ctx, x, y, colors, scale) {
+        // Coroa do vazio com energia - maior
+        ctx.fillStyle = colors.main;
+        // Pontas da coroa (simplificado) - maior
+        for (let i = 0; i < 3; i++) {
+            const px = x + 4 + i * 3;
+            ctx.beginPath();
+            ctx.moveTo(px, y + 12);
+            ctx.lineTo(px + 0.8, y + 7);
+            ctx.lineTo(px + 1.6, y + 12);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Base da coroa - maior
+        ctx.fillStyle = colors.band;
+        ctx.fillRect(x + 4, y + 9, 8, 2.2);
+
+        // Energia simples - maior
+        ctx.fillStyle = colors.energy || colors.accent;
+        ctx.fillRect(x + 6, y + 7.5, 2.5, 1.5);
+    }
+
+    drawSingleHat(ctx, hatCenterX, hatBaseY) {
+        // Função mantida para compatibilidade, mas agora usa drawHatByType
+        this.drawHatByType(ctx, hatCenterX, hatBaseY, 'plains');
     }
 
     spawnBhopDust(points) {
