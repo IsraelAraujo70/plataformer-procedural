@@ -53,7 +53,10 @@ export class Player {
 
         // Multiplayer: definir número do jogador e controles
         this.playerNumber = playerNumber;
+        // Cores vibrantes estilo cartoon
         this.color = playerNumber === 1 ? '#00d9ff' : '#ff6b6b';
+        this.colorDark = playerNumber === 1 ? '#0099cc' : '#cc3333'; // Sombra
+        this.colorLight = playerNumber === 1 ? '#66efff' : '#ff9999'; // Highlight
         this.controls = playerNumber === 1 ?
             { left: 'a', right: 'd', up: 'w' } :
             { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp' };
@@ -86,10 +89,35 @@ export class Player {
         this.deathAnimTime = 0;
         this.deathAnimDuration = 60; // 1 segundo a 60fps
 
-        // Animação squash & stretch (efeito cartoon)
+        // Animação squash & stretch AVANÇADA (efeito cartoon)
         this.squashStretch = 1.0; // 1.0 = normal, > 1 = esticado, < 1 = comprimido
+        this.squashStretchVelocity = 0; // Velocidade da animação (spring physics)
         this.wasGroundedLastFrame = false;
         this.justJumped = false;
+
+        // Sistema de antecipação (preparação antes do pulo)
+        this.anticipating = false;
+        this.anticipationTime = 0;
+        this.anticipationDuration = 8; // frames de agachamento antes do pulo
+
+        // Bounce na caminhada (pulo sutil ao andar)
+        this.walkBounce = 0;
+        this.walkBounceSpeed = 0.3;
+
+        // Sistema de piscar olhos
+        this.blinkTimer = 0;
+        this.blinkDuration = 0;
+        this.isBlinking = false;
+        this.nextBlinkTime = Math.random() * 180 + 120; // 2-5 segundos
+
+        // Rotação sutil do corpo durante movimento
+        this.bodyRotation = 0;
+        this.bodyRotationVelocity = 0;
+
+        // Sistema de trail (rastro de movimento)
+        this.trail = [];
+        this.trailMaxLength = 8;
+        this.trailTimer = 0;
 
         // Antena/topete com física de pêndulo
         this.antennaAngle = 0;       // Ângulo da antena (em radianos)
@@ -419,27 +447,122 @@ export class Player {
         }
 
         // ============================================
-        // SQUASH & STRETCH ANIMATION
+        // SQUASH & STRETCH ANIMATION AVANÇADA (Spring Physics)
         // ============================================
 
-        // Detectar pouso (chegou no chão agora)
-        if (this.grounded && !wasGrounded && previousVY > 3) {
-            this.squashStretch = 0.6; // Comprimir ao pousar
+        // Detectar pouso IMPACTANTE (chegou no chão agora)
+        if (this.grounded && !wasGrounded) {
+            const impactForce = Math.min(previousVY / 10, 1.5); // Força baseada na velocidade
+            this.squashStretch = Math.max(0.4, 1.0 - impactForce * 0.6); // Comprimir MUITO ao pousar
+            this.squashStretchVelocity = 0;
+
+            // Partículas de impacto no pouso
+            if (previousVY > 5 && window.createParticles) {
+                window.createParticles(this.x + this.width / 2, this.y + this.height, this.color, Math.floor(impactForce * 8));
+            }
         }
 
-        // Esticar ao pular
+        // Esticar MUITO ao pular (antecipação)
         if (this.justJumped) {
-            this.squashStretch = 1.4; // Esticar ao iniciar pulo
+            this.squashStretch = 1.6; // Esticar MUITO ao iniciar pulo
+            this.squashStretchVelocity = 0.15;
             this.justJumped = false;
         }
 
-        // Retornar suavemente ao normal
-        if (this.squashStretch < 1.0) {
-            this.squashStretch += 0.08; // Recuperação rápida da compressão
-            if (this.squashStretch > 1.0) this.squashStretch = 1.0;
-        } else if (this.squashStretch > 1.0) {
-            this.squashStretch -= 0.06; // Recuperação do esticamento
-            if (this.squashStretch < 1.0) this.squashStretch = 1.0;
+        // Spring physics para squash & stretch (movimento suave e elástico)
+        const targetSquash = 1.0;
+        const springStiffness = 0.15;
+        const springDamping = 0.7;
+
+        // Aplicar física de mola
+        const squashError = targetSquash - this.squashStretch;
+        this.squashStretchVelocity += squashError * springStiffness;
+        this.squashStretchVelocity *= springDamping;
+        this.squashStretch += this.squashStretchVelocity;
+
+        // Limitar valores extremos
+        this.squashStretch = Math.max(0.4, Math.min(1.8, this.squashStretch));
+
+        // ============================================
+        // WALK BOUNCE (Pulo sutil ao andar)
+        // ============================================
+        if (this.grounded && Math.abs(this.vx) > 0.5) {
+            const oldBounce = this.walkBounce;
+            this.walkBounce += this.walkBounceSpeed * (this.speedBoost > 1 ? 1.5 : 1);
+
+            // Criar partículas de poeira quando o pé toca o chão (bounce no pico)
+            const bouncePhase = Math.sin(this.walkBounce);
+            const oldPhase = Math.sin(oldBounce);
+
+            if (bouncePhase < 0 && oldPhase >= 0 && window.createParticles) {
+                // Pé tocou o chão!
+                const footX = this.x + this.width / 2 + (this.facingRight ? 5 : -5);
+                const footY = this.y + this.height + 4;
+                window.createParticles(footX, footY, '#aa8866', 3);
+            }
+        } else {
+            this.walkBounce = 0;
+        }
+
+        // ============================================
+        // BODY ROTATION (Rotação sutil ao virar)
+        // ============================================
+        let targetRotation = 0;
+        if (this.grounded && Math.abs(this.vx) > 1) {
+            targetRotation = this.vx * 0.03; // Inclinar na direção do movimento
+        }
+
+        const rotationError = targetRotation - this.bodyRotation;
+        this.bodyRotationVelocity += rotationError * 0.2;
+        this.bodyRotationVelocity *= 0.8;
+        this.bodyRotation += this.bodyRotationVelocity;
+        this.bodyRotation = Math.max(-0.15, Math.min(0.15, this.bodyRotation));
+
+        // ============================================
+        // BLINK ANIMATION (Piscar olhos)
+        // ============================================
+        this.blinkTimer++;
+
+        if (this.isBlinking) {
+            this.blinkDuration++;
+            if (this.blinkDuration >= 8) { // Piscar dura 8 frames
+                this.isBlinking = false;
+                this.blinkDuration = 0;
+                this.nextBlinkTime = this.blinkTimer + Math.random() * 180 + 120; // Próximo piscar em 2-5s
+            }
+        } else if (this.blinkTimer >= this.nextBlinkTime) {
+            this.isBlinking = true;
+            this.blinkTimer = 0;
+        }
+
+        // ============================================
+        // TRAIL SYSTEM (Rastro de movimento)
+        // ============================================
+        this.trailTimer++;
+
+        // Criar trail quando se movendo rápido
+        if (Math.abs(this.vx) > 2 || Math.abs(this.vy) > 5) {
+            if (this.trailTimer % 3 === 0) { // A cada 3 frames
+                this.trail.push({
+                    x: this.x + this.width / 2,
+                    y: this.y + this.height / 2,
+                    life: 15,
+                    maxLife: 15,
+                    squash: this.squashStretch,
+                    rotation: this.bodyRotation
+                });
+            }
+        }
+
+        // Atualizar e remover trails antigos
+        this.trail = this.trail.filter(t => {
+            t.life--;
+            return t.life > 0;
+        });
+
+        // Limitar tamanho do array
+        if (this.trail.length > this.trailMaxLength) {
+            this.trail.shift();
         }
 
         // Atualizar estado do frame anterior
@@ -799,8 +922,38 @@ export class Player {
             return;
         }
 
+        // ============================================
+        // DESENHAR TRAIL (RASTRO) antes do personagem
+        // ============================================
+        this.trail.forEach((t, index) => {
+            const alpha = t.life / t.maxLife;
+            const trailScreenX = t.x - game.camera.x;
+            const trailScreenY = t.y - game.camera.y;
+            const size = this.width * 0.8 * alpha; // Diminui com o tempo
+
+            ctx.save();
+            ctx.globalAlpha = alpha * 0.4;
+            ctx.translate(trailScreenX, trailScreenY);
+            ctx.rotate(t.rotation);
+
+            // Desenhar forma blob do trail
+            const radiusX = size / 2;
+            const radiusY = (size / 2) * t.squash;
+
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        });
+
         const screenX = this.x - game.camera.x;
         const screenY = this.y - game.camera.y;
+
+        // Aplicar walk bounce (pulo sutil ao andar)
+        const bounceOffset = Math.sin(this.walkBounce) * 2;
+        const finalScreenY = screenY - bounceOffset;
 
         // Salvar contexto para aplicar transformações
         ctx.save();
@@ -809,19 +962,22 @@ export class Player {
         const beingSucked = game.victoryTriggered && game.blackHoleSuctionProgress > 0;
 
         // ============================================
-        // APLICAR SQUASH & STRETCH
+        // APLICAR SQUASH & STRETCH + ROTAÇÃO
         // ============================================
         if (!this.dying && !beingSucked) {
             // Centro de transformação: base do personagem (pés)
             const centerX = screenX + this.width / 2;
-            const centerY = screenY + this.height; // Base (pés)
+            const centerY = finalScreenY + this.height; // Base (pés)
 
             // Mover origem para base do personagem
             ctx.translate(centerX, centerY);
 
+            // ROTAÇÃO do corpo (inclinação ao mover)
+            ctx.rotate(this.bodyRotation);
+
             // Aplicar escala vertical e compensar horizontalmente
             // (Princípio de conservação de volume da animação cartoon)
-            const horizontalSquash = 1.0 + (1.0 - this.squashStretch) * 0.5;
+            const horizontalSquash = 1.0 + (1.0 - this.squashStretch) * 0.6; // Mais exagerado!
             ctx.scale(horizontalSquash, this.squashStretch);
 
             // Retornar origem
@@ -1031,84 +1187,130 @@ export class Player {
         }
 
         // Desenhar pernas animadas (antes do corpo para ficarem atrás)
-        this.drawLegs(ctx, screenX, screenY);
+        this.drawLegs(ctx, screenX, finalScreenY);
 
         // Desenhar antena (se não tiver chapéus) - ANTES do corpo
         if (this.hatCount === 0) {
-            this.drawAntenna(ctx, screenX, screenY);
+            this.drawAntenna(ctx, screenX, finalScreenY);
         }
 
         // Corpo do jogador em formato BLOB (arredondado)
-        this.drawBlobBody(ctx, screenX, screenY);
+        this.drawBlobBody(ctx, screenX, finalScreenY);
 
-        // Sobrancelhas expressivas (arredondadas para combinar com blob)
+        // OLHOS ENORMES estilo cartoon fofo (ocupam quase toda a face)
+        const eyeLeftX = screenX + 7;
+        const eyeRightX = screenX + 17;
+        const eyeY = finalScreenY + 10;
+        const eyeSize = 6; // Muito maior!
+
+        // ANIMAÇÃO DE PISCAR (squash vertical dos olhos)
+        const blinkProgress = this.isBlinking ? Math.min(this.blinkDuration / 4, 1) : 0;
+        const eyeSquash = 1 - blinkProgress * 0.9; // Olhos fecham 90%
+
+        // Outline preto GROSSO dos olhos
         ctx.fillStyle = '#000000';
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
-
-        let eyebrowY = screenY + 7;
-        if (!this.grounded && this.vy < 0) {
-            eyebrowY = screenY + 6; // Levantadas ao pular
-        } else if (!this.grounded && this.vy > 3) {
-            eyebrowY = screenY + 8; // Abaixadas ao cair
-        }
-
-        // Sobrancelhas como linhas arredondadas
-        ctx.strokeStyle = '#000000';
         ctx.beginPath();
-        ctx.moveTo(screenX + 6, eyebrowY);
-        ctx.lineTo(screenX + 11, eyebrowY);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(screenX + 13, eyebrowY);
-        ctx.lineTo(screenX + 18, eyebrowY);
-        ctx.stroke();
-
-        // Olhos arredondados (círculos brancos)
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(screenX + 8, screenY + 11, 3, 0, Math.PI * 2);
+        ctx.ellipse(eyeLeftX, eyeY, eyeSize + 1.5, (eyeSize + 1.5) * eyeSquash, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(screenX + 16, screenY + 11, 3, 0, Math.PI * 2);
+        ctx.ellipse(eyeRightX, eyeY, eyeSize + 1.5, (eyeSize + 1.5) * eyeSquash, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Pupilas (olhando na direção do movimento ou centro quando parado)
-        ctx.fillStyle = '#000000';
-        let pupilOffsetX = 0;
-        if (Math.abs(this.vx) > 0.5) {
-            pupilOffsetX = this.facingRight ? 1 : -1;
-        }
-
-        ctx.beginPath();
-        ctx.arc(screenX + 8 + pupilOffsetX, screenY + 11, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(screenX + 16 + pupilOffsetX, screenY + 11, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Boca - oval quando pulando/caindo
-        ctx.fillStyle = '#000000';
-        if (!this.grounded || Math.abs(this.vy) > 0.5) {
-            // Boca oval (aberta) - usando ellipse
+        // Brancos dos olhos (super brancos) - só desenhar se não estiver completamente fechado
+        if (eyeSquash > 0.1) {
+            ctx.fillStyle = '#ffffff';
             ctx.beginPath();
-            ctx.ellipse(
-                screenX + 12,  // centro X
-                screenY + 20,  // centro Y
-                4,             // raio X
-                6,             // raio Y (maior = mais oval)
-                0, 0, Math.PI * 2
-            );
+            ctx.ellipse(eyeLeftX, eyeY, eyeSize, eyeSize * eyeSquash, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(eyeRightX, eyeY, eyeSize, eyeSize * eyeSquash, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Pupilas GRANDES e expressivas (seguem direção do movimento) - só se não piscando
+        if (eyeSquash > 0.3) {
+            ctx.fillStyle = '#000000';
+            let pupilOffsetX = 0;
+            let pupilOffsetY = 0;
+
+            if (Math.abs(this.vx) > 0.5) {
+                pupilOffsetX = this.facingRight ? 1.5 : -1.5;
+            }
+
+            // Pupilas olham pra baixo quando caindo
+            if (!this.grounded && this.vy > 3) {
+                pupilOffsetY = 1.5;
+            }
+            // Olham pra cima quando pulando
+            else if (!this.grounded && this.vy < -2) {
+                pupilOffsetY = -1;
+            }
+
+            const pupilSize = 3.5 * eyeSquash; // Pupilas também comprimem ao piscar
+            ctx.beginPath();
+            ctx.arc(eyeLeftX + pupilOffsetX, eyeY + pupilOffsetY, pupilSize, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(eyeRightX + pupilOffsetX, eyeY + pupilOffsetY, pupilSize, 0, Math.PI * 2);
+            ctx.fill();
+
+            // BRILHOS nos olhos (GRANDES e brilhantes) - estilo anime/cartoon
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+            ctx.beginPath();
+            ctx.arc(eyeLeftX - 1.5, eyeY - 1.5, 2 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(eyeRightX - 1.5, eyeY - 1.5, 2 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Mini brilho secundário
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.beginPath();
+            ctx.arc(eyeLeftX + 2, eyeY + 1.5, 1 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(eyeRightX + 2, eyeY + 1.5, 1 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // BOCHECHAS ROSADAS (fofo!) - pulsam ao andar
+        const cheekPulse = 1 + Math.sin(this.walkBounce * 2) * 0.1;
+        ctx.fillStyle = 'rgba(255, 150, 180, 0.4)';
+        ctx.beginPath();
+        ctx.arc(screenX + 3, finalScreenY + 14, 3 * cheekPulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 21, finalScreenY + 14, 3 * cheekPulse, 0, Math.PI * 2);
+        ctx.fill();
+
+        // BOCA EXPRESSIVA (muda com velocidade vertical)
+        if (!this.grounded || Math.abs(this.vy) > 0.5) {
+            // Boca ABERTA (surpreso/animado) - tamanho varia com velocidade
+            const mouthOpenness = 1 + Math.min(Math.abs(this.vy) / 10, 0.5);
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.ellipse(screenX + 12, finalScreenY + 20, 4 * mouthOpenness, 5 * mouthOpenness, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Interior da boca (escuro avermelhado)
+            ctx.fillStyle = '#661111';
+            ctx.beginPath();
+            ctx.ellipse(screenX + 12, finalScreenY + 20, 3 * mouthOpenness, 4 * mouthOpenness, 0, 0, Math.PI * 2);
             ctx.fill();
         } else {
-            // Boca normal (linha)
-            ctx.fillRect(screenX + 8, screenY + 18, 8, 2);
+            // SORRISO FELIZ (arco virado para cima) - maior ao andar rápido
+            const smileSize = 4 + Math.abs(this.vx) * 0.3;
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(screenX + 12, finalScreenY + 17, smileSize, 0.2, Math.PI - 0.2);
+            ctx.stroke();
         }
 
         // Desenhar chapéus POR CIMA de tudo (empilhados)
         if (this.hatCount > 0) {
-            this.drawHats(ctx, screenX, screenY);
+            this.drawHats(ctx, screenX, finalScreenY);
         }
 
         // Restaurar contexto (sempre restaurar ao final)
@@ -1116,18 +1318,45 @@ export class Player {
     }
 
     drawBlobBody(ctx, screenX, screenY) {
-        ctx.fillStyle = this.color;
-
-        // Desenhar corpo blob usando arcos e curvas para forma orgânica
-        // Criar forma arredondada/oval semelhante a um blob cartoon
         const centerX = screenX + this.width / 2;
         const centerY = screenY + this.height / 2;
         const radiusX = this.width / 2;
         const radiusY = this.height / 2;
 
-        // Desenhar elipse (blob)
+        // OUTLINE PRETO GROSSO (estilo cartoon) - mais grosso
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, radiusX + 3, radiusY + 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // SOMBRA INTERNA (lado inferior/direito) - gradiente mais suave
+        const shadowGradient = ctx.createRadialGradient(
+            centerX - radiusX * 0.4,
+            centerY - radiusY * 0.4,
+            0,
+            centerX,
+            centerY,
+            radiusX * 1.2
+        );
+        shadowGradient.addColorStop(0, this.colorLight);
+        shadowGradient.addColorStop(0.5, this.color);
+        shadowGradient.addColorStop(1, this.colorDark);
+
+        ctx.fillStyle = shadowGradient;
         ctx.beginPath();
         ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // HIGHLIGHT GRANDE (brilho no topo) - estilo cartoon fofo
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.beginPath();
+        ctx.ellipse(centerX - radiusX * 0.2, centerY - radiusY * 0.35, radiusX * 0.5, radiusY * 0.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Mini highlight secundário
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(centerX + radiusX * 0.3, centerY - radiusY * 0.2, radiusX * 0.2, radiusY * 0.15, 0, 0, Math.PI * 2);
         ctx.fill();
     }
 
@@ -1145,31 +1374,70 @@ export class Player {
     }
 
     drawSingleHat(ctx, hatCenterX, hatBaseY) {
-        const hatColor = '#2c1810'; // Marrom escuro
-        const bandColor = '#8b4513'; // Faixa marrom
+        const hatColor = '#aa6633'; // Marrom vibrante
+        const hatDark = '#884422'; // Marrom escuro
+        const bandColor = '#dd7744'; // Faixa laranja/marrom vibrante
 
-        // Aba do chapéu (oval achatado)
-        ctx.fillStyle = hatColor;
+        // OUTLINE PRETO da aba
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.ellipse(hatCenterX, hatBaseY + 13, 12, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Aba do chapéu (oval achatado) com gradiente
+        const brimGradient = ctx.createRadialGradient(
+            hatCenterX - 3, hatBaseY + 12, 0,
+            hatCenterX, hatBaseY + 13, 10
+        );
+        brimGradient.addColorStop(0, hatColor);
+        brimGradient.addColorStop(1, hatDark);
+        ctx.fillStyle = brimGradient;
         ctx.beginPath();
         ctx.ellipse(hatCenterX, hatBaseY + 13, 10, 3, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Copa do chapéu (cilindro)
-        ctx.fillStyle = hatColor;
+        // OUTLINE PRETO da copa
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(hatCenterX - 7, hatBaseY - 3, 14, 16);
+
+        // Copa do chapéu (cilindro) com gradiente
+        const crownGradient = ctx.createLinearGradient(hatCenterX - 6, 0, hatCenterX + 6, 0);
+        crownGradient.addColorStop(0, hatDark);
+        crownGradient.addColorStop(0.5, hatColor);
+        crownGradient.addColorStop(1, hatDark);
+        ctx.fillStyle = crownGradient;
         ctx.fillRect(hatCenterX - 6, hatBaseY - 2, 12, 14);
 
+        // OUTLINE PRETO do topo
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.ellipse(hatCenterX, hatBaseY - 2, 7, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
         // Topo do chapéu (oval)
+        ctx.fillStyle = hatColor;
         ctx.beginPath();
         ctx.ellipse(hatCenterX, hatBaseY - 2, 6, 2, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Faixa decorativa
+        // Faixa decorativa com outline
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(hatCenterX - 7, hatBaseY + 8, 14, 4);
+
         ctx.fillStyle = bandColor;
         ctx.fillRect(hatCenterX - 6, hatBaseY + 9, 12, 3);
 
-        // Brilho no topo (highlight)
+        // BRILHO no topo (highlight grande)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.beginPath();
+        ctx.ellipse(hatCenterX - 2, hatBaseY + 2, 3, 5, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Mini highlight
         ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.fillRect(hatCenterX - 4, hatBaseY, 3, 4);
+        ctx.beginPath();
+        ctx.arc(hatCenterX + 3, hatBaseY + 5, 1.5, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     spawnBhopDust(points) {
@@ -1283,57 +1551,113 @@ export class Player {
     }
 
     drawLegs(ctx, screenX, screenY) {
-        ctx.fillStyle = this.color;
-
-        // Parâmetros das pernas (mais próximas do centro)
-        const legWidth = 5;
+        // Parâmetros das pernas (mais grossinhas e fofas)
+        const legWidth = 6;
         const bodyBottom = screenY + this.height;
-        const leftLegX = screenX + 7;  // Mais perto do centro
-        const rightLegX = screenX + 12; // Mais perto do centro
+        const leftLegX = screenX + 6;
+        const rightLegX = screenX + 12;
 
-        // Se estiver no ar, pernas juntas
+        // Se estiver no ar, pernas juntas e ARREDONDADAS
         if (!this.grounded) {
-            ctx.fillRect(leftLegX, bodyBottom, legWidth, 5);
-            ctx.fillRect(rightLegX, bodyBottom, legWidth, 5);
+            // Outline preto das pernas (arredondado)
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.roundRect(leftLegX - 1, bodyBottom, legWidth + 2, 7, 3);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.roundRect(rightLegX - 1, bodyBottom, legWidth + 2, 7, 3);
+            ctx.fill();
 
-            // Pezinhos no ar
-            ctx.fillRect(leftLegX, bodyBottom + 5, legWidth, 2);
-            ctx.fillRect(rightLegX, bodyBottom + 5, legWidth, 2);
+            // Pernas coloridas (arredondadas)
+            ctx.fillStyle = this.colorDark;
+            ctx.beginPath();
+            ctx.roundRect(leftLegX, bodyBottom, legWidth, 5, 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.roundRect(rightLegX, bodyBottom, legWidth, 5, 2);
+            ctx.fill();
+
+            // Pezinhos ARREDONDADOS
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(leftLegX + legWidth/2, bodyBottom + 6, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(rightLegX + legWidth/2, bodyBottom + 6, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = this.colorDark;
+            ctx.beginPath();
+            ctx.arc(leftLegX + legWidth/2, bodyBottom + 6, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(rightLegX + legWidth/2, bodyBottom + 6, 3, 0, Math.PI * 2);
+            ctx.fill();
             return;
         }
 
         // Animação de caminhada - 4 frames (movimento mais exagerado)
-        let leftLegY = bodyBottom;
-        let rightLegY = bodyBottom;
         let leftLegHeight = 5;
         let rightLegHeight = 5;
 
         switch(this.animFrame) {
-            case 0: // Neutro
+            case 0:
                 leftLegHeight = 5;
                 rightLegHeight = 5;
                 break;
-            case 1: // Perna esquerda levantada, direita abaixada
+            case 1:
                 leftLegHeight = 3;
                 rightLegHeight = 7;
                 break;
-            case 2: // Neutro
+            case 2:
                 leftLegHeight = 5;
                 rightLegHeight = 5;
                 break;
-            case 3: // Perna direita levantada, esquerda abaixada
+            case 3:
                 leftLegHeight = 7;
                 rightLegHeight = 3;
                 break;
         }
 
-        // Desenhar pernas
-        ctx.fillRect(leftLegX, leftLegY, legWidth, leftLegHeight);
-        ctx.fillRect(rightLegX, rightLegY, legWidth, rightLegHeight);
+        // Outline preto das pernas (arredondado)
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.roundRect(leftLegX - 1, bodyBottom, legWidth + 2, leftLegHeight + 1, 3);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.roundRect(rightLegX - 1, bodyBottom, legWidth + 2, rightLegHeight + 1, 3);
+        ctx.fill();
 
-        // Pezinhos (pequenos retângulos nas pontas das pernas)
-        ctx.fillRect(leftLegX, leftLegY + leftLegHeight, legWidth, 2);
-        ctx.fillRect(rightLegX, rightLegY + rightLegHeight, legWidth, 2);
+        // Pernas coloridas (arredondadas)
+        ctx.fillStyle = this.colorDark;
+        ctx.beginPath();
+        ctx.roundRect(leftLegX, bodyBottom, legWidth, leftLegHeight, 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.roundRect(rightLegX, bodyBottom, legWidth, rightLegHeight, 2);
+        ctx.fill();
+
+        // Pezinhos REDONDOS E FOFOS
+        const leftFootY = bodyBottom + leftLegHeight;
+        const rightFootY = bodyBottom + rightLegHeight;
+
+        // Outline dos pezinhos
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(leftLegX + legWidth/2, leftFootY + 2, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(rightLegX + legWidth/2, rightFootY + 2, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pezinhos coloridos
+        ctx.fillStyle = this.colorDark;
+        ctx.beginPath();
+        ctx.arc(leftLegX + legWidth/2, leftFootY + 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(rightLegX + legWidth/2, rightFootY + 2, 3, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     getModifierTimeRemaining(type) {

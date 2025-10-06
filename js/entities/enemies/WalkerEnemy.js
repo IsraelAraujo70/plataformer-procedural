@@ -11,7 +11,10 @@ export class WalkerEnemy extends Enemy {
 
         this.vx = 1.5;
         this.points = 50;
-        this.color = '#ff8800'; // Laranja
+        // Cores vibrantes estilo cartoon
+        this.color = '#ff8800'; // Laranja vibrante
+        this.colorDark = '#cc6600'; // Sombra
+        this.colorLight = '#ffaa33'; // Highlight
     }
 
     update() {
@@ -82,25 +85,101 @@ export class WalkerEnemy extends Enemy {
 
         const screenX = this.x - game.camera.x;
         const screenY = this.y - game.camera.y;
+        const centerX = screenX + this.width / 2;
+        const centerY = screenY + this.height / 2;
+        const radius = this.width / 2;
 
-        // Corpo do inimigo (laranja)
-        ctx.fillStyle = this.color;
-        ctx.fillRect(screenX, screenY, this.width, this.height);
-
-        // Olhos
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(screenX + 6, screenY + 8, 4, 6);
-        ctx.fillRect(screenX + 18, screenY + 8, 4, 6);
-
-        // Pupilas
+        // OUTLINE PRETO GROSSO (estilo cartoon)
         ctx.fillStyle = '#000000';
-        ctx.fillRect(screenX + 8, screenY + 10, 2, 2);
-        ctx.fillRect(screenX + 20, screenY + 10, 2, 2);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius + 2, 0, Math.PI * 2);
+        ctx.fill();
 
-        // Dentes
+        // CORPO BLOB com gradiente (sombra interna)
+        const gradient = ctx.createRadialGradient(
+            centerX - radius * 0.3,
+            centerY - radius * 0.3,
+            0,
+            centerX,
+            centerY,
+            radius
+        );
+        gradient.addColorStop(0, this.colorLight);
+        gradient.addColorStop(0.6, this.color);
+        gradient.addColorStop(1, this.colorDark);
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // HIGHLIGHT (brilho no topo)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.beginPath();
+        ctx.arc(centerX - radius * 0.25, centerY - radius * 0.3, radius * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // OLHOS GRANDES com outline
+        // Outline dos olhos
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(screenX + 10, screenY + 11, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 18, screenY + 11, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Brancos dos olhos
         ctx.fillStyle = '#ffffff';
-        for (let i = 0; i < 4; i++) {
-            ctx.fillRect(screenX + 6 + i * 4, screenY + 20, 3, 4);
+        ctx.beginPath();
+        ctx.arc(screenX + 10, screenY + 11, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 18, screenY + 11, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pupilas grandes e expressivas
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(screenX + 10, screenY + 12, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 18, screenY + 12, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Brilho nos olhos
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.beginPath();
+        ctx.arc(screenX + 9, screenY + 10, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 17, screenY + 10, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // BOCA COM DENTES (estilo cartoon assustador)
+        // Boca grande preta
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(centerX, screenY + 22, 8, 0, Math.PI, false);
+        ctx.fill();
+
+        // Interior da boca (escuro)
+        ctx.fillStyle = '#330000';
+        ctx.beginPath();
+        ctx.arc(centerX, screenY + 22, 6, 0, Math.PI, false);
+        ctx.fill();
+
+        // Dentes triangulares brancos
+        ctx.fillStyle = '#ffffff';
+        for (let i = 0; i < 5; i++) {
+            const toothX = screenX + 6 + i * 4;
+            const toothY = screenY + 20;
+            ctx.beginPath();
+            ctx.moveTo(toothX, toothY);
+            ctx.lineTo(toothX + 3, toothY);
+            ctx.lineTo(toothX + 1.5, toothY + 4);
+            ctx.closePath();
+            ctx.fill();
         }
     }
 }

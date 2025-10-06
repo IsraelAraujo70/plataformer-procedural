@@ -73,25 +73,25 @@ function drawPlainsBackground(ctx) {
     let skyTop, skyBottom;
 
     if (progression < 0.25) {
-        // Fase 1: Dia → Pôr do sol (0.00 - 0.25)
+        // Fase 1: Dia → Pôr do sol (0.00 - 0.25) - CORES MAIS VIBRANTES
         const t = progression * 4; // 0 a 1
-        skyTop = interpolateColor('#87CEEB', '#FF6B6B', t);
-        skyBottom = interpolateColor('#E0F6FF', '#FFB347', t);
+        skyTop = interpolateColor('#00b4ff', '#ff5588', t); // Azul vibrante → Rosa vibrante
+        skyBottom = interpolateColor('#99ddff', '#ffaa55', t); // Azul claro → Laranja vibrante
     } else if (progression < 0.5) {
-        // Fase 2: Pôr do sol → Noite (0.25 - 0.50)
+        // Fase 2: Pôr do sol → Noite (0.25 - 0.50) - CORES MAIS VIBRANTES
         const t = (progression - 0.25) * 4; // 0 a 1
-        skyTop = interpolateColor('#FF6B6B', '#1a1a2e', t);
-        skyBottom = interpolateColor('#FFB347', '#16213e', t);
+        skyTop = interpolateColor('#ff5588', '#1a1a3e', t); // Rosa → Azul escuro vibrante
+        skyBottom = interpolateColor('#ffaa55', '#2a2a5e', t); // Laranja → Roxo escuro
     } else if (progression < 0.75) {
-        // Fase 3: Noite → Amanhecer (0.50 - 0.75)
+        // Fase 3: Noite → Amanhecer (0.50 - 0.75) - CORES MAIS VIBRANTES
         const t = (progression - 0.5) * 4; // 0 a 1
-        skyTop = interpolateColor('#1a1a2e', '#FF6B6B', t);
-        skyBottom = interpolateColor('#16213e', '#FFB347', t);
+        skyTop = interpolateColor('#1a1a3e', '#ff88aa', t); // Noite → Rosa amanhecer
+        skyBottom = interpolateColor('#2a2a5e', '#ffcc66', t); // Roxo escuro → Amarelo vibrante
     } else {
-        // Fase 4: Amanhecer → Dia (0.75 - 1.00)
+        // Fase 4: Amanhecer → Dia (0.75 - 1.00) - CORES MAIS VIBRANTES
         const t = (progression - 0.75) * 4; // 0 a 1
-        skyTop = interpolateColor('#FF6B6B', '#87CEEB', t);
-        skyBottom = interpolateColor('#FFB347', '#E0F6FF', t);
+        skyTop = interpolateColor('#ff88aa', '#00b4ff', t); // Rosa → Azul vibrante
+        skyBottom = interpolateColor('#ffcc66', '#99ddff', t); // Amarelo → Azul claro
     }
 
     const gradient = ctx.createLinearGradient(0, 0, 0, game.height);

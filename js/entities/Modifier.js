@@ -232,24 +232,31 @@ export class Modifier {
         const screenX = this.x - game.camera.x + this.width / 2;
         const screenY = this.y - game.camera.y + this.height / 2;
 
-        // Efeito de pulso
-        const pulse = 1 + Math.sin(this.pulseTime) * 0.2;
+        // Efeito de pulso (mais pronunciado)
+        const pulse = 1 + Math.sin(this.pulseTime) * 0.25;
         const size = this.width * pulse;
 
         ctx.save();
         ctx.translate(screenX, screenY);
         ctx.rotate(this.rotation);
 
-        // Aura/outline circular externo
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-        ctx.lineWidth = 3;
+        // Glow externo mais intenso
         ctx.shadowColor = '#ffffff';
-        ctx.shadowBlur = 15;
-        ctx.beginPath();
-        ctx.arc(0, 0, size / 2 + 2, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.shadowBlur = 20;
 
-        // Visual único - gradiente arco-íris animado
+        // OUTLINE PRETO GROSSO
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(0, 0, size / 2 + 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Aura branca vibrante
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.beginPath();
+        ctx.arc(0, 0, size / 2 + 1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Visual único - gradiente arco-íris animado (cores mais saturadas)
         const gradientRotation = this.pulseTime * 0.5;
         const gradient = ctx.createLinearGradient(
             Math.cos(gradientRotation) * size,
@@ -258,9 +265,10 @@ export class Modifier {
             -Math.sin(gradientRotation) * size
         );
 
-        gradient.addColorStop(0, '#ff00ff');    // Magenta
-        gradient.addColorStop(0.33, '#00d9ff'); // Ciano
-        gradient.addColorStop(0.66, '#00ff88'); // Verde
+        gradient.addColorStop(0, '#ff00ff');    // Magenta vibrante
+        gradient.addColorStop(0.25, '#ff66ff'); // Rosa
+        gradient.addColorStop(0.5, '#00d9ff');  // Ciano
+        gradient.addColorStop(0.75, '#00ff88'); // Verde
         gradient.addColorStop(1, '#ffff00');    // Amarelo
 
         ctx.fillStyle = gradient;
@@ -271,14 +279,49 @@ export class Modifier {
         ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Símbolo de interrogação no centro
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.font = 'bold 14px Arial';
+        // Highlight no topo
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.beginPath();
+        ctx.arc(-size * 0.15, -size * 0.15, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Símbolo de interrogação no centro (maior e com outline)
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 4;
+        ctx.font = 'bold 16px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        ctx.strokeText('?', 0, 0);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = '#000000';
+        ctx.shadowBlur = 2;
         ctx.fillText('?', 0, 0);
 
+        ctx.shadowBlur = 0;
+
         ctx.restore();
+
+        // Partículas brilhantes girando (estilo cartoon)
+        const time = Date.now() / 1000;
+        for (let i = 0; i < 6; i++) {
+            const angle = time * 2 + (i * Math.PI * 2 / 6);
+            const radius = size / 2 + 8 + Math.sin(time * 3 + i) * 3;
+            const px = screenX + Math.cos(angle) * radius;
+            const py = screenY + Math.sin(angle) * radius;
+            const opacity = 0.5 + Math.sin(time * 4 + i) * 0.3;
+
+            // Estrelinhas brilhantes
+            ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+            ctx.beginPath();
+            ctx.arc(px, py, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Brilho extra
+            ctx.fillStyle = `rgba(255, 255, 0, ${opacity * 0.5})`;
+            ctx.beginPath();
+            ctx.arc(px, py, 1, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 }

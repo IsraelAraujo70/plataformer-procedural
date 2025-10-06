@@ -12,7 +12,10 @@ export class FlyerEnemy extends Enemy {
         // Configuração específica do Flyer
         this.vx = 2; // Um pouco mais rápido
         this.points = 75; // Vale mais pontos
-        this.color = '#9d00ff'; // Roxo
+        // Cores vibrantes estilo cartoon
+        this.color = '#9d00ff'; // Roxo vibrante
+        this.colorDark = '#6a0099'; // Sombra
+        this.colorLight = '#cc33ff'; // Highlight
 
         // Parâmetros do movimento senoidal
         this.baseY = y; // Altura base
@@ -83,32 +86,79 @@ export class FlyerEnemy extends Enemy {
 
         const screenX = this.x - game.camera.x;
         const screenY = this.y - game.camera.y;
+        const centerX = screenX + 14;
+        const centerY = screenY + 14;
 
-        // Asas (desenhar primeiro para ficar atrás)
+        // Asas (desenhar primeiro para ficar atrás) com outline
         const wingFlap = Math.sin(Date.now() / 100) * 4; // Movimento das asas
-        ctx.fillStyle = '#6a0099'; // Roxo mais escuro
 
-        // Asa esquerda
+        // Outline preto das asas
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.moveTo(screenX + 8, screenY + 10);
+        ctx.lineTo(screenX - 4, screenY + 6 + wingFlap);
+        ctx.lineTo(screenX + 8, screenY + 16);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(screenX + 20, screenY + 10);
+        ctx.lineTo(screenX + 32, screenY + 6 + wingFlap);
+        ctx.lineTo(screenX + 20, screenY + 16);
+        ctx.fill();
+
+        // Asas coloridas
+        ctx.fillStyle = this.colorDark;
         ctx.beginPath();
         ctx.moveTo(screenX + 8, screenY + 10);
         ctx.lineTo(screenX - 2, screenY + 6 + wingFlap);
         ctx.lineTo(screenX + 8, screenY + 14);
         ctx.fill();
 
-        // Asa direita
         ctx.beginPath();
         ctx.moveTo(screenX + 20, screenY + 10);
         ctx.lineTo(screenX + 30, screenY + 6 + wingFlap);
         ctx.lineTo(screenX + 20, screenY + 14);
         ctx.fill();
 
-        // Corpo do inimigo (roxo, formato mais arredondado)
-        ctx.fillStyle = this.color;
+        // OUTLINE PRETO do corpo
+        ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.ellipse(screenX + 14, screenY + 14, 14, 12, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, centerY, 16, 14, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Olhos grandes (característico de voador)
+        // CORPO BLOB com gradiente
+        const gradient = ctx.createRadialGradient(
+            centerX - 5,
+            centerY - 5,
+            0,
+            centerX,
+            centerY,
+            14
+        );
+        gradient.addColorStop(0, this.colorLight);
+        gradient.addColorStop(0.6, this.color);
+        gradient.addColorStop(1, this.colorDark);
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, 14, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // HIGHLIGHT
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(centerX - 4, centerY - 4, 5, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Olhos grandes com outline
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(screenX + 9, screenY + 12, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 19, screenY + 12, 5, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.arc(screenX + 9, screenY + 12, 4, 0, Math.PI * 2);
@@ -120,14 +170,34 @@ export class FlyerEnemy extends Enemy {
         // Pupilas
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.arc(screenX + 9, screenY + 12, 2, 0, Math.PI * 2);
+        ctx.arc(screenX + 9, screenY + 12, 2.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(screenX + 19, screenY + 12, 2, 0, Math.PI * 2);
+        ctx.arc(screenX + 19, screenY + 12, 2.5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Antenas pequenas no topo
-        ctx.strokeStyle = this.color;
+        // Brilho
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.beginPath();
+        ctx.arc(screenX + 8, screenY + 11, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 18, screenY + 11, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Antenas com outline
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(screenX + 10, screenY + 4);
+        ctx.lineTo(screenX + 8, screenY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(screenX + 18, screenY + 4);
+        ctx.lineTo(screenX + 20, screenY);
+        ctx.stroke();
+
+        ctx.strokeStyle = this.colorDark;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(screenX + 10, screenY + 4);
@@ -138,7 +208,15 @@ export class FlyerEnemy extends Enemy {
         ctx.lineTo(screenX + 20, screenY);
         ctx.stroke();
 
-        // Bolinhas nas antenas
+        // Bolinhas nas antenas com outline
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(screenX + 8, screenY, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 20, screenY, 3, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(screenX + 8, screenY, 2, 0, Math.PI * 2);

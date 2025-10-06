@@ -847,7 +847,21 @@ export class Chunk {
         const tileSize = 16;
         const colors = this.biome.colors;
 
-        // Fundo base com gradiente (usar cores do bioma)
+        // OUTLINE PRETO GROSSO (estilo cartoon) - com topo arredondado
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.moveTo(x - 2, y + 8);
+        ctx.lineTo(x - 2, y + height + 2);
+        ctx.lineTo(x + width + 2, y + height + 2);
+        ctx.lineTo(x + width + 2, y + 8);
+        // Topo arredondado
+        ctx.arcTo(x + width + 2, y - 2, x + width / 2, y - 2, 8);
+        ctx.lineTo(x + width / 2, y - 2);
+        ctx.arcTo(x - 2, y - 2, x - 2, y + 8, 8);
+        ctx.closePath();
+        ctx.fill();
+
+        // Fundo base com gradiente (usar cores do bioma) - mais saturado
         const gradient = ctx.createLinearGradient(x, y, x, y + height);
 
         if (colors.ground && colors.groundDark) {
@@ -855,19 +869,23 @@ export class Chunk {
             gradient.addColorStop(0.5, colors.ground);
             gradient.addColorStop(1, colors.groundDark);
         } else {
-            // Fallback para cores padrão
-            gradient.addColorStop(0, '#8b6914');
-            gradient.addColorStop(0.5, '#654321');
-            gradient.addColorStop(1, '#3d2812');
+            // Fallback para cores padrão (mais vibrantes)
+            gradient.addColorStop(0, '#aa8800');
+            gradient.addColorStop(0.5, '#885522');
+            gradient.addColorStop(1, '#553311');
         }
 
         ctx.fillStyle = gradient;
         ctx.fillRect(x, y, width, height);
 
+        // Highlight sutil no lado esquerdo
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.fillRect(x, y, 3, height);
+
         // Definir altura da camada de grama/topo
         const grassHeight = 8;
 
-        // Camada de grama/topo (se bioma tiver)
+        // Camada de grama/topo (se bioma tiver) - com topo arredondado
         if (colors.grass || colors.cloud) {
             const topColor = colors.grass || colors.cloud;
             const topDark = colors.grassDark || colors.cloudDark;
@@ -876,13 +894,32 @@ export class Chunk {
             grassGradient.addColorStop(0, topColor);
             grassGradient.addColorStop(1, topDark || topColor);
             ctx.fillStyle = grassGradient;
-            ctx.fillRect(x, y, width, grassHeight);
 
-            // Detalhes de grama/tufos (apenas em Plains)
+            // Desenhar retângulo com topo arredondado
+            ctx.beginPath();
+            ctx.moveTo(x, y + grassHeight);
+            ctx.lineTo(x, y + 6);
+            ctx.arcTo(x, y, x + 6, y, 6);
+            ctx.lineTo(x + width - 6, y);
+            ctx.arcTo(x + width, y, x + width, y + 6, 6);
+            ctx.lineTo(x + width, y + grassHeight);
+            ctx.closePath();
+            ctx.fill();
+
+            // Highlight no topo da grama
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.fillRect(x + 4, y + 1, width - 8, 2);
+
+            // Detalhes de grama/tufos (apenas em Plains) - mais visíveis
             if (this.biome.name === 'Plains') {
                 ctx.fillStyle = topColor;
                 for (let i = 0; i < width; i += 8) {
-                    const tuftHeight = 3 + (i % 3);
+                    const tuftHeight = 4 + (i % 3);
+                    // Tufinho com outline
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(x + i - 0.5, y - tuftHeight - 0.5, 4, tuftHeight + 1);
+
+                    ctx.fillStyle = topColor;
                     ctx.fillRect(x + i, y - tuftHeight, 3, tuftHeight);
                 }
             }
@@ -926,51 +963,75 @@ export class Chunk {
     }
 
     drawFloatingPlatform(ctx, x, y, width, height) {
-        // Base da plataforma com gradiente cristalino
-        const gradient = ctx.createLinearGradient(x, y, x, y + height);
-        gradient.addColorStop(0, '#a78bfa');
-        gradient.addColorStop(0.5, '#8b5cf6');
-        gradient.addColorStop(1, '#7c3aed');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(x, y, width, height);
+        // OUTLINE PRETO GROSSO (estilo cartoon) - arredondado
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.roundRect(x - 2, y - 2, width + 4, height + 4, 6);
+        ctx.fill();
 
-        // Efeito de brilho/cristal (linhas diagonais)
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        // Base da plataforma com gradiente cristalino (cores mais vibrantes)
+        const gradient = ctx.createLinearGradient(x, y, x, y + height);
+        gradient.addColorStop(0, '#c4b5fd'); // Mais claro
+        gradient.addColorStop(0.5, '#a78bfa'); // Roxo vibrante
+        gradient.addColorStop(1, '#8b5cf6'); // Roxo médio
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, height, 4);
+        ctx.fill();
+
+        // Efeito de brilho/cristal (linhas diagonais mais visíveis)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
         ctx.lineWidth = 2;
-        for (let i = 0; i < width; i += 20) {
+        for (let i = 0; i < width; i += 15) {
             ctx.beginPath();
             ctx.moveTo(x + i, y);
-            ctx.lineTo(x + i + 10, y + height);
+            ctx.lineTo(x + i + 8, y + height);
             ctx.stroke();
         }
 
-        // Highlight no topo
-        const topGradient = ctx.createLinearGradient(x, y, x, y + 6);
-        topGradient.addColorStop(0, 'rgba(255, 255, 255, 0.6)');
+        // Highlight no topo (mais pronunciado)
+        const topGradient = ctx.createLinearGradient(x, y, x, y + 8);
+        topGradient.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
         topGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
         ctx.fillStyle = topGradient;
-        ctx.fillRect(x, y, width, 6);
+        ctx.fillRect(x + 4, y, width - 8, 8);
 
-        // Partículas brilhantes ao redor (efeito mágico)
+        // Partículas brilhantes ao redor (efeito mágico) - maiores e mais vibrantes
         const time = Date.now() / 1000;
-        const particleCount = Math.floor(width / 40);
-        ctx.fillStyle = '#c4b5fd';
+        const particleCount = Math.max(3, Math.floor(width / 30));
 
         for (let i = 0; i < particleCount; i++) {
-            const angle = time + i * (Math.PI * 2 / particleCount);
-            const radius = 15 + Math.sin(time * 2 + i) * 5;
+            const angle = time * 1.5 + i * (Math.PI * 2 / particleCount);
+            const radius = 18 + Math.sin(time * 3 + i) * 6;
             const px = x + width/2 + Math.cos(angle) * radius;
             const py = y + height/2 + Math.sin(angle) * radius;
+            const opacity = 0.6 + Math.sin(time * 4 + i) * 0.3;
 
+            // Outline preto na partícula
+            ctx.fillStyle = `rgba(0, 0, 0, ${opacity * 0.5})`;
             ctx.beginPath();
-            ctx.arc(px, py, 2, 0, Math.PI * 2);
+            ctx.arc(px, py, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Partícula colorida
+            ctx.fillStyle = `rgba(196, 181, 253, ${opacity})`;
+            ctx.beginPath();
+            ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Brilho interno
+            ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 0.8})`;
+            ctx.beginPath();
+            ctx.arc(px - 0.5, py - 0.5, 1, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // Borda brilhante
-        ctx.strokeStyle = '#c4b5fd';
+        // Borda brilhante interna
+        ctx.strokeStyle = 'rgba(196, 181, 253, 0.6)';
         ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, width, height);
+        ctx.beginPath();
+        ctx.roundRect(x + 1, y + 1, width - 2, height - 2, 3);
+        ctx.stroke();
     }
 
     drawFlower(ctx, x, y, variant) {

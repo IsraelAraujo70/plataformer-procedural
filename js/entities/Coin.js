@@ -63,35 +63,45 @@ export class Coin {
         const screenX = this.x - game.camera.x + this.width / 2;
         const screenY = this.y - game.camera.y + this.height / 2;
 
-        // Efeito de brilho/glow ao redor
+        // Efeito de brilho/glow ao redor (mais intenso)
         ctx.shadowColor = '#ffd700';
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 15;
 
         ctx.save();
         ctx.translate(screenX, screenY);
         ctx.rotate(this.rotation);
 
-        // Moeda dourada (círculo ao invés de quadrado)
+        // OUTLINE PRETO GROSSO (estilo cartoon)
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.width / 2 + 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Moeda dourada com gradiente mais vibrante
         const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.width / 2);
-        gradient.addColorStop(0, '#ffed4e');
-        gradient.addColorStop(0.7, '#ffd700');
-        gradient.addColorStop(1, '#daa520');
+        gradient.addColorStop(0, '#ffff66'); // Mais claro
+        gradient.addColorStop(0.5, '#ffd700'); // Dourado vibrante
+        gradient.addColorStop(1, '#cc9900'); // Mais escuro
         ctx.fillStyle = gradient;
         ctx.beginPath();
         ctx.arc(0, 0, this.width / 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Símbolo de moeda (C ou $)
-        ctx.fillStyle = '#b8860b';
-        ctx.font = 'bold 10px Arial';
+        // Símbolo de moeda ($ maior e com outline)
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        ctx.strokeText('$', 0, 0);
+
+        ctx.fillStyle = '#ffff66';
         ctx.fillText('$', 0, 0);
 
-        // Highlight brilhante
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        // Highlight brilhante (mais pronunciado)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
         ctx.beginPath();
-        ctx.arc(-2, -2, this.width / 4, 0, Math.PI * 2);
+        ctx.arc(-3, -3, this.width / 3, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();
@@ -99,18 +109,24 @@ export class Coin {
         // Resetar shadow
         ctx.shadowBlur = 0;
 
-        // Partículas brilhantes ao redor (efeito idle)
+        // Partículas brilhantes ao redor (mais visíveis e maiores)
         const time = Date.now() / 1000 + this.x; // Offset por posição para variar
-        for (let i = 0; i < 3; i++) {
-            const angle = time + (i * Math.PI * 2 / 3);
-            const radius = 12 + Math.sin(time * 2 + i) * 3;
+        for (let i = 0; i < 4; i++) {
+            const angle = time * 2 + (i * Math.PI * 2 / 4);
+            const radius = 14 + Math.sin(time * 3 + i) * 4;
             const px = screenX + Math.cos(angle) * radius;
             const py = screenY + Math.sin(angle) * radius;
-            const opacity = 0.3 + Math.sin(time * 3 + i) * 0.2;
+            const opacity = 0.4 + Math.sin(time * 4 + i) * 0.3;
+
+            // Outline preto nas partículas
+            ctx.fillStyle = `rgba(0, 0, 0, ${opacity * 0.5})`;
+            ctx.beginPath();
+            ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+            ctx.fill();
 
             ctx.fillStyle = `rgba(255, 215, 0, ${opacity})`;
             ctx.beginPath();
-            ctx.arc(px, py, 1, 0, Math.PI * 2);
+            ctx.arc(px, py, 1.5, 0, Math.PI * 2);
             ctx.fill();
         }
     }
