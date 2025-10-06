@@ -69,6 +69,61 @@ function gameLoop(currentTime) {
             }
         }
 
+        // Verificar vitória ao chegar no chunk 69
+        const currentChunk = Math.floor(game.player.x / (CONFIG.CHUNK_WIDTH * CONFIG.TILE_SIZE));
+        if (currentChunk >= 69 && !game.victoryTriggered) {
+            game.victoryTriggered = true;
+            console.log('Victory triggered at chunk 69!');
+        }
+
+        // Efeito de sucção pelo buraco negro
+        if (game.victoryTriggered) {
+            game.blackHoleSuctionProgress += 0.008; // ~4 segundos total
+
+            // Atualizar rotação (2 voltas completas durante a sucção)
+            game.blackHoleSuctionRotation = game.blackHoleSuctionProgress * Math.PI * 4;
+
+            // Posição do buraco negro (centro-direita da tela)
+            const blackHoleX = game.width * 0.65 + game.camera.x;
+            const blackHoleY = game.height * 0.4;
+
+            // Aplicar força de sucção ao player
+            const applyBlackHoleSuction = (player) => {
+                if (!player || player.completelyDead) return;
+
+                const dx = blackHoleX - player.x;
+                const dy = blackHoleY - player.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                // Força aumenta com o progresso
+                const force = game.blackHoleSuctionProgress * 15;
+
+                // Acelerar em direção ao buraco negro
+                player.vx += (dx / distance) * force;
+                player.vy += (dy / distance) * force;
+
+                // Diminuir tamanho gradualmente
+                const shrinkFactor = Math.max(0.2, 1 - game.blackHoleSuctionProgress);
+                player.width = CONFIG.PLAYER_WIDTH * shrinkFactor;
+                player.height = CONFIG.PLAYER_HEIGHT * shrinkFactor;
+
+                // Remover controle do jogador
+                player.controllable = false;
+            };
+
+            applyBlackHoleSuction(game.player);
+            if (game.twoPlayerMode && game.player2) {
+                applyBlackHoleSuction(game.player2);
+            }
+
+            // Após 4 segundos, mostrar tela de vitória
+            if (game.blackHoleSuctionProgress >= 1) {
+                if (window.showVictory) {
+                    window.showVictory();
+                }
+            }
+        }
+
         game.player.update();
         if (game.twoPlayerMode && game.player2) {
             game.player2.update();

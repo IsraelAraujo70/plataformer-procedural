@@ -6,7 +6,7 @@ export const game = {
     ctx: null,
     width: 1280,
     height: 720,
-    state: 'menu', // 'menu', 'playing', 'paused', 'gameover'
+    state: 'menu', // 'menu', 'playing', 'paused', 'gameover', 'victory'
     seed: 0,
     random: null,
     keys: {},
@@ -30,6 +30,11 @@ export const game = {
     currentBiome: null, // Bioma atual baseado na posição da câmera
     previousBiome: null, // Bioma anterior (para transições)
     biomeTransition: 0, // 0 a 1, progresso da transição entre biomas
+    gameStartTime: 0, // Timestamp do início do jogo
+    gameEndTime: 0, // Timestamp do fim do jogo
+    victoryTriggered: false, // Flag para controlar fim do jogo aos 2000m
+    blackHoleSuctionProgress: 0, // 0 a 1, progresso da sucção pelo buraco negro
+    blackHoleSuctionRotation: 0, // Rotação do player durante sucção
     stats: {
         coinsCollected: 0,
         enemiesDefeated: 0,

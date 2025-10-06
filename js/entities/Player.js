@@ -783,10 +783,13 @@ export class Player {
         // Salvar contexto para aplicar transformações
         ctx.save();
 
+        // Verificar se está sendo sugado pelo buraco negro
+        const beingSucked = game.victoryTriggered && game.blackHoleSuctionProgress > 0;
+
         // ============================================
         // APLICAR SQUASH & STRETCH
         // ============================================
-        if (!this.dying) {
+        if (!this.dying && !beingSucked) {
             // Centro de transformação: base do personagem (pés)
             const centerX = screenX + this.width / 2;
             const centerY = screenY + this.height; // Base (pés)
@@ -816,6 +819,21 @@ export class Player {
 
             ctx.translate(centerX, centerY);
             ctx.rotate(rotation);
+            ctx.translate(-centerX, -centerY);
+        }
+
+        // Aplicar transparência e rotação durante sucção pelo buraco negro
+        if (beingSucked) {
+            // Calcular opacidade (fade out progressivo)
+            const opacity = 1 - game.blackHoleSuctionProgress;
+            ctx.globalAlpha = opacity;
+
+            // Aplicar rotação (2 voltas completas)
+            const centerX = screenX + this.width / 2;
+            const centerY = screenY + this.height / 2;
+
+            ctx.translate(centerX, centerY);
+            ctx.rotate(game.blackHoleSuctionRotation);
             ctx.translate(-centerX, -centerY);
         }
 

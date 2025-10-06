@@ -24,6 +24,9 @@ export function updateChunks() {
 
     // Gerar chunks à frente e atrás (apenas chunks 0+)
     for (let i = Math.max(0, playerChunk - CONFIG.VIEW_DISTANCE); i <= playerChunk + CONFIG.VIEW_DISTANCE; i++) {
+        // Parar geração de chunks após o chunk 69
+        if (i > 69) continue;
+
         if (!game.chunks.has(i)) {
             // Criar seed única para este chunk baseada na seed global
             const chunkRandom = new Random(game.seed + i * 1000);

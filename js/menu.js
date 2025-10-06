@@ -45,6 +45,10 @@ export function startGame(twoPlayerMode = false) {
     game.score = 0;
     game.distance = 0;
     game.difficulty = 0;
+    game.gameStartTime = Date.now();
+    game.gameEndTime = 0;
+    game.victoryTriggered = false;
+    game.blackHoleSuctionProgress = 0;
     game.stats = {
         coinsCollected: 0,
         enemiesDefeated: 0,
@@ -148,6 +152,87 @@ export function showGameOver() {
 }
 
 // ============================================
+// SHOW VICTORY (completou 2000m)
+// ============================================
+export function showVictory() {
+    game.state = 'victory';
+    game.gameEndTime = Date.now();
+
+    const menu = document.getElementById('menu');
+
+    // Calcular tempo total de jogo
+    const totalTimeMs = game.gameEndTime - game.gameStartTime;
+    const totalSeconds = Math.floor(totalTimeMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+    if (game.twoPlayerMode) {
+        // Modo 2 jogadores
+        const p1Score = game.player.score;
+        const p2Score = game.player2.score;
+        const totalScore = p1Score + p2Score;
+
+        const coinPoints = game.stats.coinsCollected * 10;
+        const enemyPoints = game.stats.enemiesDefeated * 50;
+        const modifierPoints = game.stats.modifiersCollected * 25;
+        const distancePoints = game.distance;
+
+        menu.innerHTML = `
+            <h1 style="color: #ffd700; text-shadow: 0 0 20px #ffd700;">🏆 VICTORY! 🏆</h1>
+            <h2 style="color: #00ffff; margin: 10px 0;">You've escaped the universe!</h2>
+            <div style="text-align: left; display: inline-block; margin: 20px 0;">
+                <p style="font-size: 24px; margin: 15px 0; color: #ffd700;"><strong>⏱️ Time: ${formattedTime}</strong></p>
+                <hr style="margin: 15px 0; border-color: #ffd700;">
+                <p style="font-size: 18px; margin: 10px 0;"><strong>📊 Score Breakdown:</strong></p>
+                <p style="font-size: 16px; margin: 8px 0;">💰 Coins: ${game.stats.coinsCollected} × 10 = ${coinPoints} pts</p>
+                <p style="font-size: 16px; margin: 8px 0;">👹 Enemies: ${game.stats.enemiesDefeated} × 50 = ${enemyPoints} pts</p>
+                <p style="font-size: 16px; margin: 8px 0;">⚡ Modifiers: ${game.stats.modifiersCollected} × 25 = ${modifierPoints} pts</p>
+                <p style="font-size: 16px; margin: 8px 0;">📏 Distance: ${game.distance}m = ${distancePoints} pts</p>
+                <hr style="margin: 15px 0; border-color: #00ffff;">
+                <p style="font-size: 20px; margin: 10px 0; color: #00d9ff;"><strong>🎮 Player 1: ${p1Score} points</strong></p>
+                <p style="font-size: 20px; margin: 10px 0; color: #ff6b6b;"><strong>🎮 Player 2: ${p2Score} points</strong></p>
+                <hr style="margin: 15px 0; border-color: #ffd700;">
+                <p style="font-size: 24px; margin: 10px 0; color: #ffd700;"><strong>🏆 TOTAL: ${totalScore} points</strong></p>
+            </div>
+            <button id="playAgainBtn">🔄 Play Again</button>
+            <button id="backToMenuBtn">🏠 Back to Menu</button>
+        `;
+    } else {
+        // Modo 1 jogador
+        const coinPoints = game.stats.coinsCollected * 10;
+        const enemyPoints = game.stats.enemiesDefeated * 50;
+        const modifierPoints = game.stats.modifiersCollected * 25;
+        const distancePoints = game.distance;
+
+        menu.innerHTML = `
+            <h1 style="color: #ffd700; text-shadow: 0 0 20px #ffd700;">🏆 VICTORY! 🏆</h1>
+            <h2 style="color: #00ffff; margin: 10px 0;">You've escaped the universe!</h2>
+            <div style="text-align: left; display: inline-block; margin: 20px 0;">
+                <p style="font-size: 24px; margin: 15px 0; color: #ffd700;"><strong>⏱️ Time: ${formattedTime}</strong></p>
+                <hr style="margin: 15px 0; border-color: #ffd700;">
+                <p style="font-size: 18px; margin: 10px 0;"><strong>📊 Score Breakdown:</strong></p>
+                <p style="font-size: 16px; margin: 8px 0;">💰 Coins: ${game.stats.coinsCollected} × 10 = ${coinPoints} pts</p>
+                <p style="font-size: 16px; margin: 8px 0;">👹 Enemies: ${game.stats.enemiesDefeated} × 50 = ${enemyPoints} pts</p>
+                <p style="font-size: 16px; margin: 8px 0;">⚡ Modifiers: ${game.stats.modifiersCollected} × 25 = ${modifierPoints} pts</p>
+                <p style="font-size: 16px; margin: 8px 0;">📏 Distance: ${game.distance}m = ${distancePoints} pts</p>
+                <hr style="margin: 15px 0; border-color: #ffd700;">
+                <p style="font-size: 22px; margin: 10px 0; color: #ffd700;"><strong>🏆 TOTAL: ${game.player.score} points</strong></p>
+            </div>
+            <button id="playAgainBtn">🔄 Play Again</button>
+            <button id="backToMenuBtn">🏠 Back to Menu</button>
+        `;
+    }
+
+    menu.classList.remove('hidden');
+    document.getElementById('hud').classList.add('hidden');
+    document.getElementById('pauseBtn').classList.add('hidden');
+
+    // Configurar event listeners dos botões
+    setupGameOverButtons(); // Mesmos botões que game over
+}
+
+// ============================================
 // PAUSE GAME
 // ============================================
 export function pauseGame() {
@@ -230,5 +315,6 @@ function setupGameOverButtons() {
     }
 }
 
-// Expor showGameOver globalmente para ser chamado pelo Player
+// Expor funções globalmente para serem chamadas pelo Player e main
 window.showGameOver = showGameOver;
+window.showVictory = showVictory;
