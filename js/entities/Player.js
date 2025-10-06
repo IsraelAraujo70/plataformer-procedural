@@ -1,5 +1,6 @@
 import { CONFIG } from '../config.js';
 import { game } from '../game.js';
+import { worldToIso, drawIsoShadow } from '../utils/Isometric.js';
 
 // ============================================
 // PLAYER
@@ -777,8 +778,15 @@ export class Player {
             return;
         }
 
-        const screenX = this.x - game.camera.x;
-        const screenY = this.y - game.camera.y;
+        // Coordenadas do mundo
+        const worldX = this.x;
+        const worldY = this.y;
+        const worldZ = 0; // Personagem fica no "chão" do mundo 2D
+
+        // Converter para coordenadas isométricas
+        const isoPos = worldToIso(worldX, worldY, worldZ);
+        const screenX = isoPos.isoX - game.camera.x;
+        const screenY = isoPos.isoY - game.camera.y;
 
         // Salvar contexto para aplicar transformações
         ctx.save();
@@ -990,6 +998,13 @@ export class Player {
             }
         }
 
+        // Desenhar sombra projetada no chão
+        if (!this.grounded) {
+            // Sombra apenas quando no ar
+            const shadowY = this.height; // Distância até o "chão"
+            drawIsoShadow(ctx, worldX, worldY, shadowY, this.width, 16);
+        }
+
         // Desenhar pernas animadas (antes do corpo para ficarem atrás)
         this.drawLegs(ctx, screenX, screenY);
 
@@ -1078,17 +1093,45 @@ export class Player {
     drawBlobBody(ctx, screenX, screenY) {
         ctx.fillStyle = this.color;
 
-        // Desenhar corpo blob usando arcos e curvas para forma orgânica
-        // Criar forma arredondada/oval semelhante a um blob cartoon
-        const centerX = screenX + this.width / 2;
-        const centerY = screenY + this.height / 2;
-        const radiusX = this.width / 2;
-        const radiusY = this.height / 2;
+        // Desenhar corpo blob isométrico (3D simples)
+        // Corpo tem profundidade visual
 
-        // Desenhar elipse (blob)
+        const blobWidth = this.width;
+        const blobHeight = this.height;
+        const blobDepth = 16; // Profundidade do blob
+
+        // Face frontal (mais clara)
+        ctx.fillStyle = this.color;
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
+        ctx.ellipse(screenX + blobWidth/2, screenY + blobHeight/2, blobWidth/2, blobHeight/2, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        // Face lateral (mais escura para dar volume)
+        const sideColor = this.darkenColor(this.color, 0.7);
+        ctx.fillStyle = sideColor;
+        ctx.beginPath();
+        ctx.ellipse(
+            screenX + blobWidth/2 + blobDepth/4,
+            screenY + blobHeight/2 + blobDepth/4,
+            blobWidth/2.5,
+            blobHeight/2.5,
+            0, 0, Math.PI
+        );
+        ctx.fill();
+    }
+
+    darkenColor(color, factor) {
+        // Converter hex para RGB e escurecer
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+
+        const newR = Math.floor(r * factor);
+        const newG = Math.floor(g * factor);
+        const newB = Math.floor(b * factor);
+
+        return `rgb(${newR}, ${newG}, ${newB})`;
     }
 
     drawHats(ctx, screenX, screenY) {

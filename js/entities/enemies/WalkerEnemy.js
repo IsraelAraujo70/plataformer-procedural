@@ -80,27 +80,7 @@ export class WalkerEnemy extends Enemy {
     draw(ctx) {
         if (!this.alive) return;
 
-        const screenX = this.x - game.camera.x;
-        const screenY = this.y - game.camera.y;
-
-        // Corpo do inimigo (laranja)
-        ctx.fillStyle = this.color;
-        ctx.fillRect(screenX, screenY, this.width, this.height);
-
-        // Olhos
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(screenX + 6, screenY + 8, 4, 6);
-        ctx.fillRect(screenX + 18, screenY + 8, 4, 6);
-
-        // Pupilas
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(screenX + 8, screenY + 10, 2, 2);
-        ctx.fillRect(screenX + 20, screenY + 10, 2, 2);
-
-        // Dentes
-        ctx.fillStyle = '#ffffff';
-        for (let i = 0; i < 4; i++) {
-            ctx.fillRect(screenX + 6 + i * 4, screenY + 20, 3, 4);
-        }
+        // Usar método isométrico da classe pai
+        this.drawIsoEnemy(ctx, this.color, '#ffffff');
     }
 }

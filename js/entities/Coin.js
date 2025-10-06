@@ -1,5 +1,6 @@
 import { CONFIG } from '../config.js';
 import { game } from '../game.js';
+import { worldToIso, drawIsoShadow } from '../utils/Isometric.js';
 
 // ============================================
 // COIN
@@ -58,8 +59,18 @@ export class Coin {
     draw(ctx) {
         if (this.collected) return;
 
-        const screenX = this.x - game.camera.x + this.width / 2;
-        const screenY = this.y - game.camera.y + this.height / 2;
+        // Converter para coordenadas isométricas
+        const worldX = this.x;
+        const worldY = this.y;
+        const worldZ = 0; // Moedas flutuam um pouco
+        const floatOffset = Math.sin(Date.now() / 500 + this.x) * 3; // Animação de flutuação
+
+        const isoPos = worldToIso(worldX, worldY, worldZ + floatOffset);
+        const screenX = isoPos.isoX - game.camera.x;
+        const screenY = isoPos.isoY - game.camera.y;
+
+        // Desenhar sombra no chão
+        drawIsoShadow(ctx, worldX, worldY, floatOffset, this.width, this.width);
 
         // Efeito de brilho/glow ao redor
         ctx.shadowColor = '#ffd700';
@@ -69,17 +80,23 @@ export class Coin {
         ctx.translate(screenX, screenY);
         ctx.rotate(this.rotation);
 
-        // Moeda dourada (círculo ao invés de quadrado)
+        // Moeda dourada isométrica (oval para dar perspectiva)
         const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.width / 2);
         gradient.addColorStop(0, '#ffed4e');
         gradient.addColorStop(0.7, '#ffd700');
         gradient.addColorStop(1, '#daa520');
         ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.arc(0, 0, this.width / 2, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, this.width / 2, this.width / 3, 0, 0, Math.PI * 2); // Oval para perspectiva
         ctx.fill();
 
-        // Símbolo de moeda (C ou $)
+        // Borda da moeda (dar espessura 3D)
+        ctx.fillStyle = '#b8860b';
+        ctx.beginPath();
+        ctx.ellipse(0, 2, this.width / 2.2, this.width / 3.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Símbolo de moeda ($)
         ctx.fillStyle = '#b8860b';
         ctx.font = 'bold 10px Arial';
         ctx.textAlign = 'center';
@@ -97,18 +114,20 @@ export class Coin {
         // Resetar shadow
         ctx.shadowBlur = 0;
 
-        // Partículas brilhantes ao redor (efeito idle)
-        const time = Date.now() / 1000 + this.x; // Offset por posição para variar
+        // Partículas brilhantes ao redor (efeito idle) - isométrico
+        const time = Date.now() / 1000 + this.x;
         for (let i = 0; i < 3; i++) {
             const angle = time + (i * Math.PI * 2 / 3);
-            const radius = 12 + Math.sin(time * 2 + i) * 3;
-            const px = screenX + Math.cos(angle) * radius;
-            const py = screenY + Math.sin(angle) * radius;
+            const radius = 12;
+            const px = worldX + Math.cos(angle) * radius;
+            const py = worldY + Math.sin(angle) * radius;
+            const pz = worldZ + floatOffset + Math.sin(time * 2 + i) * 5;
+            const particlePos = worldToIso(px, py, pz);
             const opacity = 0.3 + Math.sin(time * 3 + i) * 0.2;
 
             ctx.fillStyle = `rgba(255, 215, 0, ${opacity})`;
             ctx.beginPath();
-            ctx.arc(px, py, 1, 0, Math.PI * 2);
+            ctx.arc(particlePos.isoX - game.camera.x, particlePos.isoY - game.camera.y, 2, 0, Math.PI * 2);
             ctx.fill();
         }
     }

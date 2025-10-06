@@ -7,6 +7,7 @@ import { setupInputHandlers } from './input.js';
 import { FloatingText } from './entities/FloatingText.js';
 import { drawModifierTimers } from './ui/ModifierTimers.js';
 import { drawOffscreenBubble } from './ui/OffscreenBubble.js';
+import { calculateZOrder } from './utils/Isometric.js';
 
 // ============================================
 // HELPERS GLOBAIS
@@ -114,36 +115,87 @@ function gameLoop(currentTime) {
     // Partículas ambientes (atrás de tudo, mas na frente do background)
     drawAmbientParticles(ctx);
 
-    // Chunks (terreno)
+    // Chunks (terreno) - desenhados primeiro (camada de fundo)
     game.chunks.forEach(chunk => chunk.draw(ctx));
 
-    // Entities
-    game.coins.forEach(coin => coin.draw(ctx));
-    game.enemies.forEach(enemy => enemy.draw(ctx));
-    game.modifiers.forEach(modifier => modifier.draw(ctx));
+    // === Z-ORDERING DINÂMICO ===
+    // Coletar todas as entidades que precisam de ordenação por profundidade
+    const sortableEntities = [];
 
-    // Projéteis
-    if (game.projectiles) {
-        game.projectiles.forEach(projectile => projectile.draw(ctx));
-    }
-
-    // Chapéus dos chunks (coletáveis)
-    game.chunks.forEach(chunk => {
-        chunk.hats.forEach(hat => hat.draw(ctx));
+    // Adicionar moedas
+    game.coins.forEach(coin => {
+        sortableEntities.push({
+            obj: coin,
+            zOrder: calculateZOrder(coin.x, coin.y, coin.z || 0)
+        });
     });
 
-    // Chapéus temporários (dropping)
+    // Adicionar inimigos
+    game.enemies.forEach(enemy => {
+        sortableEntities.push({
+            obj: enemy,
+            zOrder: calculateZOrder(enemy.x, enemy.y, 0)
+        });
+    });
+
+    // Adicionar modificadores
+    game.modifiers.forEach(modifier => {
+        sortableEntities.push({
+            obj: modifier,
+            zOrder: calculateZOrder(modifier.x, modifier.y, 0)
+        });
+    });
+
+    // Adicionar projéteis
+    if (game.projectiles) {
+        game.projectiles.forEach(projectile => {
+            sortableEntities.push({
+                obj: projectile,
+                zOrder: calculateZOrder(projectile.x, projectile.y, 0)
+            });
+        });
+    }
+
+    // Adicionar chapéus dos chunks
+    game.chunks.forEach(chunk => {
+        chunk.hats.forEach(hat => {
+            sortableEntities.push({
+                obj: hat,
+                zOrder: calculateZOrder(hat.x, hat.y, 0)
+            });
+        });
+    });
+
+    // Adicionar chapéus caindo
     if (game.droppingHats) {
-        game.droppingHats.forEach(hat => hat.draw(ctx));
+        game.droppingHats.forEach(hat => {
+            sortableEntities.push({
+                obj: hat,
+                zOrder: calculateZOrder(hat.x, hat.y, 0)
+            });
+        });
     }
 
-    game.particles.forEach(particle => particle.draw(ctx));
-
-    // Players
-    game.player.draw(ctx);
+    // Adicionar players
+    sortableEntities.push({
+        obj: game.player,
+        zOrder: calculateZOrder(game.player.x, game.player.y, 0)
+    });
     if (game.twoPlayerMode && game.player2) {
-        game.player2.draw(ctx);
+        sortableEntities.push({
+            obj: game.player2,
+            zOrder: calculateZOrder(game.player2.x, game.player2.y, 0)
+        });
     }
+
+    // Ordenar por z-order (menor primeiro = mais atrás)
+    sortableEntities.sort((a, b) => a.zOrder - b.zOrder);
+
+    // Desenhar na ordem correta
+    sortableEntities.forEach(entry => entry.obj.draw(ctx));
+
+    // Partículas por cima de tudo (exceto UI)
+    game.particles.forEach(particle => particle.draw(ctx));
 
     // Floating texts (por cima de tudo)
     game.floatingTexts.forEach(text => text.draw(ctx));

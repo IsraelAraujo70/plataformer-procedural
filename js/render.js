@@ -69,32 +69,33 @@ export function drawBackground(ctx) {
         drawCloud(ctx, x, y, 1);
     }
 
-    // Camada 1 - Montanhas distantes com neve
+    // Camada 1 - Montanhas distantes com neve (perspectiva isométrica)
     const parallax1 = game.camera.x * 0.15;
     for (let i = -1; i < 6; i++) {
         const x = i * 350 - (parallax1 % 350);
         const height = 180 + (i % 3) * 40;
+        const isoSkew = 20; // Inclinação isométrica
 
-        // Montanha base
+        // Montanha base com perspectiva
         ctx.fillStyle = '#2c3e50';
         ctx.beginPath();
         ctx.moveTo(x, game.height);
-        ctx.lineTo(x + 175, game.height - height);
+        ctx.lineTo(x + 175 + isoSkew, game.height - height);
         ctx.lineTo(x + 350, game.height);
         ctx.fill();
 
         // Pico nevado
         ctx.fillStyle = '#ecf0f1';
         ctx.beginPath();
-        ctx.moveTo(x + 175, game.height - height);
-        ctx.lineTo(x + 145, game.height - height + 30);
-        ctx.lineTo(x + 205, game.height - height + 30);
+        ctx.moveTo(x + 175 + isoSkew, game.height - height);
+        ctx.lineTo(x + 145 + isoSkew, game.height - height + 30);
+        ctx.lineTo(x + 205 + isoSkew, game.height - height + 30);
         ctx.fill();
 
-        // Sombra lateral
+        // Sombra lateral com perspectiva
         ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
         ctx.beginPath();
-        ctx.moveTo(x + 175, game.height - height);
+        ctx.moveTo(x + 175 + isoSkew, game.height - height);
         ctx.lineTo(x + 350, game.height);
         ctx.lineTo(x + 175, game.height);
         ctx.fill();

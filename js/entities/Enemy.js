@@ -1,5 +1,6 @@
 import { CONFIG } from '../config.js';
 import { game } from '../game.js';
+import { worldToIso, drawIsoShadow } from '../utils/Isometric.js';
 
 // ============================================
 // ENEMY BASE CLASS
@@ -109,5 +110,64 @@ export class Enemy {
     // Método para ser sobrescrito pelas subclasses
     draw(ctx) {
         // Implementação base - será sobrescrita
+    }
+
+    // Método auxiliar para desenhar inimigo em isométrico (para uso das subclasses)
+    drawIsoEnemy(ctx, color, eyeColor = '#ff0000') {
+        const worldX = this.x;
+        const worldY = this.y;
+        const worldZ = 0;
+
+        // Converter para isométrico
+        const isoPos = worldToIso(worldX, worldY, worldZ);
+        const screenX = isoPos.isoX - game.camera.x;
+        const screenY = isoPos.isoY - game.camera.y;
+
+        // Sombra
+        drawIsoShadow(ctx, worldX, worldY, 0, this.width, this.width);
+
+        // Corpo do inimigo (esfera 3D simplificada)
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.ellipse(screenX, screenY, this.width / 2, this.width / 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Lado escuro (volume)
+        const darkColor = this.darkenColor(color, 0.6);
+        ctx.fillStyle = darkColor;
+        ctx.beginPath();
+        ctx.ellipse(screenX + 4, screenY + 4, this.width / 2.5, this.width / 4, 0, 0, Math.PI);
+        ctx.fill();
+
+        // Olhos (isométricos)
+        ctx.fillStyle = eyeColor;
+        ctx.beginPath();
+        ctx.arc(screenX - 6, screenY - 4, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 2, screenY - 4, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pupilas
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(screenX - 6, screenY - 4, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 2, screenY - 4, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    darkenColor(color, factor) {
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+
+        const newR = Math.floor(r * factor);
+        const newG = Math.floor(g * factor);
+        const newB = Math.floor(b * factor);
+
+        return `rgb(${newR}, ${newG}, ${newB})`;
     }
 }

@@ -1,6 +1,7 @@
 import { CONFIG } from '../../config.js';
 import { game } from '../../game.js';
 import { Enemy } from '../Enemy.js';
+import { worldToIso, drawIsoShadow } from '../../utils/Isometric.js';
 
 // ============================================
 // FLYER ENEMY - Voa em padrão senoidal
@@ -80,70 +81,131 @@ export class FlyerEnemy extends Enemy {
     draw(ctx) {
         if (!this.alive) return;
 
-        const screenX = this.x - game.camera.x;
-        const screenY = this.y - game.camera.y;
+        const worldX = this.x;
+        const worldY = this.y;
+        const worldZ = 0;
 
-        // Asas (desenhar primeiro para ficar atrás)
-        const wingFlap = Math.sin(Date.now() / 100) * 4; // Movimento das asas
-        ctx.fillStyle = '#6a0099'; // Roxo mais escuro
+        // Converter para isométrico
+        const isoPos = worldToIso(worldX, worldY, worldZ);
+        const screenX = isoPos.isoX - game.camera.x;
+        const screenY = isoPos.isoY - game.camera.y;
 
-        // Asa esquerda
+        // Sombra projetada no chão
+        drawIsoShadow(ctx, worldX, worldY, 0, this.width, this.width);
+
+        // Movimento das asas (batida)
+        const wingFlap = Math.sin(Date.now() / 100) * 6; // Amplitude da batida
+        const wingAngle = Math.sin(Date.now() / 100) * 0.3; // Ângulo de rotação
+
+        // === ASAS 3D ISOMÉTRICAS ===
+        const wingColor = '#6a0099'; // Roxo escuro
+        const wingHighlight = '#8a00cc'; // Roxo claro para volume
+
+        // Asa esquerda (atrás do corpo)
+        ctx.fillStyle = wingColor;
         ctx.beginPath();
-        ctx.moveTo(screenX + 8, screenY + 10);
-        ctx.lineTo(screenX - 2, screenY + 6 + wingFlap);
-        ctx.lineTo(screenX + 8, screenY + 14);
+        ctx.moveTo(screenX - 8, screenY - 2);
+        ctx.lineTo(screenX - 18, screenY - 8 + wingFlap);
+        ctx.lineTo(screenX - 14, screenY + 4 + wingFlap);
+        ctx.lineTo(screenX - 6, screenY + 6);
+        ctx.closePath();
         ctx.fill();
 
-        // Asa direita
+        // Highlight na asa esquerda (volume)
+        ctx.fillStyle = wingHighlight;
         ctx.beginPath();
-        ctx.moveTo(screenX + 20, screenY + 10);
-        ctx.lineTo(screenX + 30, screenY + 6 + wingFlap);
-        ctx.lineTo(screenX + 20, screenY + 14);
+        ctx.moveTo(screenX - 8, screenY - 2);
+        ctx.lineTo(screenX - 12, screenY - 5 + wingFlap * 0.7);
+        ctx.lineTo(screenX - 10, screenY + 2 + wingFlap * 0.7);
+        ctx.lineTo(screenX - 6, screenY + 6);
+        ctx.closePath();
         ctx.fill();
 
-        // Corpo do inimigo (roxo, formato mais arredondado)
+        // Asa direita (atrás do corpo)
+        ctx.fillStyle = wingColor;
+        ctx.beginPath();
+        ctx.moveTo(screenX + 8, screenY - 2);
+        ctx.lineTo(screenX + 18, screenY - 8 + wingFlap);
+        ctx.lineTo(screenX + 14, screenY + 4 + wingFlap);
+        ctx.lineTo(screenX + 6, screenY + 6);
+        ctx.closePath();
+        ctx.fill();
+
+        // Highlight na asa direita (volume)
+        ctx.fillStyle = wingHighlight;
+        ctx.beginPath();
+        ctx.moveTo(screenX + 8, screenY - 2);
+        ctx.lineTo(screenX + 12, screenY - 5 + wingFlap * 0.7);
+        ctx.lineTo(screenX + 10, screenY + 2 + wingFlap * 0.7);
+        ctx.lineTo(screenX + 6, screenY + 6);
+        ctx.closePath();
+        ctx.fill();
+
+        // === CORPO 3D (ESFERA) ===
+        // Corpo principal (roxo)
         ctx.fillStyle = this.color;
         ctx.beginPath();
-        ctx.ellipse(screenX + 14, screenY + 14, 14, 12, 0, 0, Math.PI * 2);
+        ctx.ellipse(screenX, screenY, this.width / 2, this.width / 3, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Olhos grandes (característico de voador)
+        // Volume do corpo (lado escuro)
+        const darkColor = this.darkenColor(this.color, 0.6);
+        ctx.fillStyle = darkColor;
+        ctx.beginPath();
+        ctx.ellipse(screenX + 4, screenY + 4, this.width / 2.5, this.width / 4, 0, 0, Math.PI);
+        ctx.fill();
+
+        // === OLHOS 3D ===
+        // Brancos dos olhos
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(screenX + 9, screenY + 12, 4, 0, Math.PI * 2);
+        ctx.ellipse(screenX - 6, screenY - 4, 4, 3, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(screenX + 19, screenY + 12, 4, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 2, screenY - 4, 4, 3, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Pupilas
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.arc(screenX + 9, screenY + 12, 2, 0, Math.PI * 2);
+        ctx.arc(screenX - 6, screenY - 4, 1.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(screenX + 19, screenY + 12, 2, 0, Math.PI * 2);
+        ctx.arc(screenX + 2, screenY - 4, 1.5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Antenas pequenas no topo
+        // === ANTENAS 3D ===
         ctx.strokeStyle = this.color;
         ctx.lineWidth = 2;
+
+        // Antena esquerda
         ctx.beginPath();
-        ctx.moveTo(screenX + 10, screenY + 4);
-        ctx.lineTo(screenX + 8, screenY);
+        ctx.moveTo(screenX - 4, screenY - 10);
+        ctx.lineTo(screenX - 8, screenY - 16);
         ctx.stroke();
+
+        // Antena direita
         ctx.beginPath();
-        ctx.moveTo(screenX + 18, screenY + 4);
-        ctx.lineTo(screenX + 20, screenY);
+        ctx.moveTo(screenX + 4, screenY - 10);
+        ctx.lineTo(screenX + 6, screenY - 16);
         ctx.stroke();
 
         // Bolinhas nas antenas
         ctx.fillStyle = this.color;
         ctx.beginPath();
-        ctx.arc(screenX + 8, screenY, 2, 0, Math.PI * 2);
+        ctx.arc(screenX - 8, screenY - 16, 2.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(screenX + 20, screenY, 2, 0, Math.PI * 2);
+        ctx.arc(screenX + 6, screenY - 16, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Brilho nas bolinhas (efeito 3D)
+        ctx.fillStyle = wingHighlight;
+        ctx.beginPath();
+        ctx.arc(screenX - 9, screenY - 17, 1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 5, screenY - 17, 1, 0, Math.PI * 2);
         ctx.fill();
     }
 }

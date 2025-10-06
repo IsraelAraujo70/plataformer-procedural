@@ -9,6 +9,7 @@ import { Coin } from '../entities/Coin.js';
 import { Modifier } from '../entities/Modifier.js';
 import { Hat } from '../entities/Hat.js';
 import { PATTERNS, getDifficultyConfig, selectPattern, getBiome, BIOMES } from './Patterns.js';
+import { worldToIso, drawIsoCube, drawIsoShadow } from '../utils/Isometric.js';
 
 const ABSOLUTE_MAX_GAP = CONFIG.TILE_SIZE * 5.5;
 
@@ -843,134 +844,118 @@ export class Chunk {
         });
     }
 
+    darkenColor(color, factor) {
+        // Escurecer uma cor hex por um fator (0-1)
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+
+        const newR = Math.floor(r * factor);
+        const newG = Math.floor(g * factor);
+        const newB = Math.floor(b * factor);
+
+        return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+    }
+
     drawGroundPlatform(ctx, x, y, width, height) {
-        const tileSize = 16;
         const colors = this.biome.colors;
 
-        // Fundo base com gradiente (usar cores do bioma)
-        const gradient = ctx.createLinearGradient(x, y, x, y + height);
+        // Converter coordenadas 2D para mundo isométrico
+        const worldX = x + game.camera.x;
+        const worldY = y + game.camera.y;
+        const depth = 32; // Profundidade visual da plataforma
 
-        if (colors.ground && colors.groundDark) {
-            gradient.addColorStop(0, colors.ground);
-            gradient.addColorStop(0.5, colors.ground);
-            gradient.addColorStop(1, colors.groundDark);
-        } else {
-            // Fallback para cores padrão
-            gradient.addColorStop(0, '#8b6914');
-            gradient.addColorStop(0.5, '#654321');
-            gradient.addColorStop(1, '#3d2812');
-        }
+        // Cores do cubo isométrico baseadas no bioma
+        let colorTop, colorLeft, colorRight;
 
-        ctx.fillStyle = gradient;
-        ctx.fillRect(x, y, width, height);
-
-        // Definir altura da camada de grama/topo
-        const grassHeight = 8;
-
-        // Camada de grama/topo (se bioma tiver)
         if (colors.grass || colors.cloud) {
-            const topColor = colors.grass || colors.cloud;
-            const topDark = colors.grassDark || colors.cloudDark;
+            colorTop = colors.grass || colors.cloud;
+            colorLeft = colors.groundDark || '#654321';
+            colorRight = this.darkenColor(colorLeft, 0.8);
+        } else {
+            colorTop = colors.ground || '#8b6914';
+            colorLeft = colors.groundDark || '#654321';
+            colorRight = this.darkenColor(colorLeft, 0.8);
+        }
 
-            const grassGradient = ctx.createLinearGradient(x, y, x, y + grassHeight);
-            grassGradient.addColorStop(0, topColor);
-            grassGradient.addColorStop(1, topDark || topColor);
-            ctx.fillStyle = grassGradient;
-            ctx.fillRect(x, y, width, grassHeight);
+        // Desenhar cubo isométrico
+        drawIsoCube(ctx, worldX, worldY, 0, width, height, depth, colorTop, colorLeft, colorRight);
 
-            // Detalhes de grama/tufos (apenas em Plains)
-            if (this.biome.name === 'Plains') {
-                ctx.fillStyle = topColor;
-                for (let i = 0; i < width; i += 8) {
-                    const tuftHeight = 3 + (i % 3);
-                    ctx.fillRect(x + i, y - tuftHeight, 3, tuftHeight);
-                }
+        // Adicionar textura/detalhes no topo
+        if (this.biome.name === 'Plains' && colors.grass) {
+            // Tufos de grama no topo (isométrico)
+            const grassPos = worldToIso(worldX, worldY, height);
+            ctx.fillStyle = colors.grass;
+            for (let i = 0; i < width; i += 16) {
+                const tuftX = worldX + i;
+                const tuftPos = worldToIso(tuftX, worldY, height);
+                ctx.fillRect(tuftPos.isoX - 2, tuftPos.isoY - 5, 4, 5);
             }
         }
 
-        // Textura de blocos na lateral (padrão de tijolos)
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.lineWidth = 1;
-
-        // Linhas horizontais
-        for (let row = grassHeight; row < height; row += tileSize) {
+        // Pontos brilhantes nas laterais (minerais)
+        const seed = Math.floor(worldX / 100);
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.5)';
+        for (let i = 0; i < 2; i++) {
+            const px = worldX + ((seed * 73 + i * 137) % width);
+            const py = worldY + ((seed * 97 + i * 211) % depth);
+            const pz = ((seed * 43 + i * 89) % height);
+            const pos = worldToIso(px, py, pz);
             ctx.beginPath();
-            ctx.moveTo(x, y + row);
-            ctx.lineTo(x + width, y + row);
-            ctx.stroke();
+            ctx.arc(pos.isoX, pos.isoY, 2, 0, Math.PI * 2);
+            ctx.fill();
         }
-
-        // Linhas verticais (padrão tijolo alternado)
-        for (let row = 0; row < Math.ceil(height / tileSize); row++) {
-            const offset = (row % 2) * (tileSize / 2);
-            for (let col = offset; col < width; col += tileSize) {
-                ctx.beginPath();
-                ctx.moveTo(x + col, y + grassHeight + row * tileSize);
-                ctx.lineTo(x + col, y + grassHeight + Math.min((row + 1) * tileSize, height));
-                ctx.stroke();
-            }
-        }
-
-        // Pontos de luz aleatórios (pequenas pedras/minerais brilhantes)
-        ctx.fillStyle = 'rgba(255, 215, 0, 0.4)';
-        const seed = Math.floor(x / 100);
-        for (let i = 0; i < 3; i++) {
-            const px = x + ((seed * 73 + i * 137) % width);
-            const py = y + grassHeight + ((seed * 97 + i * 211) % (height - grassHeight));
-            ctx.fillRect(px, py, 2, 2);
-        }
-
-        // Sombra na borda inferior
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.fillRect(x, y + height - 2, width, 2);
     }
 
     drawFloatingPlatform(ctx, x, y, width, height) {
-        // Base da plataforma com gradiente cristalino
-        const gradient = ctx.createLinearGradient(x, y, x, y + height);
-        gradient.addColorStop(0, '#a78bfa');
-        gradient.addColorStop(0.5, '#8b5cf6');
-        gradient.addColorStop(1, '#7c3aed');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(x, y, width, height);
+        // Converter coordenadas para mundo isométrico
+        const worldX = x + game.camera.x;
+        const worldY = y + game.camera.y;
+        const worldZ = 0; // Altura do chão
+        const depth = 24; // Profundidade visual menor (plataforma flutuante é mais fina)
 
-        // Efeito de brilho/cristal (linhas diagonais)
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.lineWidth = 2;
-        for (let i = 0; i < width; i += 20) {
-            ctx.beginPath();
-            ctx.moveTo(x + i, y);
-            ctx.lineTo(x + i + 10, y + height);
-            ctx.stroke();
-        }
+        // Cores cristalinas para cubo isométrico
+        const colorTop = '#a78bfa';
+        const colorLeft = '#8b5cf6';
+        const colorRight = '#7c3aed';
 
-        // Highlight no topo
-        const topGradient = ctx.createLinearGradient(x, y, x, y + 6);
-        topGradient.addColorStop(0, 'rgba(255, 255, 255, 0.6)');
-        topGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.fillStyle = topGradient;
-        ctx.fillRect(x, y, width, 6);
+        // Desenhar sombra projetada no chão
+        drawIsoShadow(ctx, worldX, worldY, Math.abs(worldZ - y), width, depth);
 
-        // Partículas brilhantes ao redor (efeito mágico)
+        // Desenhar cubo isométrico cristalino
+        drawIsoCube(ctx, worldX, worldY, worldZ, width, height, depth, colorTop, colorLeft, colorRight);
+
+        // Partículas mágicas ao redor (isométrico)
         const time = Date.now() / 1000;
         const particleCount = Math.floor(width / 40);
         ctx.fillStyle = '#c4b5fd';
 
         for (let i = 0; i < particleCount; i++) {
             const angle = time + i * (Math.PI * 2 / particleCount);
-            const radius = 15 + Math.sin(time * 2 + i) * 5;
-            const px = x + width/2 + Math.cos(angle) * radius;
-            const py = y + height/2 + Math.sin(angle) * radius;
+            const radius = 20;
+            const px = worldX + width/2 + Math.cos(angle) * radius;
+            const py = worldY + depth/2 + Math.sin(angle) * radius;
+            const pz = height / 2 + Math.sin(time * 2 + i) * 8;
+            const pos = worldToIso(px, py, pz);
 
             ctx.beginPath();
-            ctx.arc(px, py, 2, 0, Math.PI * 2);
+            ctx.arc(pos.isoX, pos.isoY, 3, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // Borda brilhante
-        ctx.strokeStyle = '#c4b5fd';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, width, height);
+        // Brilho no topo (highlight isométrico)
+        const topCenter = worldToIso(worldX + width/2, worldY + depth/2, height);
+        const highlightGradient = ctx.createRadialGradient(
+            topCenter.isoX, topCenter.isoY, 0,
+            topCenter.isoX, topCenter.isoY, width/2
+        );
+        highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+        highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = highlightGradient;
+        ctx.beginPath();
+        ctx.arc(topCenter.isoX, topCenter.isoY, width/2, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     drawFlower(ctx, x, y, variant) {
