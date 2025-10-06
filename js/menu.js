@@ -2,6 +2,7 @@ import { game } from './game.js';
 import { CONFIG } from './config.js';
 import { Random } from './utils/Random.js';
 import { Player } from './entities/Player.js';
+import { resetContinueFlag } from './ui/ContinueModal.js';
 
 // ============================================
 // MENU E CONTROLES
@@ -55,6 +56,9 @@ export function startGame(twoPlayerMode = false) {
         modifiersCollected: 0,
         lastDistance: 0
     };
+
+    // Resetar flag de continue (permitir usar rewarded ad novamente)
+    resetContinueFlag();
 
     // Criar jogador(es) - começar no ar e cair sobre a plataforma inicial do chunk 0
     const spawnY = game.height - 400; // Bem acima da plataforma para cair

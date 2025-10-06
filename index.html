@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Procedural Platformer</title>
     <link rel="stylesheet" href="css/styles.css">
+
+    <!-- GameDistribution SDK for Rewarded Ads -->
+    <script src="https://html5.api.gamedistribution.com/main.min.js"></script>
 </head>
 <body>
     <div id="menu">
@@ -51,6 +54,19 @@
 
     <!-- Pause button (visible only during gameplay) -->
     <button id="pauseBtn" class="hidden">⏸️</button>
+
+    <!-- Continue Modal (Rewarded Ad) -->
+    <div id="continueModal" class="hidden">
+        <div class="modal-content">
+            <h2>💀 Continue?</h2>
+            <p>Watch an ad to revive with 1 extra life!</p>
+            <div class="modal-buttons">
+                <button id="watchAdBtn" class="btn-watch-ad">📺 Watch Ad to Revive</button>
+                <button id="giveUpBtn" class="btn-give-up">❌ Give Up</button>
+            </div>
+            <p class="ad-loading hidden">Loading ad...</p>
+        </div>
+    </div>
 
     <canvas id="gameCanvas"></canvas>
 

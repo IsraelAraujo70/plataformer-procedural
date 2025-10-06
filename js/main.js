@@ -9,6 +9,8 @@ import { drawModifierTimers } from './ui/ModifierTimers.js';
 import { drawOffscreenBubble } from './ui/OffscreenBubble.js';
 import { CONFIG } from './config.js';
 import { getBiome } from './world/Patterns.js';
+import { rewardedAdsManager } from './ads/RewardedAds.js';
+import { setupContinueModal, resetContinueFlag } from './ui/ContinueModal.js';
 
 // ============================================
 // HELPERS GLOBAIS
@@ -270,7 +272,7 @@ function resizeCanvas() {
 // ============================================
 // INICIALIZAÇÃO
 // ============================================
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
     game.canvas = document.getElementById('gameCanvas');
     game.ctx = game.canvas.getContext('2d');
 
@@ -280,6 +282,17 @@ window.addEventListener('load', () => {
     // Configurar handlers
     setupMenuHandlers();
     setupInputHandlers();
+    setupContinueModal();
+
+    // Inicializar SDK de anúncios
+    try {
+        console.log('Initializing GameDistribution SDK...');
+        await rewardedAdsManager.init();
+        console.log('GameDistribution SDK ready!');
+    } catch (error) {
+        console.error('Failed to initialize ad SDK:', error);
+        // Continuar mesmo se ads falharem (modo fallback sem ads)
+    }
 
     // Começar o loop (mesmo no menu, para possíveis animações)
     requestAnimationFrame(gameLoop);

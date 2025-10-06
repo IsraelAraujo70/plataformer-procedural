@@ -132,3 +132,131 @@ body {
     transform: scale(1.1);
     border-color: rgba(0, 217, 255, 0.8);
 }
+
+/* ============================================
+   CONTINUE MODAL (REWARDED ADS)
+   ============================================ */
+#continueModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* IMPORTANTE: Garantir que modal começa escondido */
+#continueModal.hidden {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+#continueModal .modal-content {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    color: white;
+    box-shadow: 0 0 50px rgba(0, 217, 255, 0.6);
+    border: 3px solid rgba(0, 217, 255, 0.8);
+    max-width: 90vw;
+    animation: slideIn 0.4s ease-out;
+}
+
+#continueModal h2 {
+    font-size: clamp(28px, 5vw, 48px);
+    margin-bottom: 20px;
+    color: #ff6b6b;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+#continueModal p {
+    font-size: clamp(16px, 2.5vw, 24px);
+    margin-bottom: 30px;
+    color: #e0e0e0;
+}
+
+#continueModal .modal-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+}
+
+#continueModal .btn-watch-ad {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    color: white;
+    border: 3px solid #66bb6a;
+    padding: 18px 40px;
+    font-size: clamp(16px, 2.5vw, 22px);
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 12px;
+    font-family: 'Courier New', monospace;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+    min-width: 280px;
+}
+
+#continueModal .btn-watch-ad:hover {
+    background: linear-gradient(135deg, #66bb6a 0%, #4CAF50 100%);
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.6);
+}
+
+#continueModal .btn-give-up {
+    background: linear-gradient(135deg, #666 0%, #555 100%);
+    color: white;
+    border: 3px solid #888;
+    padding: 12px 30px;
+    font-size: clamp(14px, 2vw, 18px);
+    cursor: pointer;
+    border-radius: 10px;
+    font-family: 'Courier New', monospace;
+    transition: all 0.3s;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    min-width: 200px;
+}
+
+#continueModal .btn-give-up:hover {
+    background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+    border-color: #ff6b6b;
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(244, 67, 54, 0.4);
+}
+
+#continueModal .ad-loading {
+    font-size: clamp(14px, 2vw, 18px);
+    color: #ffeb3b;
+    margin-top: 20px;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}

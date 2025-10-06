@@ -765,8 +765,27 @@ export class Player {
             }
         }
 
-        // Game over (modo 1P ou ambos morreram em 2P) - marcar para game over após animação
-        this.shouldTriggerGameOver = true;
+        // Game over (modo 1P ou ambos morreram em 2P)
+        // Ao invés de game over imediato, mostrar modal de continue (rewarded ad)
+        this.shouldTriggerGameOver = false; // Não trigger imediato
+
+        // Importar e mostrar modal de continuação após animação de morte
+        import('../ui/ContinueModal.js').then(module => {
+            // Aguardar animação de morte terminar antes de mostrar modal
+            setTimeout(() => {
+                // VALIDAÇÕES CRÍTICAS antes de mostrar modal:
+                // 1. Player ainda está morrendo?
+                // 2. Jogo está em estado válido (playing)?
+                // 3. Player ainda existe?
+                if (this.dying && game.state === 'playing' && this) {
+                    module.showContinueModal(this);
+                } else {
+                    console.warn('⚠️ Skipping continue modal - game state:', game.state, 'dying:', this.dying);
+                }
+            }, this.deathAnimDuration * (1000 / 60)); // Converter frames para ms
+        }).catch(error => {
+            console.error('❌ Failed to load ContinueModal:', error);
+        });
     }
 
     draw(ctx) {
