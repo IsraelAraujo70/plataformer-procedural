@@ -275,6 +275,7 @@ export function selectPattern(rng, difficulty) {
 export const BIOMES = {
     PLAINS: {
         name: 'Plains',
+        backgroundType: 'plains',
         colors: {
             grass: '#2ecc71',
             grassDark: '#52d681',
@@ -287,6 +288,7 @@ export const BIOMES = {
 
     CAVE: {
         name: 'Cave',
+        backgroundType: 'cave',
         colors: {
             ground: '#34495e',
             groundDark: '#2c3e50',
@@ -299,6 +301,7 @@ export const BIOMES = {
 
     ICE: {
         name: 'Ice',
+        backgroundType: 'ice',
         colors: {
             ground: '#ecf0f1',
             groundDark: '#bdc3c7',
@@ -310,8 +313,23 @@ export const BIOMES = {
         enemySpeedMultiplier: 0.6 // Inimigos mais lentos no gelo
     },
 
+    DESERT: {
+        name: 'Desert',
+        backgroundType: 'desert',
+        colors: {
+            sand: '#f4a460',
+            sandDark: '#cd853f',
+            ground: '#daa520',
+            groundDark: '#b8860b'
+        },
+        allowedTypes: ['ground', 'floating'],
+        decorations: ['cactus', 'skull', 'tumbleweed'],
+        enemySpeedMultiplier: 0.85 // Inimigos um pouco mais lentos no calor
+    },
+
     SKY: {
         name: 'Sky',
+        backgroundType: 'sky',
         colors: {
             cloud: '#ecf0f1',
             cloudDark: '#d5dbdb',
@@ -320,15 +338,61 @@ export const BIOMES = {
         allowedTypes: ['floating', 'bouncy', 'moving'],
         decorations: ['cloud', 'bird', 'star'],
         heightBias: -2 // Tende para cima
+    },
+
+    APOCALYPSE: {
+        name: 'Apocalypse',
+        backgroundType: 'apocalypse',
+        colors: {
+            ground: '#3a2a2a',
+            groundDark: '#2a1a1a',
+            accent: '#8b0000'
+        },
+        allowedTypes: ['ground', 'crumbling', 'floating'],
+        decorations: ['rubble', 'fire', 'crack'],
+        darkAmbient: true,
+        enemySpeedMultiplier: 1.2 // Inimigos mais rápidos (caos)
+    },
+
+    MOON: {
+        name: 'Moon',
+        backgroundType: 'moon',
+        colors: {
+            ground: '#9b9b9b',
+            groundDark: '#6b6b6b',
+            accent: '#c0c0c0'
+        },
+        allowedTypes: ['ground', 'floating'],
+        decorations: ['crater', 'rock', 'flag'],
+        enemySpeedMultiplier: 0.7 // Inimigos mais lentos (baixa gravidade)
+    },
+
+    BLACK_HOLE: {
+        name: 'Black Hole',
+        backgroundType: 'black_hole',
+        colors: {
+            ground: '#1a0f2e',
+            groundDark: '#0d0718',
+            accent: '#ff6b35'
+        },
+        allowedTypes: ['floating', 'crumbling'],
+        decorations: ['void', 'energy', 'distortion'],
+        darkAmbient: true,
+        enemySpeedMultiplier: 1.5, // Inimigos muito rápidos (gravidade intensa)
+        finalBiome: true // Última fase
     }
 };
 
 // Retorna bioma baseado no chunk index
 export function getBiome(chunkIndex) {
-    // Trocar bioma a cada 8-12 chunks (aleatório)
+    // Trocar bioma a cada 8 chunks
     const biomeLength = 8;
     const biomeIndex = Math.floor(chunkIndex / biomeLength);
     const biomes = Object.keys(BIOMES);
 
-    return BIOMES[biomes[biomeIndex % biomes.length]];
+    // Se chegou no buraco negro (última fase), manter nele
+    const maxBiomeIndex = biomes.length - 1;
+    const currentBiomeIndex = Math.min(biomeIndex, maxBiomeIndex);
+
+    return BIOMES[biomes[currentBiomeIndex]];
 }

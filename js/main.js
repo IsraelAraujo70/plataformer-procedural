@@ -7,6 +7,8 @@ import { setupInputHandlers } from './input.js';
 import { FloatingText } from './entities/FloatingText.js';
 import { drawModifierTimers } from './ui/ModifierTimers.js';
 import { drawOffscreenBubble } from './ui/OffscreenBubble.js';
+import { CONFIG } from './config.js';
+import { getBiome } from './world/Patterns.js';
 
 // ============================================
 // HELPERS GLOBAIS
@@ -42,6 +44,31 @@ function gameLoop(currentTime) {
     // Update (executar múltiplas vezes se time warp ativo)
     for (let i = 0; i < updateCount; i++) {
         updateChunks();
+
+        // Atualizar bioma atual baseado na posição da câmera com transição suave
+        const currentChunkIndex = Math.floor(game.camera.x / (CONFIG.CHUNK_WIDTH * CONFIG.TILE_SIZE));
+        const newBiome = getBiome(currentChunkIndex);
+
+        // Detectar mudança de bioma
+        if (game.currentBiome && game.currentBiome.name !== newBiome.name) {
+            game.previousBiome = game.currentBiome;
+            game.currentBiome = newBiome;
+            game.biomeTransition = 0; // Iniciar transição
+        } else if (!game.currentBiome) {
+            game.currentBiome = newBiome;
+            game.previousBiome = null;
+            game.biomeTransition = 1; // Sem transição inicial
+        }
+
+        // Animar transição (2 segundos de duração)
+        if (game.biomeTransition < 1) {
+            game.biomeTransition += 0.008; // Incrementar ~60fps -> 2s total
+            if (game.biomeTransition >= 1) {
+                game.biomeTransition = 1;
+                game.previousBiome = null; // Limpar bioma anterior
+            }
+        }
+
         game.player.update();
         if (game.twoPlayerMode && game.player2) {
             game.player2.update();

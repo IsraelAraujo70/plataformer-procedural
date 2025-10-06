@@ -27,6 +27,9 @@ export const game = {
     score: 0,
     distance: 0,
     difficulty: 0,
+    currentBiome: null, // Bioma atual baseado na posição da câmera
+    previousBiome: null, // Bioma anterior (para transições)
+    biomeTransition: 0, // 0 a 1, progresso da transição entre biomas
     stats: {
         coinsCollected: 0,
         enemiesDefeated: 0,
