@@ -119,18 +119,9 @@ export class WalkerEnemy extends Enemy {
         ctx.arc(centerX - radius * 0.25, centerY - radius * 0.3, radius * 0.4, 0, Math.PI * 2);
         ctx.fill();
 
-        // OLHOS GRANDES com outline
+        // Olhos mais hostis (tamanho moderado, menos fofo)
         // Outline dos olhos
         ctx.fillStyle = '#000000';
-        ctx.beginPath();
-        ctx.arc(screenX + 10, screenY + 11, 5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(screenX + 18, screenY + 11, 5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Brancos dos olhos
-        ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.arc(screenX + 10, screenY + 11, 4, 0, Math.PI * 2);
         ctx.fill();
@@ -138,22 +129,31 @@ export class WalkerEnemy extends Enemy {
         ctx.arc(screenX + 18, screenY + 11, 4, 0, Math.PI * 2);
         ctx.fill();
 
-        // Pupilas grandes e expressivas
-        ctx.fillStyle = '#000000';
+        // Brancos dos olhos (menores)
+        ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(screenX + 10, screenY + 12, 2.5, 0, Math.PI * 2);
+        ctx.arc(screenX + 10, screenY + 11, 3, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(screenX + 18, screenY + 12, 2.5, 0, Math.PI * 2);
+        ctx.arc(screenX + 18, screenY + 11, 3, 0, Math.PI * 2);
         ctx.fill();
 
-        // Brilho nos olhos
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        // Pupilas estreitas/ameaçadoras (verticais)
+        ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.arc(screenX + 9, screenY + 10, 1.5, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 10, screenY + 11, 1, 2.5, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(screenX + 17, screenY + 10, 1.5, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 18, screenY + 11, 1, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Brilho mínimo (olhar mais frio)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.beginPath();
+        ctx.arc(screenX + 9, screenY + 10, 1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 17, screenY + 10, 1, 0, Math.PI * 2);
         ctx.fill();
 
         // BOCA COM DENTES (estilo cartoon assustador)

@@ -1197,11 +1197,11 @@ export class Player {
         // Corpo do jogador em formato BLOB (arredondado)
         this.drawBlobBody(ctx, screenX, finalScreenY);
 
-        // OLHOS ENORMES estilo cartoon fofo (ocupam quase toda a face)
+        // Olhos estilo cartoon (tamanho moderado, menos infantil)
         const eyeLeftX = screenX + 7;
         const eyeRightX = screenX + 17;
         const eyeY = finalScreenY + 10;
-        const eyeSize = 6; // Muito maior!
+        const eyeSize = 4; // Tamanho moderado
 
         // ANIMAÇÃO DE PISCAR (squash vertical dos olhos)
         const blinkProgress = this.isBlinking ? Math.min(this.blinkDuration / 4, 1) : 0;
@@ -1227,26 +1227,26 @@ export class Player {
             ctx.fill();
         }
 
-        // Pupilas GRANDES e expressivas (seguem direção do movimento) - só se não piscando
+        // Pupilas expressivas (tamanho moderado, seguem direção do movimento)
         if (eyeSquash > 0.3) {
             ctx.fillStyle = '#000000';
             let pupilOffsetX = 0;
             let pupilOffsetY = 0;
 
             if (Math.abs(this.vx) > 0.5) {
-                pupilOffsetX = this.facingRight ? 1.5 : -1.5;
+                pupilOffsetX = this.facingRight ? 1.2 : -1.2;
             }
 
             // Pupilas olham pra baixo quando caindo
             if (!this.grounded && this.vy > 3) {
-                pupilOffsetY = 1.5;
+                pupilOffsetY = 1.2;
             }
             // Olham pra cima quando pulando
             else if (!this.grounded && this.vy < -2) {
-                pupilOffsetY = -1;
+                pupilOffsetY = -0.8;
             }
 
-            const pupilSize = 3.5 * eyeSquash; // Pupilas também comprimem ao piscar
+            const pupilSize = 2.5 * eyeSquash; // Pupilas também comprimem ao piscar
             ctx.beginPath();
             ctx.arc(eyeLeftX + pupilOffsetX, eyeY + pupilOffsetY, pupilSize, 0, Math.PI * 2);
             ctx.fill();
@@ -1254,57 +1254,48 @@ export class Player {
             ctx.arc(eyeRightX + pupilOffsetX, eyeY + pupilOffsetY, pupilSize, 0, Math.PI * 2);
             ctx.fill();
 
-            // BRILHOS nos olhos (GRANDES e brilhantes) - estilo anime/cartoon
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+            // Brilhos nos olhos (mais discretos)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
             ctx.beginPath();
-            ctx.arc(eyeLeftX - 1.5, eyeY - 1.5, 2 * eyeSquash, 0, Math.PI * 2);
+            ctx.arc(eyeLeftX - 1, eyeY - 1, 1.5 * eyeSquash, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(eyeRightX - 1.5, eyeY - 1.5, 2 * eyeSquash, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Mini brilho secundário
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-            ctx.beginPath();
-            ctx.arc(eyeLeftX + 2, eyeY + 1.5, 1 * eyeSquash, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(eyeRightX + 2, eyeY + 1.5, 1 * eyeSquash, 0, Math.PI * 2);
+            ctx.arc(eyeRightX - 1, eyeY - 1, 1.5 * eyeSquash, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // BOCHECHAS ROSADAS (fofo!) - pulsam ao andar
-        const cheekPulse = 1 + Math.sin(this.walkBounce * 2) * 0.1;
-        ctx.fillStyle = 'rgba(255, 150, 180, 0.4)';
+        // Bochechas sutis (menos infantil)
+        const cheekPulse = 1 + Math.sin(this.walkBounce * 2) * 0.05;
+        ctx.fillStyle = 'rgba(255, 150, 180, 0.15)';
         ctx.beginPath();
-        ctx.arc(screenX + 3, finalScreenY + 14, 3 * cheekPulse, 0, Math.PI * 2);
+        ctx.arc(screenX + 3, finalScreenY + 14, 2 * cheekPulse, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(screenX + 21, finalScreenY + 14, 3 * cheekPulse, 0, Math.PI * 2);
+        ctx.arc(screenX + 21, finalScreenY + 14, 2 * cheekPulse, 0, Math.PI * 2);
         ctx.fill();
 
-        // BOCA EXPRESSIVA (muda com velocidade vertical)
+        // Expressão mais neutra/irônica (muda com velocidade vertical)
         if (!this.grounded || Math.abs(this.vy) > 0.5) {
-            // Boca ABERTA (surpreso/animado) - tamanho varia com velocidade
-            const mouthOpenness = 1 + Math.min(Math.abs(this.vy) / 10, 0.5);
+            // Boca aberta (menos exagerada) - tamanho varia com velocidade
+            const mouthOpenness = 1 + Math.min(Math.abs(this.vy) / 15, 0.3);
             ctx.fillStyle = '#000000';
             ctx.beginPath();
-            ctx.ellipse(screenX + 12, finalScreenY + 20, 4 * mouthOpenness, 5 * mouthOpenness, 0, 0, Math.PI * 2);
+            ctx.ellipse(screenX + 12, finalScreenY + 19, 3 * mouthOpenness, 4 * mouthOpenness, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            // Interior da boca (escuro avermelhado)
+            // Interior da boca (escuro)
             ctx.fillStyle = '#661111';
             ctx.beginPath();
-            ctx.ellipse(screenX + 12, finalScreenY + 20, 3 * mouthOpenness, 4 * mouthOpenness, 0, 0, Math.PI * 2);
+            ctx.ellipse(screenX + 12, finalScreenY + 19, 2 * mouthOpenness, 3 * mouthOpenness, 0, 0, Math.PI * 2);
             ctx.fill();
         } else {
-            // SORRISO FELIZ (arco virado para cima) - maior ao andar rápido
-            const smileSize = 4 + Math.abs(this.vx) * 0.3;
+            // Sorriso mais discreto/sarcástico (arco mais sutil)
+            const smileSize = 3.5 + Math.abs(this.vx) * 0.2;
             ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 2.5;
+            ctx.lineWidth = 2;
             ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.arc(screenX + 12, finalScreenY + 17, smileSize, 0.2, Math.PI - 0.2);
+            ctx.arc(screenX + 12, finalScreenY + 17, smileSize, 0.3, Math.PI - 0.3);
             ctx.stroke();
         }
 

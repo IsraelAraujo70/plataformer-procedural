@@ -151,8 +151,8 @@ export class JumperEnemy extends Enemy {
         ctx.ellipse(centerX - radiusX * 0.25, centerY - radiusY * 0.3, radiusX * 0.4, radiusY * 0.3, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Olhos (maiores quando pulando - expressão de surpresa)
-        const eyeSize = this.grounded ? 4 : 6;
+        // Olhos mais moderados e focados (menos fofo)
+        const eyeSize = this.grounded ? 3 : 4;
 
         // Outline dos olhos
         ctx.fillStyle = '#000000';
@@ -172,14 +172,14 @@ export class JumperEnemy extends Enemy {
         ctx.arc(screenX + 18, bodyY + 10, eyeSize, 0, Math.PI * 2);
         ctx.fill();
 
-        // Pupilas
+        // Pupilas verticais estreitas
         ctx.fillStyle = '#000000';
-        const pupilY = this.grounded ? bodyY + 10 : bodyY + 12; // Olhar para baixo quando no ar
+        const pupilY = this.grounded ? bodyY + 10 : bodyY + 11;
         ctx.beginPath();
-        ctx.arc(screenX + 10, pupilY, 2.5, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 10, pupilY, 0.8, 2, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(screenX + 18, pupilY, 2.5, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 18, pupilY, 0.8, 2, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Brilho nos olhos

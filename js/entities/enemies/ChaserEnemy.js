@@ -158,28 +158,28 @@ export class ChaserEnemy extends Enemy {
         ctx.fillStyle = this.color;
         ctx.fillRect(screenX, screenY, this.width, this.height);
 
-        // Olhos (expressão agressiva)
-        const eyeAngle = this.isChasing ? -0.3 : 0; // Sobrancelhas "raivosas" quando perseguindo
+        // Olhos hostis (menos fofos, mais ameaçadores)
+        const eyeAngle = this.isChasing ? -0.3 : 0;
         ctx.fillStyle = '#ffffff';
 
-        // Olho esquerdo
+        // Olho esquerdo (menor)
         ctx.beginPath();
-        ctx.arc(screenX + 8, screenY + 10, 5, 0, Math.PI * 2);
+        ctx.arc(screenX + 8, screenY + 10, 3.5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Olho direito
+        // Olho direito (menor)
         ctx.beginPath();
-        ctx.arc(screenX + 20, screenY + 10, 5, 0, Math.PI * 2);
+        ctx.arc(screenX + 20, screenY + 10, 3.5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Pupilas (olhando na direção do movimento)
+        // Pupilas estreitas verticais (olhar predador)
         ctx.fillStyle = '#000000';
         const pupilOffsetX = this.vx > 0 ? 1 : -1;
         ctx.beginPath();
-        ctx.arc(screenX + 8 + pupilOffsetX, screenY + 10, 2.5, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 8 + pupilOffsetX, screenY + 10, 0.8, 2.5, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(screenX + 20 + pupilOffsetX, screenY + 10, 2.5, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 20 + pupilOffsetX, screenY + 10, 0.8, 2.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Sobrancelhas agressivas

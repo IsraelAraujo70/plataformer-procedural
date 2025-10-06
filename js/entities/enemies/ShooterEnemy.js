@@ -165,23 +165,23 @@ export class ShooterEnemy extends Enemy {
 
         ctx.restore();
 
-        // Olho único (tipo ciclope/torreta)
+        // Olho único ciclope (ameaçador, menos fofo)
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(screenX + 14, screenY + 10, 6, 0, Math.PI * 2);
+        ctx.arc(screenX + 14, screenY + 10, 5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Pupila (olhando na direção do alvo)
-        ctx.fillStyle = '#ff0000'; // Vermelho (agressivo)
+        // Pupila vertical estreita (olhar mecânico/frio)
+        ctx.fillStyle = '#ff0000'; // Vermelho agressivo
         if (targetPlayer) {
-            const pupilOffsetX = Math.cos(cannonAngle) * 2;
-            const pupilOffsetY = Math.sin(cannonAngle) * 2;
+            const pupilOffsetX = Math.cos(cannonAngle) * 1.5;
+            const pupilOffsetY = Math.sin(cannonAngle) * 1.5;
             ctx.beginPath();
-            ctx.arc(screenX + 14 + pupilOffsetX, screenY + 10 + pupilOffsetY, 3, 0, Math.PI * 2);
+            ctx.ellipse(screenX + 14 + pupilOffsetX, screenY + 10 + pupilOffsetY, 0.8, 3, 0, 0, Math.PI * 2);
             ctx.fill();
         } else {
             ctx.beginPath();
-            ctx.arc(screenX + 14, screenY + 10, 3, 0, Math.PI * 2);
+            ctx.ellipse(screenX + 14, screenY + 10, 0.8, 3, 0, 0, Math.PI * 2);
             ctx.fill();
         }
 

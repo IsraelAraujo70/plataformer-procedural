@@ -150,16 +150,8 @@ export class FlyerEnemy extends Enemy {
         ctx.ellipse(centerX - 4, centerY - 4, 5, 4, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Olhos grandes com outline
+        // Olhos menores e mais hostis
         ctx.fillStyle = '#000000';
-        ctx.beginPath();
-        ctx.arc(screenX + 9, screenY + 12, 5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(screenX + 19, screenY + 12, 5, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.arc(screenX + 9, screenY + 12, 4, 0, Math.PI * 2);
         ctx.fill();
@@ -167,22 +159,30 @@ export class FlyerEnemy extends Enemy {
         ctx.arc(screenX + 19, screenY + 12, 4, 0, Math.PI * 2);
         ctx.fill();
 
-        // Pupilas
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(screenX + 9, screenY + 12, 2.5, 0, Math.PI * 2);
+        ctx.arc(screenX + 9, screenY + 12, 3, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(screenX + 19, screenY + 12, 2.5, 0, Math.PI * 2);
+        ctx.arc(screenX + 19, screenY + 12, 3, 0, Math.PI * 2);
         ctx.fill();
 
-        // Brilho
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        // Pupilas verticais estreitas
+        ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.arc(screenX + 8, screenY + 11, 1.5, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 9, screenY + 12, 0.8, 2, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(screenX + 18, screenY + 11, 1.5, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 19, screenY + 12, 0.8, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Brilho discreto
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.beginPath();
+        ctx.arc(screenX + 8, screenY + 11, 1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 18, screenY + 11, 1, 0, Math.PI * 2);
         ctx.fill();
 
         // Antenas com outline
