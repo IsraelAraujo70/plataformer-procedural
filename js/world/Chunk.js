@@ -545,8 +545,8 @@ export class Chunk {
             }
         });
 
-        // Adicionar chapéu com 15% de chance (apenas em chunks >= 1)
-        if (this.index >= 1 && rng.next() < 0.15 && this.platforms.length > 0) {
+        // Adicionar chapéu com 30% de chance (apenas em chunks >= 1)
+        if (this.index >= 1 && rng.next() < 0.30 && this.platforms.length > 0) {
             // Escolher plataforma aleatória para spawnar o chapéu
             const platform = this.platforms[rng.int(0, this.platforms.length - 1)];
             const hatX = platform.x + platform.width / 2 - 10;
@@ -584,7 +584,10 @@ export class Chunk {
 
             // Só adicionar se não colidir com outros itens
             if (canPlaceItem(hatX, hatY, 20, 20, allItems)) {
-                this.hats.push(new Hat(hatX, hatY, 'collectable'));
+                // Passar o bioma atual para o chapéu
+                const biomeType = this.biome.name.toLowerCase().replace(/\s+/g, '_');
+                console.log(`Spawning hat in biome: ${this.biome.name} -> ${biomeType}`);
+                this.hats.push(new Hat(hatX, hatY, 'collectable', biomeType));
             }
         }
 

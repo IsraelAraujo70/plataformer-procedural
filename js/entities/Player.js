@@ -64,6 +64,7 @@ export class Player {
         // Stats individuais por jogador
         this.hatCount = 1; // Sistema de chapéus empilháveis: cada chapéu = 1 hit extra
         this.maxHats = 5; // Limite máximo de chapéus
+        this.hatTypes = []; // Array de tipos de chapéus coletados (por bioma)
         this.score = 0;
         this.lastDistance = 0; // Rastrear última distância para pontuação individual
 
@@ -858,6 +859,84 @@ export class Player {
         }
     }
 
+    applyHatEffect(biomeType, action) {
+        // action: 'gain' ou 'lose'
+        const hatData = this.getHatData(biomeType);
+        if (!hatData || !hatData.effect) return;
+
+        const effect = hatData.effect;
+        const isGaining = action === 'gain';
+
+        switch (effect) {
+            case 'light':
+                // Miner Helmet: iluminação extra (implementar quando tiver sistema de luz)
+                console.log(`Player ${this.playerNumber}: ${isGaining ? 'Gained' : 'Lost'} light effect`);
+                break;
+
+            case 'warmth':
+                // Fur Hat: reduz deslizamento no gelo
+                // TODO: implementar quando tiver mais controle sobre física do gelo
+                console.log(`Player ${this.playerNumber}: ${isGaining ? 'Gained' : 'Lost'} warmth effect`);
+                break;
+
+            case 'heat_resistance':
+                // Turban: resistência ao calor (inimigos causam menos dano?)
+                console.log(`Player ${this.playerNumber}: ${isGaining ? 'Gained' : 'Lost'} heat resistance`);
+                break;
+
+            case 'jump_boost':
+                // Pilot Cap: boost no pulo
+                if (isGaining) {
+                    this.jumpBoost = Math.max(this.jumpBoost, 1.15);
+                } else {
+                    // Verificar se ainda tem outro chapéu com jump_boost
+                    const hasOtherJumpBoost = this.hatTypes.some(type =>
+                        type !== biomeType && this.getHatData(type)?.effect === 'jump_boost'
+                    );
+                    if (!hasOtherJumpBoost) {
+                        this.jumpBoost = 1;
+                    }
+                }
+                break;
+
+            case 'damage_reduction':
+                // Combat Helmet: aumenta invulnerabilidade após dano
+                console.log(`Player ${this.playerNumber}: ${isGaining ? 'Gained' : 'Lost'} damage reduction`);
+                break;
+
+            case 'low_gravity':
+                // Astronaut Helmet: melhor controle em baixa gravidade
+                console.log(`Player ${this.playerNumber}: ${isGaining ? 'Gained' : 'Lost'} low gravity control`);
+                break;
+
+            case 'ultimate':
+                // Void Crown: todos os efeitos
+                if (isGaining) {
+                    this.jumpBoost = Math.max(this.jumpBoost, 1.3);
+                    console.log(`Player ${this.playerNumber}: Gained ULTIMATE power!`);
+                } else {
+                    this.jumpBoost = 1;
+                    console.log(`Player ${this.playerNumber}: Lost ultimate power`);
+                }
+                break;
+        }
+    }
+
+    getHatData(biomeType) {
+        // Importar HAT_TYPES dinamicamente
+        const HAT_TYPES = {
+            PLAINS: { effect: null },
+            CAVE: { effect: 'light' },
+            ICE: { effect: 'warmth' },
+            DESERT: { effect: 'heat_resistance' },
+            SKY: { effect: 'jump_boost' },
+            APOCALYPSE: { effect: 'damage_reduction' },
+            MOON: { effect: 'low_gravity' },
+            BLACK_HOLE: { effect: 'ultimate' }
+        };
+        return HAT_TYPES[biomeType.toUpperCase()];
+    }
+
     die() {
         if (game.devMode.enabled && game.devMode.invincible) return; // Dev Mode: não morre
 
@@ -1197,23 +1276,23 @@ export class Player {
         // Corpo do jogador em formato BLOB (arredondado)
         this.drawBlobBody(ctx, screenX, finalScreenY);
 
-        // OLHOS ENORMES estilo cartoon fofo (ocupam quase toda a face)
+        // OLHOS estilo cartoon (proporcionais)
         const eyeLeftX = screenX + 7;
         const eyeRightX = screenX + 17;
         const eyeY = finalScreenY + 10;
-        const eyeSize = 6; // Muito maior!
+        const eyeSize = 4; // Tamanho moderado
 
         // ANIMAÇÃO DE PISCAR (squash vertical dos olhos)
         const blinkProgress = this.isBlinking ? Math.min(this.blinkDuration / 4, 1) : 0;
         const eyeSquash = 1 - blinkProgress * 0.9; // Olhos fecham 90%
 
-        // Outline preto GROSSO dos olhos
+        // Outline preto dos olhos
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.ellipse(eyeLeftX, eyeY, eyeSize + 1.5, (eyeSize + 1.5) * eyeSquash, 0, 0, Math.PI * 2);
+        ctx.ellipse(eyeLeftX, eyeY, eyeSize + 1, (eyeSize + 1) * eyeSquash, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.ellipse(eyeRightX, eyeY, eyeSize + 1.5, (eyeSize + 1.5) * eyeSquash, 0, 0, Math.PI * 2);
+        ctx.ellipse(eyeRightX, eyeY, eyeSize + 1, (eyeSize + 1) * eyeSquash, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Brancos dos olhos (super brancos) - só desenhar se não estiver completamente fechado
@@ -1246,7 +1325,7 @@ export class Player {
                 pupilOffsetY = -1;
             }
 
-            const pupilSize = 3.5 * eyeSquash; // Pupilas também comprimem ao piscar
+            const pupilSize = 2.5 * eyeSquash; // Pupilas também comprimem ao piscar
             ctx.beginPath();
             ctx.arc(eyeLeftX + pupilOffsetX, eyeY + pupilOffsetY, pupilSize, 0, Math.PI * 2);
             ctx.fill();
@@ -1254,57 +1333,38 @@ export class Player {
             ctx.arc(eyeRightX + pupilOffsetX, eyeY + pupilOffsetY, pupilSize, 0, Math.PI * 2);
             ctx.fill();
 
-            // BRILHOS nos olhos (GRANDES e brilhantes) - estilo anime/cartoon
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+            // Brilho sutil nos olhos
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
             ctx.beginPath();
-            ctx.arc(eyeLeftX - 1.5, eyeY - 1.5, 2 * eyeSquash, 0, Math.PI * 2);
+            ctx.arc(eyeLeftX - 1, eyeY - 1, 1.2 * eyeSquash, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(eyeRightX - 1.5, eyeY - 1.5, 2 * eyeSquash, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Mini brilho secundário
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-            ctx.beginPath();
-            ctx.arc(eyeLeftX + 2, eyeY + 1.5, 1 * eyeSquash, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(eyeRightX + 2, eyeY + 1.5, 1 * eyeSquash, 0, Math.PI * 2);
+            ctx.arc(eyeRightX - 1, eyeY - 1, 1.2 * eyeSquash, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // BOCHECHAS ROSADAS (fofo!) - pulsam ao andar
-        const cheekPulse = 1 + Math.sin(this.walkBounce * 2) * 0.1;
-        ctx.fillStyle = 'rgba(255, 150, 180, 0.4)';
-        ctx.beginPath();
-        ctx.arc(screenX + 3, finalScreenY + 14, 3 * cheekPulse, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(screenX + 21, finalScreenY + 14, 3 * cheekPulse, 0, Math.PI * 2);
-        ctx.fill();
-
-        // BOCA EXPRESSIVA (muda com velocidade vertical)
+        // BOCA SIMPLES (muda com velocidade vertical)
         if (!this.grounded || Math.abs(this.vy) > 0.5) {
-            // Boca ABERTA (surpreso/animado) - tamanho varia com velocidade
-            const mouthOpenness = 1 + Math.min(Math.abs(this.vy) / 10, 0.5);
+            // Boca aberta (surpreso) - mais contida
+            const mouthOpenness = 1 + Math.min(Math.abs(this.vy) / 15, 0.3);
             ctx.fillStyle = '#000000';
             ctx.beginPath();
-            ctx.ellipse(screenX + 12, finalScreenY + 20, 4 * mouthOpenness, 5 * mouthOpenness, 0, 0, Math.PI * 2);
+            ctx.ellipse(screenX + 12, finalScreenY + 19, 3 * mouthOpenness, 3.5 * mouthOpenness, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            // Interior da boca (escuro avermelhado)
-            ctx.fillStyle = '#661111';
+            // Interior da boca
+            ctx.fillStyle = '#330000';
             ctx.beginPath();
-            ctx.ellipse(screenX + 12, finalScreenY + 20, 3 * mouthOpenness, 4 * mouthOpenness, 0, 0, Math.PI * 2);
+            ctx.ellipse(screenX + 12, finalScreenY + 19, 2 * mouthOpenness, 2.5 * mouthOpenness, 0, 0, Math.PI * 2);
             ctx.fill();
         } else {
-            // SORRISO FELIZ (arco virado para cima) - maior ao andar rápido
-            const smileSize = 4 + Math.abs(this.vx) * 0.3;
+            // Sorriso simples
+            const smileSize = 3.5 + Math.abs(this.vx) * 0.2;
             ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 2.5;
+            ctx.lineWidth = 2;
             ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.arc(screenX + 12, finalScreenY + 17, smileSize, 0.2, Math.PI - 0.2);
+            ctx.arc(screenX + 12, finalScreenY + 17, smileSize, 0.3, Math.PI - 0.3);
             ctx.stroke();
         }
 
@@ -1323,10 +1383,10 @@ export class Player {
         const radiusX = this.width / 2;
         const radiusY = this.height / 2;
 
-        // OUTLINE PRETO GROSSO (estilo cartoon) - mais grosso
+        // OUTLINE PRETO (estilo cartoon)
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY, radiusX + 3, radiusY + 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, centerY, radiusX + 2, radiusY + 2, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // SOMBRA INTERNA (lado inferior/direito) - gradiente mais suave
