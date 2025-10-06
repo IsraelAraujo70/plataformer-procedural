@@ -41,6 +41,22 @@ function gameLoop(currentTime) {
         updateCount = 2; // 2x velocidade (acelera 100%)
     }
 
+    // Atualizar timers de TimeWarp ANTES do loop (para não decrementar 2x)
+    if (game.player && game.player.timeWarpTime > 0) {
+        game.player.timeWarpTime--;
+        if (game.player.timeWarpTime <= 0) {
+            game.player.timeWarp = false;
+            game.player.timeWarpMaxTime = 0;
+        }
+    }
+    if (game.player2 && game.player2.timeWarpTime > 0) {
+        game.player2.timeWarpTime--;
+        if (game.player2.timeWarpTime <= 0) {
+            game.player2.timeWarp = false;
+            game.player2.timeWarpMaxTime = 0;
+        }
+    }
+
     // Update (executar múltiplas vezes se time warp ativo)
     for (let i = 0; i < updateCount; i++) {
         updateChunks();

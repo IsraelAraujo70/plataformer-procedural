@@ -223,13 +223,7 @@ export class Player {
             }
         }
 
-        if (this.timeWarpTime > 0) {
-            this.timeWarpTime--;
-            if (this.timeWarpTime <= 0) {
-                this.timeWarp = false;
-                this.timeWarpMaxTime = 0;
-            }
-        }
+        // TimeWarp é atualizado no main.js para evitar decremento duplo durante aceleração
 
         // DEV MODE: Controles especiais
         if (game.devMode.enabled && game.devMode.noclip) {
