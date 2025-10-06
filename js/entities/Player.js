@@ -309,9 +309,9 @@ export class Player {
                 this.bhopScore += points;
                 this.spawnBhopDust(points);
 
-                // 4º pulo: aplicar super boost baseado no score acumulado
-                if (this.bhopCombo === 4) {
-                    const scoreMultiplier = 1.0 + (this.bhopScore / 300) * 0.8;
+                // 3º pulo: aplicar super boost baseado no score acumulado
+                if (this.bhopCombo === 3) {
+                    const scoreMultiplier = 1.0 + (this.bhopScore / 200) * 0.8;
                     jumpStrength *= scoreMultiplier;
                     // Reset após o super pulo
                     this.bhopCombo = 0;
@@ -351,9 +351,9 @@ export class Player {
                 this.bhopScore += points;
                 this.spawnBhopDust(points);
 
-                // 4º pulo: aplicar super boost baseado no score acumulado
-                if (this.bhopCombo === 4) {
-                    const scoreMultiplier = 1.0 + (this.bhopScore / 300) * 0.8;
+                // 3º pulo: aplicar super boost baseado no score acumulado
+                if (this.bhopCombo === 3) {
+                    const scoreMultiplier = 1.0 + (this.bhopScore / 200) * 0.8;
                     jumpStrength *= scoreMultiplier;
                     // Reset após o super pulo
                     this.bhopCombo = 0;
@@ -1173,8 +1173,8 @@ export class Player {
             else if (points === 75) particleCount = 7;   // Frame 2/4 (bom)
             else if (points === 50) particleCount = 4;   // Frame 1/5 (ok)
 
-            // Cor baseada no combo (4º pulo tem partículas especiais)
-            let isSuper = this.bhopCombo === 4;
+            // Cor baseada no combo (3º pulo tem partículas especiais)
+            let isSuper = this.bhopCombo === 3;
 
             for (let i = 0; i < particleCount; i++) {
                 // Alternar entre pé esquerdo e direito
@@ -1205,12 +1205,12 @@ export class Player {
                         let fillColor, strokeColor;
 
                         if (this.isSuper) {
-                            // Partículas especiais para o 4º pulo
-                            if (this.superScore >= 250) {
-                                // Dourado (score alto)
+                            // Partículas especiais para o 3º pulo
+                            if (this.superScore >= 200) {
+                                // Dourado (score perfeito = 3x 100pts = 300pts, ajustado para 200pts)
                                 fillColor = `rgba(255, 215, 0, ${alpha})`;
                                 strokeColor = `rgba(218, 165, 32, ${alpha * 0.8})`;
-                            } else if (this.superScore >= 200) {
+                            } else if (this.superScore >= 150) {
                                 // Laranja (score médio)
                                 fillColor = `rgba(255, 140, 0, ${alpha})`;
                                 strokeColor = `rgba(255, 100, 0, ${alpha * 0.8})`;
