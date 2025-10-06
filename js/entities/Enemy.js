@@ -49,7 +49,8 @@ export class Enemy {
 
             // Adicionar pontos por derrotar inimigo
             player.score += this.points;
-            game.stats.enemiesDefeated++;
+            player.stats.enemiesDefeated++;
+            game.stats.enemiesDefeated++; // Também incrementar global para compatibilidade
 
             // createFloatingText e createParticles serão importados no main.js
             if (window.createFloatingText) {

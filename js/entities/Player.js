@@ -62,6 +62,14 @@ export class Player {
         this.hatCount = 1; // Sistema de chapéus empilháveis: cada chapéu = 1 hit extra
         this.maxHats = 5; // Limite máximo de chapéus
         this.score = 0;
+        this.lastDistance = 0; // Rastrear última distância para pontuação individual
+
+        // Estatísticas detalhadas individuais
+        this.stats = {
+            coinsCollected: 0,
+            enemiesDefeated: 0,
+            modifiersCollected: 0
+        };
 
         // Sistema de checkpoint
         this.lastSafeX = x;
@@ -484,26 +492,27 @@ export class Player {
             this.attractNearbyItems();
         }
 
-        // Atualizar distância e pontuar (baseado no jogador mais à direita)
+        // Atualizar distância individual e pontuar cada jogador independentemente
+        const currentDistance = Math.floor(this.x / CONFIG.TILE_SIZE);
+
+        // Cada jogador ganha pontos pela sua própria progressão
+        if (currentDistance > this.lastDistance) {
+            const distanceDiff = currentDistance - this.lastDistance;
+            this.score += distanceDiff;
+            this.lastDistance = currentDistance;
+        }
+
+        // Atualizar game.distance global (máximo entre todos os jogadores)
+        // Usado para gerar chunks e aumentar dificuldade
         const rightmostX = game.twoPlayerMode && game.player2 ?
             Math.max(game.player.x, game.player2.x) :
             this.x;
 
-        const newDistance = Math.floor(rightmostX / CONFIG.TILE_SIZE);
-        if (newDistance > game.distance) {
-            const distanceDiff = newDistance - game.distance;
-            // Jogador mais à direita ganha os pontos de distância
-            if (game.twoPlayerMode && game.player2) {
-                if (game.player.x > game.player2.x) {
-                    game.player.score += distanceDiff;
-                } else {
-                    game.player2.score += distanceDiff;
-                }
-            } else {
-                this.score += distanceDiff;
-            }
-            game.distance = newDistance;
+        const globalDistance = Math.floor(rightmostX / CONFIG.TILE_SIZE);
+        if (globalDistance > game.distance) {
+            game.distance = globalDistance;
         }
+
         game.difficulty = Math.floor(game.distance / 100); // Aumenta a cada 100 tiles
     }
 

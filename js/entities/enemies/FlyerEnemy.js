@@ -64,7 +64,8 @@ export class FlyerEnemy extends Enemy {
             player.vy = CONFIG.JUMP_STRENGTH * 0.5;
 
             player.score += this.points;
-            game.stats.enemiesDefeated++;
+            player.stats.enemiesDefeated++;
+            game.stats.enemiesDefeated++; // Também incrementar global para compatibilidade
 
             if (window.createFloatingText) {
                 window.createFloatingText(`+${this.points}`, this.x + this.width / 2, this.y, '#ffff00');

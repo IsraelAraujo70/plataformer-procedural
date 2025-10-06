@@ -77,7 +77,8 @@ export class Modifier {
 
             // Pontos vão apenas para quem coletou
             game.player.score += 25;
-            game.stats.modifiersCollected++;
+            game.player.stats.modifiersCollected++;
+            game.stats.modifiersCollected++; // Também incrementar global para compatibilidade
 
             const color = colors[this.type] || '#ffffff';
             if (window.createFloatingText) {
@@ -115,7 +116,8 @@ export class Modifier {
 
             // Pontos vão apenas para quem coletou
             game.player2.score += 25;
-            game.stats.modifiersCollected++;
+            game.player2.stats.modifiersCollected++;
+            game.stats.modifiersCollected++; // Também incrementar global para compatibilidade
 
             const color = colors[this.type] || '#ffffff';
             if (window.createFloatingText) {

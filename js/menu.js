@@ -97,23 +97,36 @@ export function showGameOver() {
         const p2Score = game.player2.score;
         const totalScore = p1Score + p2Score;
 
-        // Calcular pontos de cada categoria (estatísticas globais)
-        const coinPoints = game.stats.coinsCollected * 10;
-        const enemyPoints = game.stats.enemiesDefeated * 50;
-        const modifierPoints = game.stats.modifiersCollected * 25;
-        const distancePoints = game.distance;
+        // Calcular pontos de cada categoria POR JOGADOR
+        const p1CoinPoints = game.player.stats.coinsCollected * 10;
+        const p1EnemyPoints = game.player.stats.enemiesDefeated * 50;
+        const p1ModifierPoints = game.player.stats.modifiersCollected * 25;
+        const p1DistancePoints = Math.floor(game.player.x / 32); // Distância percorrida por P1
+
+        const p2CoinPoints = game.player2.stats.coinsCollected * 10;
+        const p2EnemyPoints = game.player2.stats.enemiesDefeated * 50;
+        const p2ModifierPoints = game.player2.stats.modifiersCollected * 25;
+        const p2DistancePoints = Math.floor(game.player2.x / 32); // Distância percorrida por P2
 
         menu.innerHTML = `
             <h1>GAME OVER</h1>
             <div style="text-align: left; display: inline-block; margin: 20px 0;">
-                <p style="font-size: 18px; margin: 10px 0;"><strong>📊 Score Breakdown:</strong></p>
-                <p style="font-size: 16px; margin: 8px 0;">💰 Coins: ${game.stats.coinsCollected} × 10 = ${coinPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">👹 Enemies: ${game.stats.enemiesDefeated} × 50 = ${enemyPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">⚡ Modifiers: ${game.stats.modifiersCollected} × 25 = ${modifierPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">📏 Distance: ${game.distance}m = ${distancePoints} pts</p>
-                <hr style="margin: 15px 0; border-color: #00ffff;">
-                <p style="font-size: 20px; margin: 10px 0; color: #00d9ff;"><strong>🎮 Player 1: ${p1Score} points</strong></p>
-                <p style="font-size: 20px; margin: 10px 0; color: #ff6b6b;"><strong>🎮 Player 2: ${p2Score} points</strong></p>
+                <p style="font-size: 18px; margin: 10px 0; color: #00d9ff;"><strong>🎮 Player 1 Breakdown:</strong></p>
+                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">💰 Coins: ${game.player.stats.coinsCollected} × 10 = ${p1CoinPoints} pts</p>
+                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">👹 Enemies: ${game.player.stats.enemiesDefeated} × 50 = ${p1EnemyPoints} pts</p>
+                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">⚡ Modifiers: ${game.player.stats.modifiersCollected} × 25 = ${p1ModifierPoints} pts</p>
+                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">📏 Distance: ${p1DistancePoints}m = ${p1DistancePoints} pts</p>
+                <p style="font-size: 18px; margin: 10px 0; color: #00d9ff;"><strong>Total P1: ${p1Score} points</strong></p>
+
+                <hr style="margin: 15px 0; border-color: #666;">
+
+                <p style="font-size: 18px; margin: 10px 0; color: #ff6b6b;"><strong>🎮 Player 2 Breakdown:</strong></p>
+                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">💰 Coins: ${game.player2.stats.coinsCollected} × 10 = ${p2CoinPoints} pts</p>
+                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">👹 Enemies: ${game.player2.stats.enemiesDefeated} × 50 = ${p2EnemyPoints} pts</p>
+                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">⚡ Modifiers: ${game.player2.stats.modifiersCollected} × 25 = ${p2ModifierPoints} pts</p>
+                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">📏 Distance: ${p2DistancePoints}m = ${p2DistancePoints} pts</p>
+                <p style="font-size: 18px; margin: 10px 0; color: #ff6b6b;"><strong>Total P2: ${p2Score} points</strong></p>
+
                 <hr style="margin: 15px 0; border-color: #00ffff;">
                 <p style="font-size: 24px; margin: 10px 0; color: #00ffff;"><strong>🏆 TOTAL: ${totalScore} points</strong></p>
             </div>
@@ -173,10 +186,16 @@ export function showVictory() {
         const p2Score = game.player2.score;
         const totalScore = p1Score + p2Score;
 
-        const coinPoints = game.stats.coinsCollected * 10;
-        const enemyPoints = game.stats.enemiesDefeated * 50;
-        const modifierPoints = game.stats.modifiersCollected * 25;
-        const distancePoints = game.distance;
+        // Calcular pontos de cada categoria POR JOGADOR
+        const p1CoinPoints = game.player.stats.coinsCollected * 10;
+        const p1EnemyPoints = game.player.stats.enemiesDefeated * 50;
+        const p1ModifierPoints = game.player.stats.modifiersCollected * 25;
+        const p1DistancePoints = Math.floor(game.player.x / 32);
+
+        const p2CoinPoints = game.player2.stats.coinsCollected * 10;
+        const p2EnemyPoints = game.player2.stats.enemiesDefeated * 50;
+        const p2ModifierPoints = game.player2.stats.modifiersCollected * 25;
+        const p2DistancePoints = Math.floor(game.player2.x / 32);
 
         menu.innerHTML = `
             <h1 style="color: #ffd700; text-shadow: 0 0 20px #ffd700;">🏆 VICTORY! 🏆</h1>
@@ -184,14 +203,23 @@ export function showVictory() {
             <div style="text-align: left; display: inline-block; margin: 20px 0;">
                 <p style="font-size: 24px; margin: 15px 0; color: #ffd700;"><strong>⏱️ Time: ${formattedTime}</strong></p>
                 <hr style="margin: 15px 0; border-color: #ffd700;">
-                <p style="font-size: 18px; margin: 10px 0;"><strong>📊 Score Breakdown:</strong></p>
-                <p style="font-size: 16px; margin: 8px 0;">💰 Coins: ${game.stats.coinsCollected} × 10 = ${coinPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">👹 Enemies: ${game.stats.enemiesDefeated} × 50 = ${enemyPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">⚡ Modifiers: ${game.stats.modifiersCollected} × 25 = ${modifierPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">📏 Distance: ${game.distance}m = ${distancePoints} pts</p>
-                <hr style="margin: 15px 0; border-color: #00ffff;">
-                <p style="font-size: 20px; margin: 10px 0; color: #00d9ff;"><strong>🎮 Player 1: ${p1Score} points</strong></p>
-                <p style="font-size: 20px; margin: 10px 0; color: #ff6b6b;"><strong>🎮 Player 2: ${p2Score} points</strong></p>
+
+                <p style="font-size: 18px; margin: 10px 0; color: #00d9ff;"><strong>🎮 Player 1 Breakdown:</strong></p>
+                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">💰 Coins: ${game.player.stats.coinsCollected} × 10 = ${p1CoinPoints} pts</p>
+                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">👹 Enemies: ${game.player.stats.enemiesDefeated} × 50 = ${p1EnemyPoints} pts</p>
+                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">⚡ Modifiers: ${game.player.stats.modifiersCollected} × 25 = ${p1ModifierPoints} pts</p>
+                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">📏 Distance: ${p1DistancePoints}m = ${p1DistancePoints} pts</p>
+                <p style="font-size: 18px; margin: 10px 0; color: #00d9ff;"><strong>Total P1: ${p1Score} points</strong></p>
+
+                <hr style="margin: 15px 0; border-color: #666;">
+
+                <p style="font-size: 18px; margin: 10px 0; color: #ff6b6b;"><strong>🎮 Player 2 Breakdown:</strong></p>
+                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">💰 Coins: ${game.player2.stats.coinsCollected} × 10 = ${p2CoinPoints} pts</p>
+                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">👹 Enemies: ${game.player2.stats.enemiesDefeated} × 50 = ${p2EnemyPoints} pts</p>
+                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">⚡ Modifiers: ${game.player2.stats.modifiersCollected} × 25 = ${p2ModifierPoints} pts</p>
+                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">📏 Distance: ${p2DistancePoints}m = ${p2DistancePoints} pts</p>
+                <p style="font-size: 18px; margin: 10px 0; color: #ff6b6b;"><strong>Total P2: ${p2Score} points</strong></p>
+
                 <hr style="margin: 15px 0; border-color: #ffd700;">
                 <p style="font-size: 24px; margin: 10px 0; color: #ffd700;"><strong>🏆 TOTAL: ${totalScore} points</strong></p>
             </div>

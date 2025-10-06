@@ -23,7 +23,8 @@ export class Coin {
         if (this.intersects(game.player)) {
             this.collected = true;
             game.player.score += 10;
-            game.stats.coinsCollected++;
+            game.player.stats.coinsCollected++;
+            game.stats.coinsCollected++; // Também incrementar global para compatibilidade
 
             if (window.createFloatingText) {
                 window.createFloatingText('+10', this.x + this.width / 2, this.y, '#ffd700');
@@ -37,7 +38,8 @@ export class Coin {
         if (game.player2 && !this.collected && this.intersects(game.player2)) {
             this.collected = true;
             game.player2.score += 10;
-            game.stats.coinsCollected++;
+            game.player2.stats.coinsCollected++;
+            game.stats.coinsCollected++; // Também incrementar global para compatibilidade
 
             if (window.createFloatingText) {
                 window.createFloatingText('+10', this.x + this.width / 2, this.y, '#ffd700');
