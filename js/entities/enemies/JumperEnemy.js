@@ -114,8 +114,16 @@ export class JumperEnemy extends Enemy {
         ctx.stroke();
 
         // Corpo do inimigo (verde-água, comprimido quando no chão) - formato blob
-        const bodyHeight = this.grounded ? this.height * 0.9 : this.height;
-        const bodyY = this.grounded ? screenY + 2 : screenY;
+        // Adicionar compressão extra quando prestes a pular (telegraph)
+        let squashMultiplier = 1.0;
+        if (this.grounded && this.jumpTimer > this.jumpInterval * 0.85) {
+            // Comprimir progressivamente antes do pulo (telegraph)
+            const chargeProgress = (this.jumpTimer - this.jumpInterval * 0.85) / (this.jumpInterval * 0.15);
+            squashMultiplier = 1.0 - (chargeProgress * 0.3); // Comprimir até 70% da altura
+        }
+
+        const bodyHeight = (this.grounded ? this.height * 0.9 : this.height) * squashMultiplier;
+        const bodyY = this.grounded ? screenY + (this.height - bodyHeight) : screenY;
         const centerX = screenX + this.width / 2;
         const centerY = bodyY + bodyHeight / 2;
         const radiusX = this.width / 2;
@@ -151,45 +159,50 @@ export class JumperEnemy extends Enemy {
         ctx.ellipse(centerX - radiusX * 0.25, centerY - radiusY * 0.3, radiusX * 0.4, radiusY * 0.3, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Olhos (maiores quando pulando - expressão de surpresa)
+        // Olhos (maiores quando pulando - expressão de surpresa) com PISCAR
         const eyeSize = this.grounded ? 4 : 6;
+        const eyeSquash = this.isBlinking ? 0.1 : 1.0;
 
         // Outline dos olhos
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.arc(screenX + 10, bodyY + 10, eyeSize + 1, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 10, bodyY + 10, eyeSize + 1, (eyeSize + 1) * eyeSquash, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(screenX + 18, bodyY + 10, eyeSize + 1, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 18, bodyY + 10, eyeSize + 1, (eyeSize + 1) * eyeSquash, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Olhos brancos
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(screenX + 10, bodyY + 10, eyeSize, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(screenX + 18, bodyY + 10, eyeSize, 0, Math.PI * 2);
-        ctx.fill();
+        // Olhos brancos (só se não estiver completamente fechado)
+        if (eyeSquash > 0.15) {
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(screenX + 10, bodyY + 10, eyeSize, eyeSize * eyeSquash, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(screenX + 18, bodyY + 10, eyeSize, eyeSize * eyeSquash, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
-        // Pupilas
-        ctx.fillStyle = '#000000';
-        const pupilY = this.grounded ? bodyY + 10 : bodyY + 12; // Olhar para baixo quando no ar
-        ctx.beginPath();
-        ctx.arc(screenX + 10, pupilY, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(screenX + 18, pupilY, 2.5, 0, Math.PI * 2);
-        ctx.fill();
+        // Pupilas (só se não estiver piscando muito)
+        if (eyeSquash > 0.3) {
+            ctx.fillStyle = '#000000';
+            const pupilY = this.grounded ? bodyY + 10 : bodyY + 12; // Olhar para baixo quando no ar
+            ctx.beginPath();
+            ctx.arc(screenX + 10, pupilY, 2.5 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(screenX + 18, pupilY, 2.5 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
 
-        // Brilho nos olhos
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.beginPath();
-        ctx.arc(screenX + 9, bodyY + 9, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(screenX + 17, bodyY + 9, 1.5, 0, Math.PI * 2);
-        ctx.fill();
+            // Brilho nos olhos
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.arc(screenX + 9, bodyY + 9, 1.5 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(screenX + 17, bodyY + 9, 1.5 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         // Boca (sorrisinho com outline)
         ctx.strokeStyle = '#000000';

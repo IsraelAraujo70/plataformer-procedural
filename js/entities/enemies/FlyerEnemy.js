@@ -150,40 +150,46 @@ export class FlyerEnemy extends Enemy {
         ctx.ellipse(centerX - 4, centerY - 4, 5, 4, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Olhos grandes com outline
+        // Olhos grandes com outline e PISCAR
+        const eyeSquash = this.isBlinking ? 0.1 : 1.0;
+
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.arc(screenX + 9, screenY + 12, 5, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 9, screenY + 12, 5, 5 * eyeSquash, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(screenX + 19, screenY + 12, 5, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 19, screenY + 12, 5, 5 * eyeSquash, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(screenX + 9, screenY + 12, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(screenX + 19, screenY + 12, 4, 0, Math.PI * 2);
-        ctx.fill();
+        if (eyeSquash > 0.15) {
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(screenX + 9, screenY + 12, 4, 4 * eyeSquash, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(screenX + 19, screenY + 12, 4, 4 * eyeSquash, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
-        // Pupilas
-        ctx.fillStyle = '#000000';
-        ctx.beginPath();
-        ctx.arc(screenX + 9, screenY + 12, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(screenX + 19, screenY + 12, 2.5, 0, Math.PI * 2);
-        ctx.fill();
+        // Pupilas (só se não estiver piscando muito)
+        if (eyeSquash > 0.3) {
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(screenX + 9, screenY + 12, 2.5 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(screenX + 19, screenY + 12, 2.5 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
 
-        // Brilho
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.beginPath();
-        ctx.arc(screenX + 8, screenY + 11, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(screenX + 18, screenY + 11, 1.5, 0, Math.PI * 2);
-        ctx.fill();
+            // Brilho
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.arc(screenX + 8, screenY + 11, 1.5 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(screenX + 18, screenY + 11, 1.5 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         // Antenas com outline
         ctx.strokeStyle = '#000000';

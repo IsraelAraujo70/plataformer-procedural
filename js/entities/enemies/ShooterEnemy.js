@@ -22,6 +22,11 @@ export class ShooterEnemy extends Enemy {
         this.detectionRange = 300; // Distância para detectar jogador
         this.canShoot = false;
 
+        // Telegraph (antecipação de ataque)
+        this.telegraphTime = 0;
+        this.telegraphDuration = 15; // 0.25s a 60fps
+        this.isTelegraphing = false;
+
         // Posição fixa (shooter não patrulha)
         this.centerX = x + this.width / 2;
     }
@@ -46,17 +51,33 @@ export class ShooterEnemy extends Enemy {
         // Detectar jogador mais próximo para mirar
         const targetPlayer = this.detectNearestPlayer();
 
-        // Timer de disparo
+        // Timer de disparo com telegraph
         if (targetPlayer && this.grounded) {
             this.shootTimer += game.deltaTimeFactor;
 
-            if (this.shootTimer >= this.shootInterval) {
-                this.shoot(targetPlayer);
-                this.shootTimer = 0;
+            // Quando o timer atingir o intervalo, começar telegraph
+            if (this.shootTimer >= this.shootInterval && !this.isTelegraphing) {
+                this.isTelegraphing = true;
+                this.telegraphTime = 0;
+            }
+
+            // Atualizar telegraph
+            if (this.isTelegraphing) {
+                this.telegraphTime += game.deltaTimeFactor;
+
+                if (this.telegraphTime >= this.telegraphDuration) {
+                    // AGORA SIM atirar!
+                    this.shoot(targetPlayer);
+                    this.shootTimer = 0;
+                    this.isTelegraphing = false;
+                    this.telegraphTime = 0;
+                }
             }
         } else {
-            // Resetar timer se não houver alvo
+            // Resetar timer e telegraph se não houver alvo
             this.shootTimer = Math.max(0, this.shootTimer - 2);
+            this.isTelegraphing = false;
+            this.telegraphTime = 0;
         }
 
         // Remover se cair do mundo
@@ -136,9 +157,22 @@ export class ShooterEnemy extends Enemy {
         ctx.fillStyle = '#cc00cc'; // Magenta escuro
         ctx.fillRect(screenX + 4, screenY + 18, 20, 10);
 
-        // Corpo principal (magenta)
-        ctx.fillStyle = this.color;
+        // Corpo principal (magenta) com flash vermelho durante telegraph
+        if (this.isTelegraphing) {
+            // Piscar vermelho durante telegraph
+            const flash = Math.floor(this.telegraphTime / 3) % 2; // Alterna a cada 3 frames
+            ctx.fillStyle = flash ? '#ff0000' : this.color;
+        } else {
+            ctx.fillStyle = this.color;
+        }
         ctx.fillRect(screenX, screenY, this.width, this.height - 10);
+
+        // Overlay vermelho semi-transparente durante telegraph
+        if (this.isTelegraphing) {
+            const intensity = this.telegraphTime / this.telegraphDuration;
+            ctx.fillStyle = `rgba(255, 0, 0, ${intensity * 0.5})`;
+            ctx.fillRect(screenX, screenY, this.width, this.height - 10);
+        }
 
         // Detectar jogador mais próximo para direcionar o canhão
         const targetPlayer = this.detectNearestPlayer();
@@ -165,24 +199,37 @@ export class ShooterEnemy extends Enemy {
 
         ctx.restore();
 
-        // Olho único (tipo ciclope/torreta)
-        ctx.fillStyle = '#ffffff';
+        // Olho único (tipo ciclope/torreta) com PISCAR
+        const eyeSquash = this.isBlinking ? 0.1 : 1.0;
+
+        // Outline preto do olho
+        ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.arc(screenX + 14, screenY + 10, 6, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 14, screenY + 10, 7, 7 * eyeSquash, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Pupila (olhando na direção do alvo)
-        ctx.fillStyle = '#ff0000'; // Vermelho (agressivo)
-        if (targetPlayer) {
-            const pupilOffsetX = Math.cos(cannonAngle) * 2;
-            const pupilOffsetY = Math.sin(cannonAngle) * 2;
+        // Branco do olho (só se não estiver completamente fechado)
+        if (eyeSquash > 0.15) {
+            ctx.fillStyle = '#ffffff';
             ctx.beginPath();
-            ctx.arc(screenX + 14 + pupilOffsetX, screenY + 10 + pupilOffsetY, 3, 0, Math.PI * 2);
+            ctx.ellipse(screenX + 14, screenY + 10, 6, 6 * eyeSquash, 0, 0, Math.PI * 2);
             ctx.fill();
-        } else {
-            ctx.beginPath();
-            ctx.arc(screenX + 14, screenY + 10, 3, 0, Math.PI * 2);
-            ctx.fill();
+        }
+
+        // Pupila (olhando na direção do alvo) (só se não estiver piscando muito)
+        if (eyeSquash > 0.3) {
+            ctx.fillStyle = '#ff0000'; // Vermelho (agressivo)
+            if (targetPlayer) {
+                const pupilOffsetX = Math.cos(cannonAngle) * 2;
+                const pupilOffsetY = Math.sin(cannonAngle) * 2;
+                ctx.beginPath();
+                ctx.arc(screenX + 14 + pupilOffsetX, screenY + 10 + pupilOffsetY, 3 * eyeSquash, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                ctx.beginPath();
+                ctx.arc(screenX + 14, screenY + 10, 3 * eyeSquash, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         // Indicador de carga do disparo (anel ao redor do olho)

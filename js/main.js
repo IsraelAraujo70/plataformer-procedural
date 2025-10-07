@@ -1,6 +1,6 @@
 import { game } from './game.js';
 import { updateChunks, updateCamera } from './camera.js';
-import { drawBackground, createParticles, initAmbientParticles, updateAmbientParticles, drawAmbientParticles } from './render.js';
+import { drawBackground, drawParallaxLayers, createParticles, initAmbientParticles, updateAmbientParticles, drawAmbientParticles } from './render.js';
 import { drawDevModeUI } from './devMode.js';
 import { setupMenuHandlers } from './menu.js';
 import { setupInputHandlers } from './input.js';
@@ -215,6 +215,9 @@ function gameLoop(currentTime) {
     ctx.fillRect(0, 0, game.width, game.height);
 
     drawBackground(ctx);
+
+    // Parallax animado multi-camadas (após background, antes de partículas)
+    drawParallaxLayers(ctx);
 
     // Partículas ambientes (atrás de tudo, mas na frente do background)
     drawAmbientParticles(ctx);

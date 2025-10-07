@@ -24,9 +24,33 @@ export class Enemy {
 
         // Cor padrão (pode ser modificado por subclasses)
         this.color = '#ff8800';
+
+        // Sistema de piscar olhos (igual ao player)
+        this.blinkTimer = 0;
+        this.blinkDuration = 0;
+        this.isBlinking = false;
+        this.nextBlinkTime = Math.random() * 180 + 120; // 2-5 segundos (offset random por inimigo)
+    }
+
+    updateBlink() {
+        this.blinkTimer += game.deltaTimeFactor;
+
+        if (this.isBlinking) {
+            this.blinkDuration += game.deltaTimeFactor;
+            if (this.blinkDuration >= 8) { // Piscar dura 8 frames
+                this.isBlinking = false;
+                this.blinkDuration = 0;
+                this.nextBlinkTime = this.blinkTimer + Math.random() * 180 + 120;
+            }
+        } else if (this.blinkTimer >= this.nextBlinkTime) {
+            this.isBlinking = true;
+            this.blinkTimer = 0;
+        }
     }
 
     update() {
+        // Atualizar piscar de olhos
+        this.updateBlink();
         if (!this.alive) return;
 
         // Colisão com Player 1

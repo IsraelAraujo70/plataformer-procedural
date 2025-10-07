@@ -2236,6 +2236,223 @@ export function drawAmbientParticles(ctx) {
 }
 
 // ============================================
+// PARALLAX ANIMADO MULTI-CAMADAS
+// ============================================
+
+// Sistema de partículas de neve para bioma Ice
+let snowParticles = [];
+
+export function drawParallaxLayers(ctx) {
+    const currentBiome = game.currentBiome?.name || 'Plains';
+
+    // Desenhar camadas baseadas no bioma
+    switch(currentBiome) {
+        case 'Plains':
+            drawPlainsParallax(ctx);
+            break;
+        case 'Sky':
+            drawSkyParallax(ctx);
+            break;
+        case 'Ice':
+            drawIceParallax(ctx);
+            break;
+        case 'Cave':
+            drawCaveParallax(ctx);
+            break;
+        case 'Desert':
+            drawDesertParallax(ctx);
+            break;
+        // Outros biomas podem ser adicionados futuramente
+    }
+}
+
+// ============================================
+// PLAINS PARALLAX - Nuvens e Pássaros
+// ============================================
+function drawPlainsParallax(ctx) {
+    const time = Date.now() / 1000;
+
+    // CAMADA 1: Nuvens distantes (50% velocidade câmera)
+    const cloudOffset = (game.camera.x * 0.5) % 400;
+    for (let i = -1; i < 5; i++) {
+        const x = i * 400 - cloudOffset;
+        const y = 50 + Math.sin(time * 0.3 + i) * 10;
+        drawCloud(ctx, x, y, 'rgba(255, 255, 255, 0.4)', 40);
+    }
+
+    // CAMADA 2: Pássaros voando (30% velocidade câmera)
+    const birdOffset = (game.camera.x * 0.3) % 600;
+    for (let i = 0; i < 3; i++) {
+        const x = i * 600 - birdOffset + Math.sin(time + i * 2) * 50;
+        const y = 100 + Math.cos(time * 0.5 + i) * 30;
+        const wingFlap = Math.sin(time * 5 + i) > 0;
+        drawBird(ctx, x, y, wingFlap);
+    }
+}
+
+// ============================================
+// SKY PARALLAX - Nuvens Próximas
+// ============================================
+function drawSkyParallax(ctx) {
+    const time = Date.now() / 1000;
+
+    // Nuvens grandes e próximas (70% velocidade)
+    const cloudOffset = (game.camera.x * 0.7) % 300;
+    for (let i = -1; i < 6; i++) {
+        const x = i * 300 - cloudOffset;
+        const y = 100 + Math.sin(time * 0.5 + i) * 20;
+        const size = 60 + Math.sin(i) * 20;
+        drawCloud(ctx, x, y, 'rgba(255, 255, 255, 0.6)', size);
+    }
+}
+
+// ============================================
+// ICE PARALLAX - Neve Caindo
+// ============================================
+function drawIceParallax(ctx) {
+    const time = Date.now();
+
+    // Criar neve periodicamente
+    if (snowParticles.length < 100 && Math.random() < 0.3) {
+        snowParticles.push({
+            x: Math.random() * game.width + game.camera.x,
+            y: game.camera.y - 10,
+            speed: Math.random() * 1 + 0.5,
+            size: Math.random() * 3 + 1,
+            sway: Math.random() * 0.5
+        });
+    }
+
+    // Atualizar e desenhar neve
+    snowParticles = snowParticles.filter(snow => {
+        snow.y += snow.speed * game.deltaTimeFactor;
+        snow.x += Math.sin(time / 500 + snow.y) * snow.sway * game.deltaTimeFactor;
+
+        const screenX = snow.x - game.camera.x;
+        const screenY = snow.y - game.camera.y;
+
+        if (screenY < game.height + 20) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, snow.size, 0, Math.PI * 2);
+            ctx.fill();
+            return true;
+        }
+        return false;
+    });
+}
+
+// ============================================
+// CAVE PARALLAX - Morcegos e Fireflies
+// ============================================
+function drawCaveParallax(ctx) {
+    const time = Date.now() / 1000;
+
+    // Morcegos voando
+    const batOffset = (game.camera.x * 0.4) % 500;
+    for (let i = 0; i < 2; i++) {
+        const x = i * 500 - batOffset + Math.sin(time * 2 + i * 3) * 80;
+        const y = 80 + Math.sin(time * 3 + i) * 40;
+        const wingFlap = Math.sin(time * 8 + i) > 0;
+        drawBat(ctx, x, y, wingFlap);
+    }
+
+    // Partículas de poeira brilhante (fireflies)
+    for (let i = 0; i < 15; i++) {
+        const x = ((i * 100 + time * 20) % (game.width + 200)) + game.camera.x - 100;
+        const y = 100 + Math.sin(time + i) * 80;
+        const opacity = 0.3 + Math.sin(time * 3 + i) * 0.3;
+
+        const screenX = x - game.camera.x;
+        const screenY = y;
+
+        ctx.fillStyle = `rgba(255, 215, 100, ${opacity})`;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+// ============================================
+// DESERT PARALLAX - Areia Flutuante
+// ============================================
+function drawDesertParallax(ctx) {
+    const time = Date.now() / 1000;
+
+    // Partículas de areia no vento
+    for (let i = 0; i < 20; i++) {
+        const x = ((i * 80 + time * 60) % (game.width + 200)) + game.camera.x - 100;
+        const y = game.height - 100 + Math.sin(time * 2 + i) * 40;
+        const opacity = 0.2 + Math.sin(time * 4 + i) * 0.2;
+
+        const screenX = x - game.camera.x;
+        const screenY = y - game.camera.y;
+
+        ctx.fillStyle = `rgba(218, 165, 32, ${opacity})`;
+        ctx.fillRect(screenX, screenY, 3, 1);
+    }
+}
+
+// ============================================
+// FUNÇÕES AUXILIARES DE DESENHO
+// ============================================
+
+function drawCloud(ctx, x, y, color, size) {
+    const screenX = x - game.camera.x;
+
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(screenX, y, size * 0.5, 0, Math.PI * 2);
+    ctx.arc(screenX + size * 0.4, y, size * 0.6, 0, Math.PI * 2);
+    ctx.arc(screenX - size * 0.4, y, size * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+function drawBird(ctx, x, y, wingUp) {
+    const screenX = x - game.camera.x;
+    const screenY = y;
+
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+
+    const wingOffset = wingUp ? -3 : 3;
+    ctx.moveTo(screenX - 8, screenY + wingOffset);
+    ctx.quadraticCurveTo(screenX - 4, screenY - 5, screenX, screenY);
+    ctx.quadraticCurveTo(screenX + 4, screenY - 5, screenX + 8, screenY + wingOffset);
+    ctx.stroke();
+}
+
+function drawBat(ctx, x, y, wingUp) {
+    const screenX = x - game.camera.x;
+    const screenY = y;
+
+    ctx.fillStyle = 'rgba(80, 60, 100, 0.7)';
+    const wingOffset = wingUp ? -4 : 2;
+
+    // Asa esquerda
+    ctx.beginPath();
+    ctx.moveTo(screenX, screenY);
+    ctx.lineTo(screenX - 6, screenY + wingOffset);
+    ctx.lineTo(screenX - 3, screenY);
+    ctx.fill();
+
+    // Asa direita
+    ctx.beginPath();
+    ctx.moveTo(screenX, screenY);
+    ctx.lineTo(screenX + 6, screenY + wingOffset);
+    ctx.lineTo(screenX + 3, screenY);
+    ctx.fill();
+
+    // Corpo
+    ctx.fillStyle = 'rgba(60, 40, 80, 0.8)';
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, 2, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+// ============================================
 // PARTICLES
 // ============================================
 export function createParticles(x, y, color, count) {

@@ -20,6 +20,12 @@ export class ChaserEnemy extends Enemy {
         this.detectionRange = 250; // Pixels de distância para detectar jogador
         this.isChasing = false;
         this.targetPlayer = null;
+
+        // Telegraph (agachamento antes de dar dash)
+        this.dashCharging = false;
+        this.dashChargeTime = 0;
+        this.dashChargeDuration = 20; // 0.33s
+        this.wasChasing = false;
     }
 
     update() {
@@ -28,9 +34,24 @@ export class ChaserEnemy extends Enemy {
         // Detectar jogador mais próximo
         this.detectNearestPlayer();
 
+        // Detectar mudança de estado (começou a perseguir)
+        if (!this.wasChasing && this.isChasing) {
+            this.dashCharging = true;
+            this.dashChargeTime = 0;
+        }
+        this.wasChasing = this.isChasing;
+
+        // Atualizar carga do dash
+        if (this.dashCharging) {
+            this.dashChargeTime += game.deltaTimeFactor;
+            if (this.dashChargeTime >= this.dashChargeDuration) {
+                this.dashCharging = false;
+            }
+        }
+
         // Comportamento de perseguição
-        if (this.isChasing && this.targetPlayer) {
-            // Perseguir jogador
+        if (this.isChasing && this.targetPlayer && !this.dashCharging) {
+            // Perseguir jogador (só após carregar)
             const dx = this.targetPlayer.x - this.x;
 
             if (Math.abs(dx) > 10) { // Margem para evitar oscilação
@@ -40,6 +61,9 @@ export class ChaserEnemy extends Enemy {
                     this.vx = -this.chaseSpeed;
                 }
             }
+        } else if (this.dashCharging) {
+            // Parar durante carga
+            this.vx = this.vx > 0 ? this.normalSpeed * 0.2 : -this.normalSpeed * 0.2;
         } else {
             // Patrulha normal (como walker, mas mais devagar)
             // Detectar borda antes de cair
@@ -154,59 +178,82 @@ export class ChaserEnemy extends Enemy {
             ctx.fill();
         }
 
-        // Corpo do inimigo (vermelho)
+        // Corpo do inimigo (vermelho) com squash durante carga
+        let bodyHeight = this.height;
+        let bodyY = screenY;
+
+        if (this.dashCharging) {
+            // Comprimir verticalmente durante carga (squash)
+            const squashFactor = 0.7 + (this.dashChargeTime / this.dashChargeDuration) * 0.3;
+            bodyHeight = this.height * squashFactor;
+            bodyY = screenY + (this.height - bodyHeight); // Ajustar Y para manter base no chão
+        }
+
         ctx.fillStyle = this.color;
-        ctx.fillRect(screenX, screenY, this.width, this.height);
+        ctx.fillRect(screenX, bodyY, this.width, bodyHeight);
 
-        // Olhos (expressão agressiva)
+        // Olhos (expressão agressiva) com PISCAR - ajustados para posição do corpo
         const eyeAngle = this.isChasing ? -0.3 : 0; // Sobrancelhas "raivosas" quando perseguindo
-        ctx.fillStyle = '#ffffff';
+        const eyeSquash = this.isBlinking ? 0.1 : 1.0;
+        const eyeYOffset = bodyY - screenY; // Ajuste de Y baseado no squash
 
-        // Olho esquerdo
-        ctx.beginPath();
-        ctx.arc(screenX + 8, screenY + 10, 5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Olho direito
-        ctx.beginPath();
-        ctx.arc(screenX + 20, screenY + 10, 5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Pupilas (olhando na direção do movimento)
+        // Outline preto dos olhos
         ctx.fillStyle = '#000000';
-        const pupilOffsetX = this.vx > 0 ? 1 : -1;
         ctx.beginPath();
-        ctx.arc(screenX + 8 + pupilOffsetX, screenY + 10, 2.5, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 8, screenY + 10 + eyeYOffset, 6, 6 * eyeSquash, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(screenX + 20 + pupilOffsetX, screenY + 10, 2.5, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 20, screenY + 10 + eyeYOffset, 6, 6 * eyeSquash, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        // Brancos dos olhos (só se não estiver completamente fechado)
+        if (eyeSquash > 0.15) {
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(screenX + 8, screenY + 10 + eyeYOffset, 5, 5 * eyeSquash, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(screenX + 20, screenY + 10 + eyeYOffset, 5, 5 * eyeSquash, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Pupilas (olhando na direção do movimento) (só se não estiver piscando muito)
+        if (eyeSquash > 0.3) {
+            ctx.fillStyle = '#000000';
+            const pupilOffsetX = this.vx > 0 ? 1 : -1;
+            ctx.beginPath();
+            ctx.arc(screenX + 8 + pupilOffsetX, screenY + 10 + eyeYOffset, 2.5 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(screenX + 20 + pupilOffsetX, screenY + 10 + eyeYOffset, 2.5 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         // Sobrancelhas agressivas
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(screenX + 4, screenY + 6);
-        ctx.lineTo(screenX + 12, screenY + 8);
+        ctx.moveTo(screenX + 4, screenY + 6 + eyeYOffset);
+        ctx.lineTo(screenX + 12, screenY + 8 + eyeYOffset);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(screenX + 16, screenY + 8);
-        ctx.lineTo(screenX + 24, screenY + 6);
+        ctx.moveTo(screenX + 16, screenY + 8 + eyeYOffset);
+        ctx.lineTo(screenX + 24, screenY + 6 + eyeYOffset);
         ctx.stroke();
 
         // Boca (sorriso maligno)
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.arc(screenX + 14, screenY + 19, 6, 0, Math.PI);
+        ctx.arc(screenX + 14, screenY + 19 + eyeYOffset, 6, 0, Math.PI);
         ctx.fill();
 
         // Dentes pontiagudos
         ctx.fillStyle = '#ffffff';
         for (let i = 0; i < 3; i++) {
             ctx.beginPath();
-            ctx.moveTo(screenX + 9 + i * 5, screenY + 19);
-            ctx.lineTo(screenX + 11 + i * 5, screenY + 23);
-            ctx.lineTo(screenX + 13 + i * 5, screenY + 19);
+            ctx.moveTo(screenX + 9 + i * 5, screenY + 19 + eyeYOffset);
+            ctx.lineTo(screenX + 11 + i * 5, screenY + 23 + eyeYOffset);
+            ctx.lineTo(screenX + 13 + i * 5, screenY + 19 + eyeYOffset);
             ctx.fill();
         }
 

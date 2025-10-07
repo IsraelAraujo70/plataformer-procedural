@@ -119,42 +119,48 @@ export class WalkerEnemy extends Enemy {
         ctx.arc(centerX - radius * 0.25, centerY - radius * 0.3, radius * 0.4, 0, Math.PI * 2);
         ctx.fill();
 
-        // OLHOS GRANDES com outline
+        // OLHOS GRANDES com outline e PISCAR
+        const eyeSquash = this.isBlinking ? 0.1 : 1.0;
+
         // Outline dos olhos
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.arc(screenX + 10, screenY + 11, 5, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 10, screenY + 11, 5, 5 * eyeSquash, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(screenX + 18, screenY + 11, 5, 0, Math.PI * 2);
+        ctx.ellipse(screenX + 18, screenY + 11, 5, 5 * eyeSquash, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Brancos dos olhos
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(screenX + 10, screenY + 11, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(screenX + 18, screenY + 11, 4, 0, Math.PI * 2);
-        ctx.fill();
+        // Brancos dos olhos (só se não estiver completamente fechado)
+        if (eyeSquash > 0.15) {
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(screenX + 10, screenY + 11, 4, 4 * eyeSquash, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(screenX + 18, screenY + 11, 4, 4 * eyeSquash, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
-        // Pupilas grandes e expressivas
-        ctx.fillStyle = '#000000';
-        ctx.beginPath();
-        ctx.arc(screenX + 10, screenY + 12, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(screenX + 18, screenY + 12, 2.5, 0, Math.PI * 2);
-        ctx.fill();
+        // Pupilas grandes e expressivas (só se não estiver piscando muito)
+        if (eyeSquash > 0.3) {
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(screenX + 10, screenY + 12, 2.5 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(screenX + 18, screenY + 12, 2.5 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
 
-        // Brilho nos olhos
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.beginPath();
-        ctx.arc(screenX + 9, screenY + 10, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(screenX + 17, screenY + 10, 1.5, 0, Math.PI * 2);
-        ctx.fill();
+            // Brilho nos olhos
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.arc(screenX + 9, screenY + 10, 1.5 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(screenX + 17, screenY + 10, 1.5 * eyeSquash, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         // BOCA COM DENTES (estilo cartoon assustador)
         // Boca grande preta

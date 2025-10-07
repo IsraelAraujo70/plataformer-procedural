@@ -130,6 +130,10 @@ export class Player {
         this.bhopCombo = 0;           // Contador de pulos bem-sucedidos (0-3)
         this.bhopScore = 0;           // Pontos acumulados (0-300)
         this.framesSinceGrounded = 0; // Frames desde que tocou o chão
+
+        // Sistema de expressões faciais dinâmicas
+        this.expression = 'normal';   // normal, scared, excited, dizzy, angry, determined
+        this.expressionTimer = 0;     // Timer para controlar duração de expressões temporárias
     }
 
     update() {
@@ -649,6 +653,51 @@ export class Player {
         }
 
         game.difficulty = Math.floor(game.distance / 100); // Aumenta a cada 100 tiles
+
+        // ============================================
+        // SISTEMA DE EXPRESSÕES FACIAIS DINÂMICAS
+        // ============================================
+        this.updateExpression();
+    }
+
+    updateExpression() {
+        // Atualizar timer de expressão
+        this.expressionTimer += game.deltaTimeFactor;
+
+        // Prioridade de expressões (ordem importa!)
+
+        // 1. DIZZY - Controles invertidos (alta prioridade)
+        if (this.reverseControls) {
+            this.expression = 'dizzy';
+            return;
+        }
+
+        // 2. SCARED - Caindo de grande altura
+        if (!this.grounded && this.vy > 8) {
+            this.expression = 'scared';
+            return;
+        }
+
+        // 3. ANGRY - Acabou de tomar dano (invulnerável mas perdeu chapéu)
+        if (this.invulnerable && this.invulnerableTime > 60 && this.hatCount < this.maxHats) {
+            this.expression = 'angry';
+            return;
+        }
+
+        // 4. DETERMINED - Bunny hop combo ativo
+        if (this.bhopCombo > 0) {
+            this.expression = 'determined';
+            return;
+        }
+
+        // 5. EXCITED - Velocidade alta
+        if (this.speedBoost > 1 || Math.abs(this.vx) > 6) {
+            this.expression = 'excited';
+            return;
+        }
+
+        // 6. NORMAL - Estado padrão
+        this.expression = 'normal';
     }
 
     updatePendulumPhysics() {
@@ -1293,97 +1342,20 @@ export class Player {
         // Corpo do jogador em formato BLOB (arredondado)
         this.drawBlobBody(ctx, screenX, finalScreenY);
 
-        // OLHOS estilo cartoon (proporcionais)
-        const eyeLeftX = screenX + 7;
-        const eyeRightX = screenX + 17;
-        const eyeY = finalScreenY + 10;
-        const eyeSize = 4; // Tamanho moderado
+        // ============================================
+        // OLHOS COM EXPRESSÕES DINÂMICAS
+        // ============================================
+        this.drawEyes(ctx, screenX, finalScreenY);
 
-        // ANIMAÇÃO DE PISCAR (squash vertical dos olhos)
-        const blinkProgress = this.isBlinking ? Math.min(this.blinkDuration / 4, 1) : 0;
-        const eyeSquash = 1 - blinkProgress * 0.9; // Olhos fecham 90%
+        // ============================================
+        // BOCA COM EXPRESSÕES DINÂMICAS
+        // ============================================
+        this.drawMouth(ctx, screenX, finalScreenY);
 
-        // Outline preto dos olhos
-        ctx.fillStyle = '#000000';
-        ctx.beginPath();
-        ctx.ellipse(eyeLeftX, eyeY, eyeSize + 1, (eyeSize + 1) * eyeSquash, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(eyeRightX, eyeY, eyeSize + 1, (eyeSize + 1) * eyeSquash, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Brancos dos olhos (super brancos) - só desenhar se não estiver completamente fechado
-        if (eyeSquash > 0.1) {
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.ellipse(eyeLeftX, eyeY, eyeSize, eyeSize * eyeSquash, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.ellipse(eyeRightX, eyeY, eyeSize, eyeSize * eyeSquash, 0, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        // Pupilas GRANDES e expressivas (seguem direção do movimento) - só se não piscando
-        if (eyeSquash > 0.3) {
-            ctx.fillStyle = '#000000';
-            let pupilOffsetX = 0;
-            let pupilOffsetY = 0;
-
-            if (Math.abs(this.vx) > 0.5) {
-                pupilOffsetX = this.facingRight ? 1.5 : -1.5;
-            }
-
-            // Pupilas olham pra baixo quando caindo
-            if (!this.grounded && this.vy > 3) {
-                pupilOffsetY = 1.5;
-            }
-            // Olham pra cima quando pulando
-            else if (!this.grounded && this.vy < -2) {
-                pupilOffsetY = -1;
-            }
-
-            const pupilSize = 2.5 * eyeSquash; // Pupilas também comprimem ao piscar
-            ctx.beginPath();
-            ctx.arc(eyeLeftX + pupilOffsetX, eyeY + pupilOffsetY, pupilSize, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(eyeRightX + pupilOffsetX, eyeY + pupilOffsetY, pupilSize, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Brilho sutil nos olhos
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.beginPath();
-            ctx.arc(eyeLeftX - 1, eyeY - 1, 1.2 * eyeSquash, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(eyeRightX - 1, eyeY - 1, 1.2 * eyeSquash, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        // BOCA SIMPLES (muda com velocidade vertical)
-        if (!this.grounded || Math.abs(this.vy) > 0.5) {
-            // Boca aberta (surpreso) - mais contida
-            const mouthOpenness = 1 + Math.min(Math.abs(this.vy) / 15, 0.3);
-            ctx.fillStyle = '#000000';
-            ctx.beginPath();
-            ctx.ellipse(screenX + 12, finalScreenY + 19, 3 * mouthOpenness, 3.5 * mouthOpenness, 0, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Interior da boca
-            ctx.fillStyle = '#330000';
-            ctx.beginPath();
-            ctx.ellipse(screenX + 12, finalScreenY + 19, 2 * mouthOpenness, 2.5 * mouthOpenness, 0, 0, Math.PI * 2);
-            ctx.fill();
-        } else {
-            // Sorriso simples
-            const smileSize = 3.5 + Math.abs(this.vx) * 0.2;
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 2;
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.arc(screenX + 12, finalScreenY + 17, smileSize, 0.3, Math.PI - 0.3);
-            ctx.stroke();
-        }
+        // ============================================
+        // ELEMENTOS EXTRAS BASEADOS EM EXPRESSÃO
+        // ============================================
+        this.drawExpressionExtras(ctx, screenX, finalScreenY);
 
         // Desenhar chapéus POR CIMA de tudo (empilhados)
         if (this.hatCount > 0) {
@@ -1392,6 +1364,341 @@ export class Player {
 
         // Restaurar contexto (sempre restaurar ao final)
         ctx.restore();
+    }
+
+    drawEyes(ctx, screenX, screenY) {
+        const eyeLeftX = screenX + 7;
+        const eyeRightX = screenX + 17;
+        const eyeY = screenY + 10;
+        let eyeSize = 4;
+        let eyeWidthMultiplier = 1;
+        let eyeHeightMultiplier = 1;
+
+        // ANIMAÇÃO DE PISCAR (squash vertical dos olhos)
+        const blinkProgress = this.isBlinking ? Math.min(this.blinkDuration / 4, 1) : 0;
+        const eyeSquash = 1 - blinkProgress * 0.9; // Olhos fecham 90%
+
+        // Modificar formato baseado em expressão
+        switch (this.expression) {
+            case 'scared':
+                // Olhos mais largos e arredondados
+                eyeSize = 5;
+                eyeWidthMultiplier = 1.2;
+                eyeHeightMultiplier = 1.3;
+                break;
+
+            case 'excited':
+                // Olhos brilhantes normais
+                eyeSize = 4.5;
+                eyeWidthMultiplier = 1.1;
+                eyeHeightMultiplier = 1.1;
+                break;
+
+            case 'dizzy':
+                // Olhos em espiral/X - renderizar diferente
+                this.drawDizzyEyes(ctx, eyeLeftX, eyeRightX, eyeY);
+                return;
+
+            case 'angry':
+                // Olhos estreitos (mais horizontais)
+                eyeSize = 4;
+                eyeWidthMultiplier = 1.2;
+                eyeHeightMultiplier = 0.6;
+                break;
+
+            case 'determined':
+                // Olhos semi-fechados focados
+                eyeSize = 4;
+                eyeWidthMultiplier = 1;
+                eyeHeightMultiplier = 0.7;
+                break;
+
+            default: // normal
+                eyeSize = 4;
+                eyeWidthMultiplier = 1;
+                eyeHeightMultiplier = 1;
+        }
+
+        // Aplicar squash de piscar
+        eyeHeightMultiplier *= eyeSquash;
+
+        // Outline preto dos olhos
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.ellipse(eyeLeftX, eyeY, (eyeSize + 1) * eyeWidthMultiplier, (eyeSize + 1) * eyeHeightMultiplier, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(eyeRightX, eyeY, (eyeSize + 1) * eyeWidthMultiplier, (eyeSize + 1) * eyeHeightMultiplier, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Brancos dos olhos - só desenhar se não estiver completamente fechado
+        if (eyeHeightMultiplier > 0.1) {
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(eyeLeftX, eyeY, eyeSize * eyeWidthMultiplier, eyeSize * eyeHeightMultiplier, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(eyeRightX, eyeY, eyeSize * eyeWidthMultiplier, eyeSize * eyeHeightMultiplier, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Pupilas - só se não piscando
+        if (eyeHeightMultiplier > 0.3) {
+            this.drawPupils(ctx, eyeLeftX, eyeRightX, eyeY, eyeWidthMultiplier, eyeHeightMultiplier);
+        }
+    }
+
+    drawDizzyEyes(ctx, eyeLeftX, eyeRightX, eyeY) {
+        // Olhos em X (dizzy/confuso)
+        const size = 5;
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2.5;
+
+        // Olho esquerdo - X
+        ctx.beginPath();
+        ctx.moveTo(eyeLeftX - size/2, eyeY - size/2);
+        ctx.lineTo(eyeLeftX + size/2, eyeY + size/2);
+        ctx.moveTo(eyeLeftX + size/2, eyeY - size/2);
+        ctx.lineTo(eyeLeftX - size/2, eyeY + size/2);
+        ctx.stroke();
+
+        // Olho direito - X
+        ctx.beginPath();
+        ctx.moveTo(eyeRightX - size/2, eyeY - size/2);
+        ctx.lineTo(eyeRightX + size/2, eyeY + size/2);
+        ctx.moveTo(eyeRightX + size/2, eyeY - size/2);
+        ctx.lineTo(eyeRightX - size/2, eyeY + size/2);
+        ctx.stroke();
+    }
+
+    drawPupils(ctx, eyeLeftX, eyeRightX, eyeY, widthMult, heightMult) {
+        ctx.fillStyle = '#000000';
+        let pupilOffsetX = 0;
+        let pupilOffsetY = 0;
+        let pupilSize = 2.5;
+
+        // Modificar pupilas baseado em expressão
+        switch (this.expression) {
+            case 'scared':
+                // Pupilas pequenas olhando para baixo
+                pupilSize = 1.5;
+                pupilOffsetY = 1.5;
+                break;
+
+            case 'excited':
+                // Pupilas grandes e brilhantes
+                pupilSize = 3;
+                if (Math.abs(this.vx) > 0.5) {
+                    pupilOffsetX = this.facingRight ? 1.5 : -1.5;
+                }
+                break;
+
+            case 'angry':
+                // Pupilas menores e centradas (olhar fixo)
+                pupilSize = 2;
+                break;
+
+            case 'determined':
+                // Pupilas focadas na direção do movimento
+                pupilSize = 2.5;
+                if (Math.abs(this.vx) > 0.5) {
+                    pupilOffsetX = this.facingRight ? 1 : -1;
+                }
+                break;
+
+            default: // normal
+                pupilSize = 2.5;
+                if (Math.abs(this.vx) > 0.5) {
+                    pupilOffsetX = this.facingRight ? 1.5 : -1.5;
+                }
+                // Pupilas olham pra baixo quando caindo
+                if (!this.grounded && this.vy > 3) {
+                    pupilOffsetY = 1.5;
+                }
+                // Olham pra cima quando pulando
+                else if (!this.grounded && this.vy < -2) {
+                    pupilOffsetY = -1;
+                }
+        }
+
+        // Desenhar pupilas
+        ctx.beginPath();
+        ctx.arc(eyeLeftX + pupilOffsetX, eyeY + pupilOffsetY, pupilSize * heightMult, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(eyeRightX + pupilOffsetX, eyeY + pupilOffsetY, pupilSize * heightMult, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Brilho nos olhos (exceto angry)
+        if (this.expression !== 'angry') {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.beginPath();
+            ctx.arc(eyeLeftX - 1, eyeY - 1, 1.2 * heightMult, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(eyeRightX - 1, eyeY - 1, 1.2 * heightMult, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    drawMouth(ctx, screenX, screenY) {
+        const mouthX = screenX + 12;
+        const mouthY = screenY + 19;
+
+        switch (this.expression) {
+            case 'scared':
+                // Boca oval grande (O surpreso)
+                const scaredSize = 1.5;
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.ellipse(mouthX, mouthY, 3 * scaredSize, 4 * scaredSize, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Interior da boca
+                ctx.fillStyle = '#330000';
+                ctx.beginPath();
+                ctx.ellipse(mouthX, mouthY, 2 * scaredSize, 3 * scaredSize, 0, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+
+            case 'excited':
+                // Sorriso largo com língua de fora
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.arc(mouthX, screenY + 17, 5, 0.2, Math.PI - 0.2);
+                ctx.stroke();
+
+                // Língua (pequena)
+                ctx.fillStyle = '#ff6b9d';
+                ctx.beginPath();
+                ctx.ellipse(mouthX, screenY + 20, 2, 3, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Outline da língua
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.ellipse(mouthX, screenY + 20, 2, 3, 0, Math.PI, Math.PI * 2);
+                ctx.stroke();
+                break;
+
+            case 'dizzy':
+                // Boca ondulada (~)
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(mouthX - 4, mouthY - 1);
+                ctx.quadraticCurveTo(mouthX - 2, mouthY + 1, mouthX, mouthY - 1);
+                ctx.quadraticCurveTo(mouthX + 2, mouthY - 3, mouthX + 4, mouthY - 1);
+                ctx.stroke();
+                break;
+
+            case 'angry':
+                // Linha reta horizontal (boca fechada com raiva)
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(mouthX - 4, screenY + 18);
+                ctx.lineTo(mouthX + 4, screenY + 18);
+                ctx.stroke();
+                break;
+
+            case 'determined':
+                // Sorriso pequeno confiante
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.arc(mouthX, screenY + 17, 3, 0.3, Math.PI - 0.3);
+                ctx.stroke();
+                break;
+
+            default: // normal
+                // Boca padrão (muda com velocidade vertical)
+                if (!this.grounded || Math.abs(this.vy) > 0.5) {
+                    // Boca aberta (surpreso)
+                    const mouthOpenness = 1 + Math.min(Math.abs(this.vy) / 15, 0.3);
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.ellipse(mouthX, mouthY, 3 * mouthOpenness, 3.5 * mouthOpenness, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Interior da boca
+                    ctx.fillStyle = '#330000';
+                    ctx.beginPath();
+                    ctx.ellipse(mouthX, mouthY, 2 * mouthOpenness, 2.5 * mouthOpenness, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Sorriso simples
+                    const smileSize = 3.5 + Math.abs(this.vx) * 0.2;
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 2;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.arc(mouthX, screenY + 17, smileSize, 0.3, Math.PI - 0.3);
+                    ctx.stroke();
+                }
+        }
+    }
+
+    drawExpressionExtras(ctx, screenX, screenY) {
+        // Gotas de suor para scared e dizzy
+        if (this.expression === 'scared' || this.expression === 'dizzy') {
+            const sweatX = screenX + this.width + 2;
+            const sweatY = screenY + 8;
+            const sweatTime = Date.now() / 300;
+            const sweatOffset = Math.sin(sweatTime) * 2;
+
+            // Gota 1
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.ellipse(sweatX, sweatY + sweatOffset, 2.5, 3.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#6bb6ff';
+            ctx.beginPath();
+            ctx.ellipse(sweatX, sweatY + sweatOffset, 2, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Brilho na gota
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.beginPath();
+            ctx.arc(sweatX - 0.5, sweatY + sweatOffset - 0.5, 1, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Partículas de raiva para angry
+        if (this.expression === 'angry') {
+            const time = Date.now() / 100;
+            const headCenterX = screenX + this.width / 2;
+            const headY = screenY + 5;
+
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+
+            // 3 linhas de raiva pulsantes
+            for (let i = 0; i < 3; i++) {
+                const angle = (i * Math.PI * 2 / 3) - Math.PI / 2;
+                const pulse = Math.sin(time + i) * 0.5 + 0.5;
+                const startDist = 8;
+                const endDist = 11 + pulse * 2;
+
+                const startX = headCenterX + Math.cos(angle) * startDist;
+                const startY = headY + Math.sin(angle) * startDist;
+                const endX = headCenterX + Math.cos(angle) * endDist;
+                const endY = headY + Math.sin(angle) * endDist;
+
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+            }
+        }
     }
 
     drawBlobBody(ctx, screenX, screenY) {
