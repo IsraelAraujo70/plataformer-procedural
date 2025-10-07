@@ -35,7 +35,7 @@ export class FlyerEnemy extends Enemy {
         if (!this.alive) return;
 
         // Movimento horizontal
-        this.x += this.vx;
+        this.x += this.vx * game.deltaTimeFactor;
 
         // Patrulha em área maior (não limitado à plataforma)
         if (this.x <= this.patrolStartX || this.x >= this.patrolStartX + this.patrolRange) {

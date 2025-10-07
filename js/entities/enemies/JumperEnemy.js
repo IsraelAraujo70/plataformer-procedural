@@ -28,10 +28,10 @@ export class JumperEnemy extends Enemy {
         if (!this.alive) return;
 
         // Timer de pulo
-        this.jumpTimer++;
+        this.jumpTimer += game.deltaTimeFactor;
 
         // Movimento horizontal (mais lento)
-        this.x += this.vx;
+        this.x += this.vx * game.deltaTimeFactor;
 
         // Patrulha na plataforma (inverter direção nas bordas)
         if (this.x <= this.platformX || this.x + this.width >= this.platformX + this.platformWidth) {
@@ -47,8 +47,8 @@ export class JumperEnemy extends Enemy {
         }
 
         // Gravidade
-        this.vy += CONFIG.GRAVITY;
-        this.y += this.vy;
+        this.vy += CONFIG.GRAVITY * game.deltaTimeFactor;
+        this.y += this.vy * game.deltaTimeFactor;
 
         // Colisão com plataformas
         this.grounded = false;

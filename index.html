@@ -3,15 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Procedural Platformer</title>
+    <title>Stack or Splat</title>
     <link rel="stylesheet" href="css/styles.css">
 
     <!-- GameDistribution SDK for Rewarded Ads -->
     <script src="https://html5.api.gamedistribution.com/main.min.js"></script>
 </head>
 <body>
-    <div id="menu">
-        <h1>🌟 PROCEDURAL PLATFORMER 🌟</h1>
+    <!-- Loading Screen (aparece antes do menu) -->
+    <div id="loadingScreen">
+        <h1>🎩 STACK OR SPLAT 🎩</h1>
+        <div class="loading-spinner"></div>
+        <p>Loading game...</p>
+    </div>
+
+    <div id="menu" class="hidden">
+        <h1>🎩 STACK OR SPLAT 🎩</h1>
         <button id="start1PBtn">🎮 1 Player</button>
         <button id="start2PBtn">👥 2 Players</button>
         <button id="instructionsBtn">📖 Instructions</button>

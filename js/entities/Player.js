@@ -135,13 +135,13 @@ export class Player {
     update() {
         // Atualizar animação de morte
         if (this.dying) {
-            this.deathAnimTime++;
+            this.deathAnimTime += game.deltaTimeFactor;
 
             // Efeito de queda e rotação
-            this.vy += CONFIG.GRAVITY * 0.5;
-            this.y += this.vy;
-            this.vx *= 0.95; // Desacelerar horizontalmente
-            this.x += this.vx;
+            this.vy += CONFIG.GRAVITY * 0.5 * game.deltaTimeFactor;
+            this.y += this.vy * game.deltaTimeFactor;
+            this.vx *= Math.pow(0.95, game.deltaTimeFactor); // Desacelerar horizontalmente
+            this.x += this.vx * game.deltaTimeFactor;
 
             // Quando a animação terminar, marcar como completamente morto
             if (this.deathAnimTime >= this.deathAnimDuration) {
@@ -163,9 +163,9 @@ export class Player {
             return;
         }
 
-        // Atualizar modificadores
+        // Atualizar modificadores (usando deltaTimeFactor para consistência)
         if (this.jumpBoostTime > 0) {
-            this.jumpBoostTime--;
+            this.jumpBoostTime -= game.deltaTimeFactor;
             if (this.jumpBoostTime <= 0) {
                 this.jumpBoost = 1;
                 this.jumpBoostMaxTime = 0;
@@ -173,7 +173,7 @@ export class Player {
         }
 
         if (this.speedBoostTime > 0) {
-            this.speedBoostTime--;
+            this.speedBoostTime -= game.deltaTimeFactor;
             if (this.speedBoostTime <= 0) {
                 this.speedBoost = 1;
                 this.speedBoostMaxTime = 0;
@@ -181,7 +181,7 @@ export class Player {
         }
 
         if (this.shieldTime > 0) {
-            this.shieldTime--;
+            this.shieldTime -= game.deltaTimeFactor;
             if (this.shieldTime <= 0) {
                 this.shield = false;
                 this.shieldMaxTime = 0;
@@ -189,7 +189,7 @@ export class Player {
         }
 
         if (this.reverseControlsTime > 0) {
-            this.reverseControlsTime--;
+            this.reverseControlsTime -= game.deltaTimeFactor;
             if (this.reverseControlsTime <= 0) {
                 this.reverseControls = false;
                 this.reverseControlsMaxTime = 0;
@@ -197,7 +197,7 @@ export class Player {
         }
 
         if (this.icyFloorTime > 0) {
-            this.icyFloorTime--;
+            this.icyFloorTime -= game.deltaTimeFactor;
             if (this.icyFloorTime <= 0) {
                 this.icyFloor = false;
                 this.icyFloorMaxTime = 0;
@@ -205,7 +205,7 @@ export class Player {
         }
 
         if (this.doubleJumpTime > 0) {
-            this.doubleJumpTime--;
+            this.doubleJumpTime -= game.deltaTimeFactor;
             if (this.doubleJumpTime <= 0) {
                 this.doubleJumpEnabled = false;
                 this.doubleJumpMaxTime = 0;
@@ -214,7 +214,7 @@ export class Player {
         }
 
         if (this.magnetTime > 0) {
-            this.magnetTime--;
+            this.magnetTime -= game.deltaTimeFactor;
             if (this.magnetTime <= 0) {
                 this.magnetActive = false;
                 this.magnetMaxTime = 0;
@@ -222,7 +222,7 @@ export class Player {
         }
 
         if (this.tinyPlayerTime > 0) {
-            this.tinyPlayerTime--;
+            this.tinyPlayerTime -= game.deltaTimeFactor;
             if (this.tinyPlayerTime <= 0) {
                 this.tinyPlayer = false;
                 this.tinyPlayerMaxTime = 0;
@@ -237,7 +237,7 @@ export class Player {
         }
 
         if (this.heavyTime > 0) {
-            this.heavyTime--;
+            this.heavyTime -= game.deltaTimeFactor;
             if (this.heavyTime <= 0) {
                 this.heavy = false;
                 this.heavyMaxTime = 0;
@@ -245,7 +245,7 @@ export class Player {
         }
 
         if (this.bouncyTime > 0) {
-            this.bouncyTime--;
+            this.bouncyTime -= game.deltaTimeFactor;
             if (this.bouncyTime <= 0) {
                 this.bouncy = false;
                 this.bouncyMaxTime = 0;
@@ -300,7 +300,8 @@ export class Player {
         // Atualizar animação de caminhada (quando está se movendo)
         if (Math.abs(this.vx) > 0.5) {
             const currentAnimSpeed = this.speedBoost > 1 ? Math.floor(this.animSpeed / 1.5) : this.animSpeed;
-            this.animCounter++;
+            // Usar deltaTimeFactor para manter velocidade de animação consistente
+            this.animCounter += game.deltaTimeFactor;
             if (this.animCounter >= currentAnimSpeed) {
                 this.animFrame = (this.animFrame + 1) % 4;
                 this.animCounter = 0;
@@ -316,18 +317,25 @@ export class Player {
             if (this.heavy) jumpStrength *= 0.7; // Heavy reduz força do pulo em 30%
             if (game.devMode.enabled) jumpStrength *= 1.5; // Super pulo em dev mode
 
+            // DEBUG: Log bunny hop
+            console.log(`🐰 P${this.playerNumber} JUMP: frames=${this.framesSinceGrounded}, combo=${this.bhopCombo}, score=${this.bhopScore}`);
+
             // Sistema secreto: detectar timing e acumular pontos
             if (this.framesSinceGrounded >= 1 && this.framesSinceGrounded <= 5) {
-                // Calcular pontos baseado na precisão (frame 3 = perfeito)
+                // Calcular pontos baseado na precisão
+                // Usar ranges ao invés de comparações exatas para funcionar com deltaTime
                 let points = 0;
-                if (this.framesSinceGrounded === 3) {
-                    points = 100; // Centro perfeito
-                } else if (this.framesSinceGrounded === 2 || this.framesSinceGrounded === 4) {
-                    points = 75;  // Bom
-                } else if (this.framesSinceGrounded === 1 || this.framesSinceGrounded === 5) {
-                    points = 50;  // Ok
+                if (this.framesSinceGrounded >= 2.5 && this.framesSinceGrounded < 3.5) {
+                    points = 100; // Centro perfeito (frame 3)
+                } else if ((this.framesSinceGrounded >= 1.5 && this.framesSinceGrounded < 2.5) ||
+                           (this.framesSinceGrounded >= 3.5 && this.framesSinceGrounded < 4.5)) {
+                    points = 75;  // Bom (frames 2 ou 4)
+                } else if ((this.framesSinceGrounded >= 1 && this.framesSinceGrounded < 1.5) ||
+                           (this.framesSinceGrounded >= 4.5 && this.framesSinceGrounded <= 5)) {
+                    points = 50;  // Ok (frames 1 ou 5)
                 }
 
+                console.log(`✅ ACCEPTED! Points: ${points}`);
                 this.bhopCombo++;
                 this.bhopScore += points;
                 this.spawnBhopDust(points);
@@ -336,12 +344,14 @@ export class Player {
                 if (this.bhopCombo === 3) {
                     const scoreMultiplier = 1.0 + (this.bhopScore / 200) * 0.8;
                     jumpStrength *= scoreMultiplier;
+                    console.log(`🚀 SUPER JUMP! Multiplier: ${scoreMultiplier.toFixed(2)}x`);
                     // Reset após o super pulo
                     this.bhopCombo = 0;
                     this.bhopScore = 0;
                 }
             } else if (this.framesSinceGrounded > 5) {
                 // Errou a janela: reset completo
+                console.log(`❌ TOO LATE! Combo reset`);
                 this.bhopCombo = 0;
                 this.bhopScore = 0;
             }
@@ -359,15 +369,17 @@ export class Player {
             if (game.devMode.enabled) jumpStrength *= 1.5;
 
             // Sistema secreto: detectar timing e acumular pontos
-            if (this.framesSinceGrounded >= 1 && this.framesSinceGrounded <= 5) {
-                // Calcular pontos baseado na precisão (frame 3 = perfeito)
+            if (this.framesSinceGrounded >= 2 && this.framesSinceGrounded <= 5) {
+                // Calcular pontos baseado na precisão
+                // Usar ranges ao invés de comparações exatas para funcionar com deltaTime
                 let points = 0;
-                if (this.framesSinceGrounded === 3) {
-                    points = 100; // Centro perfeito
-                } else if (this.framesSinceGrounded === 2 || this.framesSinceGrounded === 4) {
-                    points = 75;  // Bom
-                } else if (this.framesSinceGrounded === 1 || this.framesSinceGrounded === 5) {
-                    points = 50;  // Ok
+                if (this.framesSinceGrounded >= 2.5 && this.framesSinceGrounded < 3.5) {
+                    points = 100; // Centro perfeito (frame 3)
+                } else if ((this.framesSinceGrounded >= 2 && this.framesSinceGrounded < 2.5) ||
+                           (this.framesSinceGrounded >= 3.5 && this.framesSinceGrounded < 4.5)) {
+                    points = 75;  // Bom (frames 2 ou 4)
+                } else if (this.framesSinceGrounded >= 4.5 && this.framesSinceGrounded <= 5) {
+                    points = 50;  // Ok (frame 5)
                 }
 
                 this.bhopCombo++;
@@ -426,15 +438,16 @@ export class Player {
         if (game.devMode.gravityEnabled) {
             let gravity = CONFIG.GRAVITY;
             if (this.heavy) gravity *= 1.7; // Heavy aumenta gravidade em 70%
-            this.vy += gravity;
+            this.vy += gravity * game.deltaTimeFactor;
         }
 
         // Limites de velocidade
-        if (this.vy > 20) this.vy = 20;
+        const maxVelocity = 20;
+        if (this.vy > maxVelocity) this.vy = maxVelocity;
 
-        // Atualizar posição
-        this.x += this.vx;
-        this.y += this.vy;
+        // Atualizar posição (usando deltaTimeFactor para consistência)
+        this.x += this.vx * game.deltaTimeFactor;
+        this.y += this.vy * game.deltaTimeFactor;
 
         // Colisões com terreno
         const wasGrounded = this.grounded; // Salvar estado ANTES de resetar
@@ -456,6 +469,9 @@ export class Player {
             const impactForce = Math.min(previousVY / 10, 1.5); // Força baseada na velocidade
             this.squashStretch = Math.max(0.4, 1.0 - impactForce * 0.6); // Comprimir MUITO ao pousar
             this.squashStretchVelocity = 0;
+
+            // Resetar contador de bunny hop ao pousar
+            this.framesSinceGrounded = 0;
 
             // Partículas de impacto no pouso
             if (previousVY > 5 && window.createParticles) {
@@ -522,10 +538,10 @@ export class Player {
         // ============================================
         // BLINK ANIMATION (Piscar olhos)
         // ============================================
-        this.blinkTimer++;
+        this.blinkTimer += game.deltaTimeFactor;
 
         if (this.isBlinking) {
-            this.blinkDuration++;
+            this.blinkDuration += game.deltaTimeFactor;
             if (this.blinkDuration >= 8) { // Piscar dura 8 frames
                 this.isBlinking = false;
                 this.blinkDuration = 0;
@@ -539,11 +555,11 @@ export class Player {
         // ============================================
         // TRAIL SYSTEM (Rastro de movimento)
         // ============================================
-        this.trailTimer++;
+        this.trailTimer += game.deltaTimeFactor;
 
         // Criar trail quando se movendo rápido
         if (Math.abs(this.vx) > 2 || Math.abs(this.vy) > 5) {
-            if (this.trailTimer % 3 === 0) { // A cada 3 frames
+            if (Math.floor(this.trailTimer) % 3 === 0 && Math.floor(this.trailTimer - game.deltaTimeFactor) % 3 !== 0) { // A cada 3 frames
                 this.trail.push({
                     x: this.x + this.width / 2,
                     y: this.y + this.height / 2,
@@ -557,7 +573,7 @@ export class Player {
 
         // Atualizar e remover trails antigos
         this.trail = this.trail.filter(t => {
-            t.life--;
+            t.life -= game.deltaTimeFactor;
             return t.life > 0;
         });
 
@@ -571,15 +587,16 @@ export class Player {
 
         // Sistema secreto: rastreamento de frames e reset
         if (this.grounded) {
+            // Incrementar sempre que estiver no chão (USAR INCREMENTO FIXO, não deltaTime)
+            // Bunny hop é baseado em timing de input, não em tempo físico
             this.framesSinceGrounded++;
             // Reset automático se ficar parado no chão
             if (this.framesSinceGrounded > 10) {
                 this.bhopCombo = 0;
                 this.bhopScore = 0;
             }
-        } else {
-            this.framesSinceGrounded = 0;
         }
+        // NÃO resetar quando no ar - precisa manter o valor do último toque no chão!
 
         // ============================================
         // FÍSICA DE PÊNDULO: BRAÇOS E ANTENA
@@ -599,7 +616,7 @@ export class Player {
 
         // Invulnerabilidade
         if (this.invulnerable) {
-            this.invulnerableTime--;
+            this.invulnerableTime -= game.deltaTimeFactor;
             if (this.invulnerableTime <= 0) {
                 this.invulnerable = false;
             }
@@ -1532,11 +1549,11 @@ export class Player {
                     isSuper: isSuper,
                     superScore: isSuper ? this.bhopScore : 0,
                     update() {
-                        this.x += this.vx;
-                        this.y += this.vy;
-                        this.vy += 0.25;
-                        this.vx *= 0.96;
-                        this.life--;
+                        this.x += this.vx * game.deltaTimeFactor;
+                        this.y += this.vy * game.deltaTimeFactor;
+                        this.vy += 0.25 * game.deltaTimeFactor;
+                        this.vx *= Math.pow(0.96, game.deltaTimeFactor);
+                        this.life -= game.deltaTimeFactor;
                     },
                     draw(ctx) {
                         const screenX = this.x - game.camera.x;

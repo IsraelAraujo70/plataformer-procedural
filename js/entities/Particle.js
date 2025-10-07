@@ -16,10 +16,10 @@ export class Particle {
     }
 
     update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        this.vy += 0.3;
-        this.life--;
+        this.x += this.vx * game.deltaTimeFactor;
+        this.y += this.vy * game.deltaTimeFactor;
+        this.vy += 0.3 * game.deltaTimeFactor;
+        this.life -= game.deltaTimeFactor;
     }
 
     draw(ctx) {

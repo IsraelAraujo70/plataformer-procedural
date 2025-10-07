@@ -21,7 +21,6 @@ export function setupMenuHandlers() {
 export function startGame(twoPlayerMode = false) {
     // Gerar seed aleatório
     game.seed = Math.floor(Math.random() * 1000000);
-    console.log('Seed:', game.seed);
 
     // Definir modo de jogo
     game.twoPlayerMode = twoPlayerMode;

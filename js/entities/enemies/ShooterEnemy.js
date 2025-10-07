@@ -33,8 +33,8 @@ export class ShooterEnemy extends Enemy {
         this.vx = 0;
 
         // Gravidade
-        this.vy += CONFIG.GRAVITY;
-        this.y += this.vy;
+        this.vy += CONFIG.GRAVITY * game.deltaTimeFactor;
+        this.y += this.vy * game.deltaTimeFactor;
 
         // Colisão com plataformas
         this.grounded = false;
@@ -48,7 +48,7 @@ export class ShooterEnemy extends Enemy {
 
         // Timer de disparo
         if (targetPlayer && this.grounded) {
-            this.shootTimer++;
+            this.shootTimer += game.deltaTimeFactor;
 
             if (this.shootTimer >= this.shootInterval) {
                 this.shoot(targetPlayer);

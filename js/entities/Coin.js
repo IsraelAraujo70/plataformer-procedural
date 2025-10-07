@@ -17,7 +17,7 @@ export class Coin {
     update() {
         if (this.collected) return;
 
-        this.rotation += 0.05;
+        this.rotation += 0.05 * game.deltaTimeFactor;
 
         // Colisão com Player 1
         if (this.intersects(game.player)) {

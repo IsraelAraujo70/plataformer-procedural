@@ -43,6 +43,7 @@ export const game = {
     },
     lastTime: 0,
     deltaTime: 0,
+    deltaTimeFactor: 1.0, // Fator de normalização para 60 FPS (1.0 = velocidade normal)
     devMode: {
         enabled: false,
         noclip: false,

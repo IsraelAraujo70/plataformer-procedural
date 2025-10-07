@@ -33,9 +33,14 @@ function gameLoop(currentTime) {
 
     if (game.state !== 'playing') return;
 
-    // Delta time
-    game.deltaTime = currentTime - game.lastTime;
+    // Delta time - normalizado para 60 FPS
+    const rawDeltaTime = currentTime - game.lastTime;
     game.lastTime = currentTime;
+
+    // Calcular fator de normalização (16.67ms = 60 FPS)
+    const targetFrameTime = 1000 / 60; // ~16.67ms
+    game.deltaTime = rawDeltaTime;
+    game.deltaTimeFactor = rawDeltaTime / targetFrameTime; // Fator de escala (1.0 = 60 FPS)
 
     // Time Warp: executar updates múltiplos se algum jogador tiver time warp ativo
     let updateCount = 1;
@@ -45,14 +50,14 @@ function gameLoop(currentTime) {
 
     // Atualizar timers de TimeWarp ANTES do loop (para não decrementar 2x)
     if (game.player && game.player.timeWarpTime > 0) {
-        game.player.timeWarpTime--;
+        game.player.timeWarpTime -= game.deltaTimeFactor;
         if (game.player.timeWarpTime <= 0) {
             game.player.timeWarp = false;
             game.player.timeWarpMaxTime = 0;
         }
     }
     if (game.player2 && game.player2.timeWarpTime > 0) {
-        game.player2.timeWarpTime--;
+        game.player2.timeWarpTime -= game.deltaTimeFactor;
         if (game.player2.timeWarpTime <= 0) {
             game.player2.timeWarp = false;
             game.player2.timeWarpMaxTime = 0;
@@ -284,14 +289,20 @@ window.addEventListener('load', async () => {
     setupInputHandlers();
     setupContinueModal();
 
-    // Inicializar SDK de anúncios
+    // IMPORTANTE: Manter loading screen visível enquanto SDK carrega
+    const loadingScreen = document.getElementById('loadingScreen');
+    const menu = document.getElementById('menu');
+
+    // Inicializar SDK de anúncios ANTES de mostrar o menu
     try {
-        console.log('Initializing GameDistribution SDK...');
         await rewardedAdsManager.init();
-        console.log('GameDistribution SDK ready!');
     } catch (error) {
         console.error('Failed to initialize ad SDK:', error);
         // Continuar mesmo se ads falharem (modo fallback sem ads)
+    } finally {
+        // SEMPRE esconder loading e mostrar menu (mesmo se SDK falhar)
+        loadingScreen.classList.add('hidden');
+        menu.classList.remove('hidden');
     }
 
     // Começar o loop (mesmo no menu, para possíveis animações)

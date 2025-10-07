@@ -142,13 +142,13 @@ export class Hat {
             // ============================================
             // MODO: Chapéu caindo (não coletável)
             // ============================================
-            this.lifetime++;
+            this.lifetime += game.deltaTimeFactor;
 
             // Física simples
-            this.vy += CONFIG.GRAVITY * 0.5;
-            this.x += this.vx;
-            this.y += this.vy;
-            this.rotation += this.rotationSpeed;
+            this.vy += CONFIG.GRAVITY * 0.5 * game.deltaTimeFactor;
+            this.x += this.vx * game.deltaTimeFactor;
+            this.y += this.vy * game.deltaTimeFactor;
+            this.rotation += this.rotationSpeed * game.deltaTimeFactor;
 
             // Fade out progressivo
             this.alpha = 1.0 - (this.lifetime / this.maxLifetime);

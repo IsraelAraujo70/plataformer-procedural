@@ -21,8 +21,8 @@ export class Projectile {
         if (!this.alive) return;
 
         // Movimento reto (sem gravidade)
-        this.x += this.vx;
-        this.y += this.vy;
+        this.x += this.vx * game.deltaTimeFactor;
+        this.y += this.vy * game.deltaTimeFactor;
 
         // Verificar colisão com plataformas
         this.checkPlatformCollisions();

@@ -15,8 +15,8 @@ export class FloatingText {
     }
 
     update() {
-        this.y += this.vy;
-        this.life--;
+        this.y += this.vy * game.deltaTimeFactor;
+        this.life -= game.deltaTimeFactor;
     }
 
     draw(ctx) {

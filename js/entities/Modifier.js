@@ -31,8 +31,8 @@ export class Modifier {
     update() {
         if (this.collected) return;
 
-        this.rotation += 0.03;
-        this.pulseTime += 0.1;
+        this.rotation += 0.03 * game.deltaTimeFactor;
+        this.pulseTime += 0.1 * game.deltaTimeFactor;
 
         // Mapeamento de cores por tipo de modificador
         const colors = {
