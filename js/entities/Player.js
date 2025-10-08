@@ -123,7 +123,7 @@ export class Player {
         // Antena/topete com física de pêndulo
         this.antennaAngle = 0;       // Ângulo da antena (em radianos)
         this.antennaVelocity = 0;    // Velocidade angular da antena
-        this.antennaLength = 8;      // Comprimento da antena
+        this.antennaLength = 12;     // Comprimento da antena
         this.antennaWidth = 3;       // Largura da antena
 
         // Sistema secreto de movimento avançado
@@ -1710,7 +1710,7 @@ export class Player {
         // OUTLINE PRETO (estilo cartoon)
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY, radiusX + 2, radiusY + 2, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, centerY, radiusX + 1.5, radiusY + 1.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // SOMBRA INTERNA (lado inferior/direito) - gradiente mais suave
@@ -1912,17 +1912,32 @@ export class Player {
         const antennaEndX = baseX + Math.sin(this.antennaAngle) * this.antennaLength;
         const antennaEndY = baseY - Math.cos(this.antennaAngle) * this.antennaLength;
 
-        // Desenhar haste da antena
-        ctx.lineWidth = this.antennaWidth;
+        // Desenhar outline preto da haste da antena
+        ctx.lineWidth = this.antennaWidth + 2;
         ctx.lineCap = 'round';
-        ctx.strokeStyle = this.color;
+        ctx.strokeStyle = '#000000';
         ctx.beginPath();
         ctx.moveTo(baseX, baseY);
         ctx.lineTo(antennaEndX, antennaEndY);
         ctx.stroke();
 
+        // Desenhar haste da antena
+        ctx.lineWidth = this.antennaWidth;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = this.colorDark;
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.lineTo(antennaEndX, antennaEndY);
+        ctx.stroke();
+
+        // Outline preto da bolinha na ponta da antena
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(antennaEndX, antennaEndY, this.antennaWidth * 1.5 + 1, 0, Math.PI * 2);
+        ctx.fill();
+
         // Bolinha na ponta da antena
-        ctx.fillStyle = this.color;
+        ctx.fillStyle = this.colorDark;
         ctx.beginPath();
         ctx.arc(antennaEndX, antennaEndY, this.antennaWidth * 1.5, 0, Math.PI * 2);
         ctx.fill();
