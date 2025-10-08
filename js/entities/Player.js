@@ -62,9 +62,9 @@ export class Player {
             { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp' };
 
         // Stats individuais por jogador
-        this.hatCount = 1; // Sistema de chapéus empilháveis: cada chapéu = 1 hit extra
+        this.hatCount = 0; // Sistema de chapéus empilháveis: cada chapéu = 1 hit extra
         this.maxHats = 5; // Limite máximo de chapéus
-        this.hatTypes = []; // Array de tipos de chapéus coletados (por bioma)
+        this.hatTypes = []; // Array de tipos de chapéus coletados (por bioma) - SEMPRE sincronizado com hatCount
         this.score = 0;
         this.lastDistance = 0; // Rastrear última distância para pontuação individual
 
@@ -1857,225 +1857,452 @@ export class Player {
 
     drawMinerHelmet(ctx, hatCenterX, hatBaseY) {
         const main = '#2C3E50';
+        const dark = '#1A252F';
         const accent = '#F1C40F';
         const light = '#FFF8DC';
 
-        // Outline
+        // Outline do capacete (1px)
         ctx.fillStyle = '#000000';
-        ctx.fillRect(hatCenterX - 8, hatBaseY + 1, 16, 14);
+        ctx.fillRect(hatCenterX - 7, hatBaseY - 1, 14, 15);
 
-        // Capacete
+        // Capacete base
         ctx.fillStyle = main;
-        ctx.fillRect(hatCenterX - 7, hatBaseY + 2, 14, 12);
+        ctx.fillRect(hatCenterX - 6, hatBaseY, 12, 13);
 
         // Topo arredondado outline
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.ellipse(hatCenterX, hatBaseY + 2, 8, 3, 0, 0, Math.PI, true);
+        ctx.ellipse(hatCenterX, hatBaseY, 7, 2, 0, 0, Math.PI, true);
         ctx.fill();
 
         // Topo arredondado
         ctx.fillStyle = main;
         ctx.beginPath();
-        ctx.ellipse(hatCenterX, hatBaseY + 2, 7, 2, 0, 0, Math.PI, true);
+        ctx.ellipse(hatCenterX, hatBaseY, 6, 1.5, 0, 0, Math.PI, true);
         ctx.fill();
 
-        // Lanterna frontal
-        ctx.fillStyle = accent;
-        ctx.fillRect(hatCenterX - 3, hatBaseY + 5, 4, 5);
-        ctx.fillStyle = light;
-        ctx.fillRect(hatCenterX - 2, hatBaseY + 6, 2, 3);
+        // Sombra lateral do capacete
+        ctx.fillStyle = dark;
+        ctx.fillRect(hatCenterX + 3, hatBaseY + 2, 3, 10);
 
-        // Brilho da lanterna
+        // Lanterna frontal na testa (lateral direita)
+        // Base da lanterna
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(hatCenterX + 3, hatBaseY + 4, 5, 6);
+
+        ctx.fillStyle = accent;
+        ctx.fillRect(hatCenterX + 4, hatBaseY + 5, 3, 4);
+
+        // Vidro da lanterna
+        ctx.fillStyle = light;
+        ctx.fillRect(hatCenterX + 4, hatBaseY + 6, 3, 2);
+
+        // Brilho intenso da lanterna
         ctx.shadowColor = light;
-        ctx.shadowBlur = 5;
+        ctx.shadowBlur = 8;
         ctx.fillStyle = light;
         ctx.beginPath();
-        ctx.arc(hatCenterX - 1, hatBaseY + 7, 1, 0, Math.PI * 2);
+        ctx.arc(hatCenterX + 5.5, hatBaseY + 7, 1.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
+
+        // Faixa de segurança
+        ctx.fillStyle = '#34495E';
+        ctx.fillRect(hatCenterX - 5, hatBaseY + 11, 10, 2);
+
+        // Brilho metálico no capacete
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillRect(hatCenterX - 4, hatBaseY + 2, 2, 4);
     }
 
     drawFurHat(ctx, hatCenterX, hatBaseY) {
         const main = '#F8F8FF';
+        const dark = '#E8E8F0';
         const accent = '#87CEEB';
         const fur = '#FFFACD';
 
-        // Outline base
+        // Outline da copa (1px)
         ctx.fillStyle = '#000000';
-        ctx.beginPath();
-        ctx.ellipse(hatCenterX, hatBaseY + 11, 11, 4, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillRect(hatCenterX - 6, hatBaseY, 12, 10);
 
-        // Base
+        // Copa principal (parte de cima)
+        ctx.fillStyle = main;
+        ctx.fillRect(hatCenterX - 5, hatBaseY + 1, 10, 8);
+
+        // Topo arredondado
         ctx.fillStyle = main;
         ctx.beginPath();
-        ctx.ellipse(hatCenterX, hatBaseY + 11, 10, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(hatCenterX, hatBaseY + 1, 5, 1.5, 0, 0, Math.PI, true);
         ctx.fill();
 
-        // Outline copa
+        // Sombra do topo
+        ctx.fillStyle = dark;
+        ctx.fillRect(hatCenterX + 2, hatBaseY + 2, 3, 6);
+
+        // Outline da faixa de pelo (1px)
         ctx.fillStyle = '#000000';
-        ctx.fillRect(hatCenterX - 7, hatBaseY, 14, 12);
+        ctx.fillRect(hatCenterX - 7, hatBaseY + 8, 14, 5);
 
-        // Copa
-        ctx.fillStyle = main;
-        ctx.fillRect(hatCenterX - 6, hatBaseY + 1, 12, 10);
-
-        // Pelo na borda
+        // Faixa de pelo grossa (estilo ushanka)
         ctx.fillStyle = fur;
-        for (let i = 0; i < 10; i++) {
-            const x = hatCenterX - 6 + i * 1.2;
-            ctx.fillRect(x, hatBaseY + 9, 1, 2);
+        ctx.fillRect(hatCenterX - 6, hatBaseY + 9, 12, 3);
+
+        // Pelos individuais saindo da faixa (mais visíveis)
+        ctx.fillStyle = fur;
+        for (let i = 0; i < 12; i++) {
+            const x = hatCenterX - 6 + i;
+            const length = 2 + Math.sin(i * 0.8) * 1;
+            ctx.fillRect(x, hatBaseY + 12, 1, length);
         }
 
-        // Faixa azul
+        // Orelha esquerda (abas laterais da ushanka)
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.ellipse(hatCenterX - 7, hatBaseY + 10, 3, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = fur;
+        ctx.beginPath();
+        ctx.ellipse(hatCenterX - 7, hatBaseY + 10, 2, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Orelha direita
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.ellipse(hatCenterX + 7, hatBaseY + 10, 3, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = fur;
+        ctx.beginPath();
+        ctx.ellipse(hatCenterX + 7, hatBaseY + 10, 2, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Faixa decorativa azul
         ctx.fillStyle = accent;
-        ctx.fillRect(hatCenterX - 6, hatBaseY + 7, 12, 2);
+        ctx.fillRect(hatCenterX - 5, hatBaseY + 6, 10, 2);
+
+        // Brilho no topo
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.fillRect(hatCenterX - 2, hatBaseY + 3, 2, 2);
     }
 
     drawTurban(ctx, hatCenterX, hatBaseY) {
         const main = '#F4A460';
+        const dark = '#D2B48C';
         const band = '#D2691E';
         const accent = '#FFD700';
 
-        // Camadas do turbante (de baixo para cima)
-        for (let i = 0; i < 3; i++) {
-            // Outline
+        // Camadas enroladas do turbante (mais juntas e realistas)
+        for (let i = 0; i < 4; i++) {
+            const yOffset = hatBaseY + 10 - i * 1.5;
+            const width = 9 - i * 0.5;
+
+            // Outline de cada camada (1px)
             ctx.fillStyle = '#000000';
             ctx.beginPath();
-            ctx.ellipse(hatCenterX, hatBaseY + 11 - i * 2, 11 - i, 4, 0, 0, Math.PI * 2);
+            ctx.ellipse(hatCenterX, yOffset, width + 1, 2.5, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            // Camada
-            ctx.fillStyle = main;
+            // Camada do tecido
+            ctx.fillStyle = i % 2 === 0 ? main : dark;
             ctx.beginPath();
-            ctx.ellipse(hatCenterX, hatBaseY + 11 - i * 2, 10 - i, 3, 0, 0, Math.PI * 2);
+            ctx.ellipse(hatCenterX, yOffset, width, 2, 0, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // Nó decorativo
+        // Nó lateral decorativo (menor e à direita)
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.ellipse(hatCenterX + 4, hatBaseY + 6, 5, 4, 0, 0, Math.PI * 2);
+        ctx.ellipse(hatCenterX + 6, hatBaseY + 7, 3, 3.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.fillStyle = band;
         ctx.beginPath();
-        ctx.ellipse(hatCenterX + 4, hatBaseY + 6, 4, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(hatCenterX + 6, hatBaseY + 7, 2, 2.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Detalhe dourado
+        // Dobrinha do nó
+        ctx.fillStyle = dark;
+        ctx.beginPath();
+        ctx.ellipse(hatCenterX + 6, hatBaseY + 7, 1, 1.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Joia dourada central
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(hatCenterX, hatBaseY + 5, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.fillStyle = accent;
-        ctx.fillRect(hatCenterX - 2, hatBaseY + 7, 4, 2);
+        ctx.beginPath();
+        ctx.arc(hatCenterX, hatBaseY + 5, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Brilho na joia
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.beginPath();
+        ctx.arc(hatCenterX - 0.5, hatBaseY + 4.5, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Padrão de tecido (linhas sutis)
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.arc(hatCenterX, hatBaseY + 8, 5 + i * 2, 0, Math.PI);
+            ctx.stroke();
+        }
     }
 
     drawPilotCap(ctx, hatCenterX, hatBaseY) {
         const main = '#4682B4';
-        const accent = '#FFFFFF';
-        const goggles = '#000000';
+        const dark = '#36648B';
+        const leather = '#8B4513';
+        const goggles = '#2F4F4F';
 
-        // Outline base
+        // Outline do quepe (1px)
         ctx.fillStyle = '#000000';
-        ctx.beginPath();
-        ctx.ellipse(hatCenterX, hatBaseY + 11, 12, 4, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillRect(hatCenterX - 6, hatBaseY, 12, 11);
 
-        // Base (pala)
+        // Copa do quepe
+        ctx.fillStyle = main;
+        ctx.fillRect(hatCenterX - 5, hatBaseY + 1, 10, 9);
+
+        // Topo arredondado
         ctx.fillStyle = main;
         ctx.beginPath();
-        ctx.ellipse(hatCenterX, hatBaseY + 11, 11, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(hatCenterX, hatBaseY + 1, 5, 1.5, 0, 0, Math.PI, true);
         ctx.fill();
 
-        // Outline copa
+        // Sombra lateral
+        ctx.fillStyle = dark;
+        ctx.fillRect(hatCenterX + 2, hatBaseY + 2, 3, 7);
+
+        // Pala do quepe (outline)
         ctx.fillStyle = '#000000';
-        ctx.fillRect(hatCenterX - 6, hatBaseY + 2, 12, 10);
+        ctx.beginPath();
+        ctx.ellipse(hatCenterX, hatBaseY + 10, 9, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-        // Copa
-        ctx.fillStyle = main;
-        ctx.fillRect(hatCenterX - 5, hatBaseY + 3, 10, 8);
+        // Pala (azul marinho)
+        ctx.fillStyle = dark;
+        ctx.beginPath();
+        ctx.ellipse(hatCenterX, hatBaseY + 10, 8, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-        // Óculos de aviador
+        // Goggles de aviador (grandes e característicos)
+        // Frame de couro marrom
+        ctx.fillStyle = leather;
+        ctx.beginPath();
+        ctx.ellipse(hatCenterX - 3, hatBaseY + 5, 3, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(hatCenterX + 3, hatBaseY + 5, 3, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Lentes escuras
         ctx.fillStyle = goggles;
         ctx.beginPath();
-        ctx.ellipse(hatCenterX - 2, hatBaseY + 5, 2, 1.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(hatCenterX - 3, hatBaseY + 5, 2, 1.8, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.ellipse(hatCenterX + 2, hatBaseY + 5, 2, 1.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(hatCenterX + 3, hatBaseY + 5, 2, 1.8, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Ponte dos óculos
-        ctx.fillRect(hatCenterX - 1, hatBaseY + 4, 2, 1);
+        // Reflexo nas lentes
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.beginPath();
+        ctx.arc(hatCenterX - 3.5, hatBaseY + 4.5, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(hatCenterX + 2.5, hatBaseY + 4.5, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Ponte dos goggles
+        ctx.fillStyle = leather;
+        ctx.fillRect(hatCenterX - 1, hatBaseY + 4.5, 2, 1);
+
+        // Faixa elástica
+        ctx.strokeStyle = leather;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(hatCenterX - 6, hatBaseY + 5, 1, 0, Math.PI);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(hatCenterX + 6, hatBaseY + 5, 1, 0, Math.PI);
+        ctx.stroke();
+
+        // Insígnia/emblema no quepe
+        ctx.fillStyle = '#FFD700';
+        ctx.beginPath();
+        ctx.arc(hatCenterX, hatBaseY + 3, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = accent;
+        ctx.beginPath();
+        ctx.arc(hatCenterX, hatBaseY + 3, 1, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     drawCombatHelmet(ctx, hatCenterX, hatBaseY) {
         const main = '#2F2F2F';
+        const dark = '#1C1C1C';
+        const camo1 = '#3A3A2A';
+        const camo2 = '#4A4A3A';
         const accent = '#8B0000';
-        const camo = '#696969';
 
-        // Outline capacete
+        // Outline do capacete (1px)
         ctx.fillStyle = '#000000';
-        ctx.fillRect(hatCenterX - 8, hatBaseY + 1, 16, 13);
+        ctx.fillRect(hatCenterX - 7, hatBaseY - 1, 14, 14);
 
-        // Capacete
+        // Capacete base
         ctx.fillStyle = main;
-        ctx.fillRect(hatCenterX - 7, hatBaseY + 2, 14, 11);
+        ctx.fillRect(hatCenterX - 6, hatBaseY, 12, 12);
 
         // Topo arredondado outline
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.ellipse(hatCenterX, hatBaseY + 2, 8, 3, 0, 0, Math.PI, true);
+        ctx.ellipse(hatCenterX, hatBaseY, 7, 2, 0, 0, Math.PI, true);
         ctx.fill();
 
         // Topo arredondado
         ctx.fillStyle = main;
         ctx.beginPath();
-        ctx.ellipse(hatCenterX, hatBaseY + 2, 7, 2, 0, 0, Math.PI, true);
+        ctx.ellipse(hatCenterX, hatBaseY, 6, 1.5, 0, 0, Math.PI, true);
         ctx.fill();
 
-        // Padrão de camuflagem
-        ctx.fillStyle = camo;
-        ctx.fillRect(hatCenterX - 5, hatBaseY + 4, 2, 2);
-        ctx.fillRect(hatCenterX, hatBaseY + 6, 2, 2);
-        ctx.fillRect(hatCenterX + 3, hatBaseY + 5, 2, 2);
+        // Sombra lateral
+        ctx.fillStyle = dark;
+        ctx.fillRect(hatCenterX + 3, hatBaseY + 1, 3, 10);
 
-        // Detalhes vermelhos
+        // Padrão de camuflagem tático (manchas irregulares)
+        ctx.fillStyle = camo1;
+        ctx.fillRect(hatCenterX - 5, hatBaseY + 2, 3, 2);
+        ctx.fillRect(hatCenterX - 2, hatBaseY + 5, 2, 3);
+        ctx.fillRect(hatCenterX + 2, hatBaseY + 3, 2, 2);
+
+        ctx.fillStyle = camo2;
+        ctx.fillRect(hatCenterX - 3, hatBaseY + 3, 2, 2);
+        ctx.fillRect(hatCenterX + 1, hatBaseY + 7, 3, 2);
+        ctx.fillRect(hatCenterX - 4, hatBaseY + 7, 2, 2);
+
+        // Visor/goggle tático (frontal)
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(hatCenterX - 4, hatBaseY + 5, 8, 3);
+
+        ctx.fillStyle = 'rgba(139, 0, 0, 0.4)'; // Vidro vermelho escuro
+        ctx.fillRect(hatCenterX - 3, hatBaseY + 6, 6, 1);
+
+        // Reflexo no visor
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.fillRect(hatCenterX - 2, hatBaseY + 6, 2, 1);
+
+        // Faixa de fixação NVG (night vision mount)
+        ctx.fillStyle = dark;
+        ctx.fillRect(hatCenterX - 5, hatBaseY + 2, 10, 1);
+
+        // Mount rail
         ctx.fillStyle = accent;
-        ctx.fillRect(hatCenterX - 6, hatBaseY + 3, 12, 1);
-        ctx.fillRect(hatCenterX - 6, hatBaseY + 11, 12, 1);
+        ctx.fillRect(hatCenterX - 1, hatBaseY, 2, 2);
+
+        // Velcro patches (detalhes táticos)
+        ctx.fillStyle = camo1;
+        ctx.fillRect(hatCenterX - 5, hatBaseY + 10, 3, 1);
+        ctx.fillRect(hatCenterX + 2, hatBaseY + 10, 3, 1);
+
+        // Strap de queixeira
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(hatCenterX - 6, hatBaseY + 11);
+        ctx.lineTo(hatCenterX - 4, hatBaseY + 13);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(hatCenterX + 6, hatBaseY + 11);
+        ctx.lineTo(hatCenterX + 4, hatBaseY + 13);
+        ctx.stroke();
     }
 
     drawAstronautHelmet(ctx, hatCenterX, hatBaseY) {
         const main = '#C0C0C0';
+        const dark = '#A0A0A0';
         const visor = '#87CEEB';
+        const collar = '#D3D3D3';
 
-        // Outline capacete
+        // Colar metálico da base (outline)
         ctx.fillStyle = '#000000';
-        ctx.fillRect(hatCenterX - 8, hatBaseY + 1, 16, 13);
+        ctx.fillRect(hatCenterX - 8, hatBaseY + 10, 16, 4);
 
-        // Capacete
-        ctx.fillStyle = main;
-        ctx.fillRect(hatCenterX - 7, hatBaseY + 2, 14, 11);
+        ctx.fillStyle = dark;
+        ctx.fillRect(hatCenterX - 7, hatBaseY + 11, 14, 2);
 
-        // Topo arredondado outline
+        // Detalhes do colar
+        ctx.fillStyle = collar;
+        ctx.fillRect(hatCenterX - 6, hatBaseY + 11, 1, 2);
+        ctx.fillRect(hatCenterX - 2, hatBaseY + 11, 1, 2);
+        ctx.fillRect(hatCenterX + 2, hatBaseY + 11, 1, 2);
+        ctx.fillRect(hatCenterX + 5, hatBaseY + 11, 1, 2);
+
+        // Dome transparente arredondado (outline)
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.ellipse(hatCenterX, hatBaseY + 2, 8, 3, 0, 0, Math.PI, true);
+        ctx.ellipse(hatCenterX, hatBaseY + 6, 8, 7, 0, 0, Math.PI, true);
         ctx.fill();
 
-        // Topo arredondado
+        // Dome transparente (vidro com gradiente)
+        const domeGradient = ctx.createRadialGradient(
+            hatCenterX - 2, hatBaseY + 3, 0,
+            hatCenterX, hatBaseY + 6, 8
+        );
+        domeGradient.addColorStop(0, 'rgba(135, 206, 235, 0.3)');
+        domeGradient.addColorStop(0.7, 'rgba(135, 206, 235, 0.5)');
+        domeGradient.addColorStop(1, 'rgba(100, 150, 200, 0.6)');
+
+        ctx.fillStyle = domeGradient;
+        ctx.beginPath();
+        ctx.ellipse(hatCenterX, hatBaseY + 6, 7, 6, 0, 0, Math.PI, true);
+        ctx.fill();
+
+        // Reflexos no visor (múltiplos pontos de luz)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.beginPath();
+        ctx.ellipse(hatCenterX - 3, hatBaseY + 3, 2, 1.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.beginPath();
+        ctx.arc(hatCenterX + 2, hatBaseY + 5, 1, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.beginPath();
+        ctx.arc(hatCenterX - 4, hatBaseY + 6, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Aro metálico do visor
         ctx.fillStyle = main;
         ctx.beginPath();
-        ctx.ellipse(hatCenterX, hatBaseY + 2, 7, 2, 0, 0, Math.PI, true);
+        ctx.ellipse(hatCenterX, hatBaseY + 10, 7, 1.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Visor azul
-        ctx.fillStyle = visor;
-        ctx.fillRect(hatCenterX - 5, hatBaseY + 4, 10, 7);
+        // Sombra do aro
+        ctx.fillStyle = dark;
+        ctx.beginPath();
+        ctx.ellipse(hatCenterX, hatBaseY + 10, 7, 1.5, 0, Math.PI, Math.PI * 2);
+        ctx.fill();
 
-        // Reflexo no visor
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-        ctx.fillRect(hatCenterX - 3, hatBaseY + 5, 2, 1);
-        ctx.fillRect(hatCenterX + 1, hatBaseY + 7, 1, 2);
+        // Faixa de vedação
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(hatCenterX - 6, hatBaseY + 10, 12, 1);
+
+        // Válvulas laterais (detalhes técnicos)
+        ctx.fillStyle = '#4169E1';
+        ctx.fillRect(hatCenterX - 7, hatBaseY + 8, 2, 2);
+        ctx.fillRect(hatCenterX + 5, hatBaseY + 8, 2, 2);
+
+        // Brilho metálico no colar
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.fillRect(hatCenterX - 5, hatBaseY + 11, 3, 1);
     }
 
     drawVoidCrown(ctx, hatCenterX, hatBaseY) {
@@ -2083,55 +2310,114 @@ export class Player {
         const band = '#1A0F2E';
         const accent = '#FF6B35';
         const energy = '#8A2BE2';
+        const energyLight = '#DA70D6';
 
-        // Pontas da coroa (5 pontas)
-        ctx.fillStyle = '#000000';
-        for (let i = 0; i < 5; i++) {
-            const x = hatCenterX - 7 + i * 3.5;
-            ctx.beginPath();
-            ctx.moveTo(x, hatBaseY + 11);
-            ctx.lineTo(x + 1.5, hatBaseY + 4);
-            ctx.lineTo(x + 3, hatBaseY + 11);
-            ctx.closePath();
-            ctx.fill();
-        }
+        const time = Date.now() / 1000;
+        const pulse = Math.sin(time * 4) * 0.5 + 0.5;
 
-        // Pontas coloridas
-        ctx.fillStyle = main;
-        for (let i = 0; i < 5; i++) {
-            const x = hatCenterX - 7 + i * 3.5;
-            ctx.beginPath();
-            ctx.moveTo(x + 0.5, hatBaseY + 11);
-            ctx.lineTo(x + 1.5, hatBaseY + 5);
-            ctx.lineTo(x + 2.5, hatBaseY + 11);
-            ctx.closePath();
-            ctx.fill();
-        }
-
-        // Base da coroa
+        // Base da coroa (outline mais grossa)
         ctx.fillStyle = '#000000';
         ctx.fillRect(hatCenterX - 7, hatBaseY + 9, 14, 4);
 
         ctx.fillStyle = band;
         ctx.fillRect(hatCenterX - 6, hatBaseY + 10, 12, 2);
 
-        // Energia pulsante
-        const time = Date.now() / 1000;
-        const pulse = Math.sin(time * 4) * 0.5 + 0.5;
+        // Detalhes na base (runas/símbolos)
+        ctx.fillStyle = accent;
+        ctx.fillRect(hatCenterX - 5, hatBaseY + 10, 1, 2);
+        ctx.fillRect(hatCenterX - 1, hatBaseY + 10, 1, 2);
+        ctx.fillRect(hatCenterX + 3, hatBaseY + 10, 1, 2);
 
-        ctx.shadowColor = energy;
-        ctx.shadowBlur = 4 * pulse;
-        ctx.fillStyle = energy;
+        // Pontas da coroa (5 pontas MAIS GROSSAS)
+        for (let i = 0; i < 5; i++) {
+            const xBase = hatCenterX - 6 + i * 3;
 
-        // Pequenos orbes de energia
-        for (let i = 0; i < 3; i++) {
-            const angle = time * 2 + (i * Math.PI * 2 / 3);
-            const x = hatCenterX + Math.cos(angle) * 6;
-            const y = hatBaseY + 7 + Math.sin(angle) * 1;
+            // Outline preto mais grosso (1px)
+            ctx.fillStyle = '#000000';
             ctx.beginPath();
-            ctx.arc(x, y, 1, 0, Math.PI * 2);
+            ctx.moveTo(xBase - 1, hatBaseY + 9);
+            ctx.lineTo(xBase + 1, hatBaseY + 2);
+            ctx.lineTo(xBase + 3, hatBaseY + 9);
+            ctx.closePath();
+            ctx.fill();
+
+            // Ponta colorida (preta brilhante)
+            ctx.fillStyle = main;
+            ctx.beginPath();
+            ctx.moveTo(xBase, hatBaseY + 9);
+            ctx.lineTo(xBase + 1, hatBaseY + 3);
+            ctx.lineTo(xBase + 2, hatBaseY + 9);
+            ctx.closePath();
+            ctx.fill();
+
+            // Brilho de energia nas pontas
+            const pontaPulse = Math.sin(time * 3 + i) * 0.5 + 0.5;
+            ctx.fillStyle = `rgba(138, 43, 226, ${pontaPulse * 0.8})`;
+            ctx.beginPath();
+            ctx.arc(xBase + 1, hatBaseY + 3, 1.5, 0, Math.PI * 2);
             ctx.fill();
         }
+
+        // Orbes de energia girando (MAIORES e mais intensos)
+        ctx.shadowColor = energy;
+        ctx.shadowBlur = 10 * pulse;
+
+        for (let i = 0; i < 5; i++) {
+            const angle = time * 2 + (i * Math.PI * 2 / 5);
+            const radius = 8 + Math.sin(time * 3 + i) * 2;
+            const x = hatCenterX + Math.cos(angle) * radius;
+            const y = hatBaseY + 6 + Math.sin(angle) * (radius * 0.3);
+            const orbPulse = Math.sin(time * 4 + i) * 0.5 + 0.5;
+
+            // Glow ao redor do orbe
+            ctx.fillStyle = `rgba(218, 112, 214, ${orbPulse * 0.3})`;
+            ctx.beginPath();
+            ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Orbe principal
+            ctx.fillStyle = `rgba(138, 43, 226, ${0.8 + orbPulse * 0.2})`;
+            ctx.beginPath();
+            ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Centro brilhante do orbe
+            ctx.fillStyle = energyLight;
+            ctx.beginPath();
+            ctx.arc(x, y, 0.8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.shadowBlur = 0;
+
+        // Raios de energia saindo da coroa
+        ctx.strokeStyle = `rgba(255, 107, 53, ${pulse * 0.5})`;
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+            const rayAngle = time * 1.5 + (i * Math.PI * 2 / 3);
+            const x1 = hatCenterX;
+            const y1 = hatBaseY + 6;
+            const x2 = hatCenterX + Math.cos(rayAngle) * 5;
+            const y2 = hatBaseY + 6 + Math.sin(rayAngle) * 3;
+
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+
+        // Núcleo de energia central
+        ctx.shadowColor = energy;
+        ctx.shadowBlur = 8 * pulse;
+        ctx.fillStyle = energy;
+        ctx.beginPath();
+        ctx.arc(hatCenterX, hatBaseY + 6, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = energyLight;
+        ctx.beginPath();
+        ctx.arc(hatCenterX, hatBaseY + 6, 1, 0, Math.PI * 2);
+        ctx.fill();
         ctx.shadowBlur = 0;
     }
 
