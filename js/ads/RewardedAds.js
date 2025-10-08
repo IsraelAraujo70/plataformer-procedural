@@ -23,7 +23,7 @@ class RewardedAdsManager {
      * Inicializar SDK do GameDistribution
      */
     async init() {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             if (this.isInitialized) {
                 resolve();
                 return;
@@ -34,34 +34,44 @@ class RewardedAdsManager {
                 console.warn('⚠️ GameDistribution SDK not loaded (may be blocked by ad blocker)');
                 console.warn('ℹ️ Running in fallback mode - ads will be disabled');
                 // Resolver mesmo assim para não quebrar o jogo
-                this.isInitialized = false; // Marcar como não inicializado
-                resolve(); // Mas permitir que o jogo continue
+                this.isInitialized = false;
+                resolve();
                 return;
             }
 
             try {
+                let resolved = false; // Flag para garantir que resolve() só é chamado uma vez
+
                 // GameDistribution SDK usa eventos globais
                 // Escutar eventos SDK_READY e SDK_ERROR
-                window.addEventListener('SDK_READY', () => {
+                const onReady = () => {
+                    if (resolved) return;
+                    resolved = true;
                     this.isInitialized = true;
                     console.log('✅ GameDistribution SDK initialized successfully!');
                     resolve();
-                });
+                };
 
-                window.addEventListener('SDK_ERROR', (event) => {
-                    console.error('❌ SDK Error:', event.detail);
+                const onError = (event) => {
+                    if (resolved) return;
+                    resolved = true;
+                    console.error('❌ SDK Error:', event?.detail || 'Unknown error');
                     // Não rejeitar - continuar em modo fallback
                     this.isInitialized = false;
                     resolve();
-                });
+                };
 
-                // Timeout de 5 segundos - se não inicializar, continuar sem ads
+                window.addEventListener('SDK_READY', onReady, { once: true });
+                window.addEventListener('SDK_ERROR', onError, { once: true });
+
+                // Timeout de 3 segundos - GARANTIR que resolve() seja chamado
                 setTimeout(() => {
-                    if (!this.isInitialized) {
-                        console.warn('⏱️ SDK initialization timeout - continuing without ads');
-                        resolve();
-                    }
-                }, 5000);
+                    if (resolved) return;
+                    resolved = true;
+                    console.warn('⏱️ SDK initialization timeout - continuing without ads');
+                    this.isInitialized = false;
+                    resolve();
+                }, 3000);
 
                 // O SDK já foi carregado pelo script tag e deve auto-inicializar
                 console.log('⏳ Waiting for GameDistribution SDK to initialize...');

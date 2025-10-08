@@ -2277,7 +2277,8 @@ function drawPlainsParallax(ctx) {
     for (let i = -1; i < 5; i++) {
         const x = i * 400 - cloudOffset;
         const y = 50 + Math.sin(time * 0.3 + i) * 10;
-        drawCloud(ctx, x, y, 'rgba(255, 255, 255, 0.4)', 40);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        drawCloud(ctx, x, y, 0.8);
     }
 
     // CAMADA 2: Pássaros voando (30% velocidade câmera)
@@ -2301,8 +2302,9 @@ function drawSkyParallax(ctx) {
     for (let i = -1; i < 6; i++) {
         const x = i * 300 - cloudOffset;
         const y = 100 + Math.sin(time * 0.5 + i) * 20;
-        const size = 60 + Math.sin(i) * 20;
-        drawCloud(ctx, x, y, 'rgba(255, 255, 255, 0.6)', size);
+        const size = 1.2 + Math.sin(i) * 0.4;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        drawCloud(ctx, x, y, size);
     }
 }
 
@@ -2396,17 +2398,6 @@ function drawDesertParallax(ctx) {
 // ============================================
 // FUNÇÕES AUXILIARES DE DESENHO
 // ============================================
-
-function drawCloud(ctx, x, y, color, size) {
-    const screenX = x - game.camera.x;
-
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(screenX, y, size * 0.5, 0, Math.PI * 2);
-    ctx.arc(screenX + size * 0.4, y, size * 0.6, 0, Math.PI * 2);
-    ctx.arc(screenX - size * 0.4, y, size * 0.6, 0, Math.PI * 2);
-    ctx.fill();
-}
 
 function drawBird(ctx, x, y, wingUp) {
     const screenX = x - game.camera.x;
