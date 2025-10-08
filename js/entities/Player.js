@@ -1710,7 +1710,7 @@ export class Player {
         // OUTLINE PRETO (estilo cartoon)
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY, radiusX + 1.5, radiusY + 1.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, centerY, radiusX + 2, radiusY + 2, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // SOMBRA INTERNA (lado inferior/direito) - gradiente mais suave
@@ -1933,7 +1933,7 @@ export class Player {
         // Outline preto da bolinha na ponta da antena
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.arc(antennaEndX, antennaEndY, this.antennaWidth * 1.5 + 1, 0, Math.PI * 2);
+        ctx.arc(antennaEndX, antennaEndY, this.antennaWidth * 1.5 + 2, 0, Math.PI * 2);
         ctx.fill();
 
         // Bolinha na ponta da antena
@@ -1961,10 +1961,10 @@ export class Player {
             // Outline preto das pernas (arredondado)
             ctx.fillStyle = '#000000';
             ctx.beginPath();
-            ctx.roundRect(leftLegX - 1, bodyBottom, legWidth + 2, 7, 3);
+            ctx.roundRect(leftLegX - 2, bodyBottom, legWidth + 4, 7, 3);
             ctx.fill();
             ctx.beginPath();
-            ctx.roundRect(rightLegX - 1, bodyBottom, legWidth + 2, 7, 3);
+            ctx.roundRect(rightLegX - 2, bodyBottom, legWidth + 4, 7, 3);
             ctx.fill();
 
             // Pernas coloridas (arredondadas)
@@ -1979,10 +1979,10 @@ export class Player {
             // Pezinhos ARREDONDADOS
             ctx.fillStyle = '#000000';
             ctx.beginPath();
-            ctx.arc(leftLegX + legWidth/2, bodyBottom + 6, 4, 0, Math.PI * 2);
+            ctx.arc(leftLegX + legWidth/2, bodyBottom + 6, 5, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(rightLegX + legWidth/2, bodyBottom + 6, 4, 0, Math.PI * 2);
+            ctx.arc(rightLegX + legWidth/2, bodyBottom + 6, 5, 0, Math.PI * 2);
             ctx.fill();
 
             ctx.fillStyle = this.colorDark;
@@ -2021,10 +2021,10 @@ export class Player {
         // Outline preto das pernas (arredondado)
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.roundRect(leftLegX - 1, bodyBottom, legWidth + 2, leftLegHeight + 1, 3);
+        ctx.roundRect(leftLegX - 2, bodyBottom, legWidth + 4, leftLegHeight + 1, 3);
         ctx.fill();
         ctx.beginPath();
-        ctx.roundRect(rightLegX - 1, bodyBottom, legWidth + 2, rightLegHeight + 1, 3);
+        ctx.roundRect(rightLegX - 2, bodyBottom, legWidth + 4, rightLegHeight + 1, 3);
         ctx.fill();
 
         // Pernas coloridas (arredondadas)
@@ -2043,10 +2043,10 @@ export class Player {
         // Outline dos pezinhos
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.arc(leftLegX + legWidth/2, leftFootY + 2, 4, 0, Math.PI * 2);
+        ctx.arc(leftLegX + legWidth/2, leftFootY + 2, 5, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(rightLegX + legWidth/2, rightFootY + 2, 4, 0, Math.PI * 2);
+        ctx.arc(rightLegX + legWidth/2, rightFootY + 2, 5, 0, Math.PI * 2);
         ctx.fill();
 
         // Pezinhos coloridos
