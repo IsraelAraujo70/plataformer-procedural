@@ -613,6 +613,15 @@ export class Chunk {
                 });
             });
 
+            this.hats.forEach(hat => {
+                allItems.push({
+                    x: hat.x,
+                    y: hat.y,
+                    width: 20,
+                    height: 20
+                });
+            });
+
             if (this.platforms.length > 0) {
                 let attempts = 0;
                 let placed = false;
