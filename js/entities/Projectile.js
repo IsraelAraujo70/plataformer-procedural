@@ -65,6 +65,9 @@ export class Projectile {
             game.player.takeDamage();
             this.alive = false;
 
+            // Som de projétil acertando
+            game.soundManager?.playProjectileHit();
+
             if (window.createParticles) {
                 window.createParticles(this.x, this.y, this.color, 6);
             }
@@ -75,6 +78,9 @@ export class Projectile {
         if (game.player2 && !game.player2.dying && this.intersects(game.player2)) {
             game.player2.takeDamage();
             this.alive = false;
+
+            // Som de projétil acertando
+            game.soundManager?.playProjectileHit();
 
             if (window.createParticles) {
                 window.createParticles(this.x, this.y, this.color, 6);

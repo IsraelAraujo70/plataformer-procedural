@@ -326,3 +326,103 @@ body {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
 }
+
+/* ============================================
+   AUDIO SETTINGS PANEL
+   ============================================ */
+#audioSettings {
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(10, 10, 30, 0.7);
+    border-radius: 15px;
+    border: 2px solid rgba(0, 217, 255, 0.5);
+}
+
+#audioSettings h3 {
+    font-size: clamp(18px, 3vw, 24px);
+    margin-bottom: 20px;
+    color: #00ffff;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+}
+
+.volume-control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 15px 0;
+    gap: 10px;
+}
+
+.volume-control label {
+    font-size: clamp(12px, 1.8vw, 16px);
+    color: #e0e0e0;
+    min-width: 140px;
+    text-align: left;
+}
+
+.volume-control input[type="range"] {
+    flex: 1;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.volume-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #00d9ff 0%, #00a3ff 100%);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0, 217, 255, 0.8);
+    transition: all 0.2s;
+}
+
+.volume-control input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 15px rgba(0, 217, 255, 1);
+}
+
+.volume-control input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #00d9ff 0%, #00a3ff 100%);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0, 217, 255, 0.8);
+    transition: all 0.2s;
+    border: none;
+}
+
+.volume-control input[type="range"]::-moz-range-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 15px rgba(0, 217, 255, 1);
+}
+
+.volume-control span {
+    font-size: clamp(12px, 1.8vw, 16px);
+    color: #00ffff;
+    font-weight: bold;
+    min-width: 50px;
+    text-align: right;
+}
+
+.mute-btn {
+    background: linear-gradient(135deg, #ffaa00 0%, #ff8800 100%) !important;
+    margin-top: 10px;
+}
+
+.mute-btn:hover {
+    background: linear-gradient(135deg, #ffcc00 0%, #ffaa00 100%) !important;
+}
+
+#closeAudioBtn {
+    background: linear-gradient(135deg, #666 0%, #555 100%) !important;
+    margin-top: 5px;
+}
+
+#closeAudioBtn:hover {
+    background: linear-gradient(135deg, #888 0%, #666 100%) !important;
+}

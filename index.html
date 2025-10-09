@@ -22,6 +22,30 @@
         <button id="start1PBtn">🎮 1 Player</button>
         <button id="start2PBtn">👥 2 Players</button>
         <button id="instructionsBtn">📖 Instructions</button>
+        <button id="audioBtn">🔊 Audio Settings</button>
+
+        <!-- Audio Settings Panel -->
+        <div id="audioSettings" class="hidden">
+            <h3>🎵 Audio Settings</h3>
+            <div class="volume-control">
+                <label for="masterVolume">🔊 Master Volume:</label>
+                <input type="range" id="masterVolume" min="0" max="100" value="70">
+                <span id="masterVolumeValue">70%</span>
+            </div>
+            <div class="volume-control">
+                <label for="musicVolume">🎵 Music Volume:</label>
+                <input type="range" id="musicVolume" min="0" max="100" value="50">
+                <span id="musicVolumeValue">50%</span>
+            </div>
+            <div class="volume-control">
+                <label for="sfxVolume">🔔 SFX Volume:</label>
+                <input type="range" id="sfxVolume" min="0" max="100" value="80">
+                <span id="sfxVolumeValue">80%</span>
+            </div>
+            <button id="muteBtn" class="mute-btn">🔊 Mute/Unmute</button>
+            <button id="closeAudioBtn">✖️ Close</button>
+        </div>
+
         <div id="instructions" class="hidden">
             <p><strong>1 Player Controls:</strong></p>
             <p>A D / ← → : Move</p>

@@ -180,6 +180,9 @@ export class Hat {
                     game.player.hatCount++;
                     game.player.hatTypes.push(this.biomeType);
 
+                    // Som de coletar chapéu
+                    game.soundManager?.playHatCollect();
+
                     // Aplicar efeito especial do chapéu coletado
                     game.player.applyHatEffect(this.biomeType, 'gain');
 
@@ -193,6 +196,9 @@ export class Hat {
                 } else if (hasThisHatType) {
                     // Já tem este tipo - converter em moedas
                     this.collected = true;
+
+                    // Som de moedas (já que vira moeda)
+                    game.soundManager?.playCoin();
 
                     // Dar moedas como recompensa
                     const coinReward = 5;
@@ -224,6 +230,9 @@ export class Hat {
                     game.player2.hatCount++;
                     game.player2.hatTypes.push(this.biomeType);
 
+                    // Som de coletar chapéu
+                    game.soundManager?.playHatCollect();
+
                     // Aplicar efeito especial do chapéu coletado
                     game.player2.applyHatEffect(this.biomeType, 'gain');
 
@@ -237,6 +246,9 @@ export class Hat {
                 } else if (hasThisHatType) {
                     // Já tem este tipo - converter em moedas
                     this.collected = true;
+
+                    // Som de moedas (já que vira moeda)
+                    game.soundManager?.playCoin();
 
                     // Dar moedas como recompensa
                     const coinReward = 5;

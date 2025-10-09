@@ -11,6 +11,7 @@ export const game = {
     random: null,
     keys: {},
     camera: { x: 0, y: 0, targetX: 0 },
+    soundManager: null, // Sistema de som
     player: null,
     player2: null,
     twoPlayerMode: false,

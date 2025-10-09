@@ -26,6 +26,9 @@ export class Coin {
             game.player.stats.coinsCollected++;
             game.stats.coinsCollected++; // Também incrementar global para compatibilidade
 
+            // Som de moeda
+            game.soundManager?.playCoin();
+
             if (window.createFloatingText) {
                 window.createFloatingText('+10', this.x + this.width / 2, this.y, '#ffd700');
             }
@@ -40,6 +43,9 @@ export class Coin {
             game.player2.score += 10;
             game.player2.stats.coinsCollected++;
             game.stats.coinsCollected++; // Também incrementar global para compatibilidade
+
+            // Som de moeda
+            game.soundManager?.playCoin();
 
             if (window.createFloatingText) {
                 window.createFloatingText('+10', this.x + this.width / 2, this.y, '#ffd700');

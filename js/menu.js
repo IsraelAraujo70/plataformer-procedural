@@ -9,13 +9,106 @@ import { resetContinueFlag } from './ui/ContinueModal.js';
 // ============================================
 
 export function setupMenuHandlers() {
-    document.getElementById('start1PBtn').addEventListener('click', () => startGame(false));
-    document.getElementById('start2PBtn').addEventListener('click', () => startGame(true));
+    // Botões principais
+    document.getElementById('start1PBtn').addEventListener('click', () => {
+        game.soundManager?.playButtonClick();
+        startGame(false);
+    });
+    document.getElementById('start2PBtn').addEventListener('click', () => {
+        game.soundManager?.playButtonClick();
+        startGame(true);
+    });
     document.getElementById('instructionsBtn').addEventListener('click', () => {
+        game.soundManager?.playButtonClick();
         const instructions = document.getElementById('instructions');
         instructions.classList.toggle('hidden');
     });
-    document.getElementById('pauseBtn').addEventListener('click', pauseGame);
+    document.getElementById('pauseBtn').addEventListener('click', () => {
+        game.soundManager?.playButtonClick();
+        pauseGame();
+    });
+
+    // Botão de configurações de áudio
+    document.getElementById('audioBtn').addEventListener('click', () => {
+        game.soundManager?.playButtonClick();
+        const audioSettings = document.getElementById('audioSettings');
+        audioSettings.classList.toggle('hidden');
+    });
+
+    // Configurações de áudio
+    setupAudioControls();
+}
+
+// ============================================
+// AUDIO CONTROLS
+// ============================================
+function setupAudioControls() {
+    const masterVolumeSlider = document.getElementById('masterVolume');
+    const musicVolumeSlider = document.getElementById('musicVolume');
+    const sfxVolumeSlider = document.getElementById('sfxVolume');
+    const muteBtn = document.getElementById('muteBtn');
+    const closeAudioBtn = document.getElementById('closeAudioBtn');
+
+    // Carregar valores salvos
+    if (game.soundManager) {
+        masterVolumeSlider.value = game.soundManager.masterVolume * 100;
+        musicVolumeSlider.value = game.soundManager.musicVolume * 100;
+        sfxVolumeSlider.value = game.soundManager.sfxVolume * 100;
+        updateVolumeDisplays();
+    }
+
+    // Master Volume
+    masterVolumeSlider.addEventListener('input', (e) => {
+        const volume = e.target.value / 100;
+        game.soundManager?.setMasterVolume(volume);
+        updateVolumeDisplays();
+    });
+
+    // Music Volume
+    musicVolumeSlider.addEventListener('input', (e) => {
+        const volume = e.target.value / 100;
+        game.soundManager?.setMusicVolume(volume);
+        updateVolumeDisplays();
+    });
+
+    // SFX Volume
+    sfxVolumeSlider.addEventListener('input', (e) => {
+        const volume = e.target.value / 100;
+        game.soundManager?.setSfxVolume(volume);
+        updateVolumeDisplays();
+        // Tocar som de teste ao ajustar SFX
+        game.soundManager?.playButtonHover();
+    });
+
+    // Mute/Unmute
+    muteBtn.addEventListener('click', () => {
+        const isMuted = game.soundManager?.toggleMute();
+        muteBtn.textContent = isMuted ? '🔇 Mute/Unmute' : '🔊 Mute/Unmute';
+        game.soundManager?.playButtonClick();
+    });
+
+    // Fechar painel
+    closeAudioBtn.addEventListener('click', () => {
+        game.soundManager?.playButtonClick();
+        document.getElementById('audioSettings').classList.add('hidden');
+    });
+
+    // Hover effects com som
+    const allButtons = document.querySelectorAll('#menu button');
+    allButtons.forEach(btn => {
+        btn.addEventListener('mouseenter', () => {
+            game.soundManager?.playButtonHover();
+        });
+    });
+}
+
+function updateVolumeDisplays() {
+    document.getElementById('masterVolumeValue').textContent =
+        Math.round(game.soundManager.masterVolume * 100) + '%';
+    document.getElementById('musicVolumeValue').textContent =
+        Math.round(game.soundManager.musicVolume * 100) + '%';
+    document.getElementById('sfxVolumeValue').textContent =
+        Math.round(game.soundManager.sfxVolume * 100) + '%';
 }
 
 export function startGame(twoPlayerMode = false) {
@@ -84,6 +177,9 @@ export function startGame(twoPlayerMode = false) {
     }
     document.getElementById('distance').textContent = game.distance;
 
+    // Trocar música para gameplay
+    game.soundManager?.playGameplayMusic();
+
     // Iniciar loop
     game.state = 'playing';
     game.lastTime = performance.now();
@@ -91,6 +187,10 @@ export function startGame(twoPlayerMode = false) {
 
 export function showGameOver() {
     game.state = 'gameover';
+
+    // Tocar som de game over e parar música
+    game.soundManager?.playGameOver();
+    game.soundManager?.stopMusic();
 
     const menu = document.getElementById('menu');
 
@@ -173,6 +273,10 @@ export function showGameOver() {
 export function showVictory() {
     game.state = 'victory';
     game.gameEndTime = Date.now();
+
+    // Tocar som de vitória e música especial
+    game.soundManager?.playVictory();
+    game.soundManager?.playVictoryMusic();
 
     const menu = document.getElementById('menu');
 

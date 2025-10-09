@@ -62,6 +62,13 @@ export class Modifier {
 
             this.collected = true;
 
+            // Som de modificador (ou swap se for swap)
+            if (this.type === 'swap') {
+                game.soundManager?.playSwap();
+            } else {
+                game.soundManager?.playModifier();
+            }
+
             // Em modo 2 jogadores, aplicar efeito em ambos
             if (game.twoPlayerMode && game.player2) {
                 // Swap é especial: só precisa ser aplicado uma vez
@@ -100,6 +107,13 @@ export class Modifier {
             }
 
             this.collected = true;
+
+            // Som de modificador (ou swap se for swap)
+            if (this.type === 'swap') {
+                game.soundManager?.playSwap();
+            } else {
+                game.soundManager?.playModifier();
+            }
 
             // Em modo 2 jogadores, aplicar efeito em ambos
             if (game.twoPlayerMode && game.player) {

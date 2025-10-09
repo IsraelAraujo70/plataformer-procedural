@@ -71,6 +71,9 @@ export class Enemy {
             this.alive = false;
             player.vy = CONFIG.JUMP_STRENGTH * 0.5; // Mini bounce
 
+            // Som de stomp
+            game.soundManager?.playStomp();
+
             // Adicionar pontos por derrotar inimigo
             player.score += this.points;
             player.stats.enemiesDefeated++;

@@ -11,6 +11,7 @@ import { CONFIG } from './config.js';
 import { getBiome } from './world/Patterns.js';
 import { rewardedAdsManager } from './ads/RewardedAds.js';
 import { setupContinueModal, resetContinueFlag } from './ui/ContinueModal.js';
+import { soundManager } from './audio/SoundManager.js';
 
 // ============================================
 // HELPERS GLOBAIS
@@ -77,6 +78,20 @@ function gameLoop(currentTime) {
             game.previousBiome = game.currentBiome;
             game.currentBiome = newBiome;
             game.biomeTransition = 0; // Iniciar transição
+
+            // Trocar música do bioma
+            const biomeNameMap = {
+                'Plains': 'plains',
+                'Cave': 'cave',
+                'Ice': 'ice',
+                'Desert': 'desert',
+                'Sky': 'sky',
+                'Apocalypse': 'apocalypse',
+                'Moon': 'moon',
+                'Black Hole': 'black_hole'
+            };
+            const biomeMusicName = biomeNameMap[newBiome.name] || 'plains';
+            game.soundManager?.playBiomeMusic(biomeMusicName);
         } else if (!game.currentBiome) {
             game.currentBiome = newBiome;
             game.previousBiome = null;
@@ -284,6 +299,9 @@ window.addEventListener('load', async () => {
     game.canvas = document.getElementById('gameCanvas');
     game.ctx = game.canvas.getContext('2d');
 
+    // Inicializar sistema de som
+    game.soundManager = soundManager;
+
     // Configurar canvas responsivo
     resizeCanvas();
 
@@ -306,6 +324,9 @@ window.addEventListener('load', async () => {
         // SEMPRE esconder loading e mostrar menu (mesmo se SDK falhar)
         loadingScreen.classList.add('hidden');
         menu.classList.remove('hidden');
+
+        // Iniciar música de menu
+        game.soundManager.playMenuMusic();
     }
 
     // Começar o loop (mesmo no menu, para possíveis animações)

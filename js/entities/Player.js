@@ -364,6 +364,9 @@ export class Player {
             this.jumping = true;
             this.grounded = false;
             this.justJumped = true; // Trigger animação de stretch
+
+            // Som de pulo
+            game.soundManager?.playJump();
         }
 
         // Pulo conjunto (ESPAÇO faz ambos pularem)
@@ -408,6 +411,9 @@ export class Player {
             this.jumping = true;
             this.grounded = false;
             this.justJumped = true; // Trigger animação de stretch
+
+            // Som de pulo
+            game.soundManager?.playJump();
         }
 
         // Double Jump (pulo no ar se modificador ativo)
@@ -418,6 +424,9 @@ export class Player {
             this.hasDoubleJump = false; // Consumir o double jump
             this.jumping = true;
             this.justJumped = true; // Trigger animação de stretch
+
+            // Som de pulo (double jump)
+            game.soundManager?.playJump();
         }
 
         if (game.keys[' '] && !this.grounded && this.doubleJumpEnabled && this.hasDoubleJump && !this.jumping) {
@@ -427,6 +436,9 @@ export class Player {
             this.hasDoubleJump = false;
             this.jumping = true;
             this.justJumped = true; // Trigger animação de stretch
+
+            // Som de pulo (double jump)
+            game.soundManager?.playJump();
         }
 
         if (!game.keys[this.controls.up] && !game.keys[' ']) {
@@ -745,6 +757,12 @@ export class Player {
                     if (minOverlap === overlapTop && this.vy > 0) {
                         this.y = platform.y - this.height;
                         this.vy = 0;
+
+                        // Som de aterrissagem (apenas se estava no ar)
+                        if (!this.grounded) {
+                            game.soundManager?.playLand();
+                        }
+
                         this.grounded = true;
                     }
                     // Head bump
@@ -888,6 +906,9 @@ export class Player {
             this.shieldTime = 0;
             this.shieldMaxTime = 0;
 
+            // Som de shield quebrando
+            game.soundManager?.playShieldBreak();
+
             // Efeito visual de shield quebrado
             if (window.createParticles) {
                 window.createParticles(this.x + this.width / 2, this.y + this.height / 2, '#ffaa00', 20);
@@ -904,6 +925,9 @@ export class Player {
 
         // Sistema de chapéus empilháveis
         if (this.hatCount > 0) {
+            // Som de dano (perdeu chapéu)
+            game.soundManager?.playDamage();
+
             // Perde 1 chapéu do topo da pilha
             this.hatCount--;
 
@@ -1021,6 +1045,9 @@ export class Player {
 
     die() {
         if (game.devMode.enabled && game.devMode.invincible) return; // Dev Mode: não morre
+
+        // Som de morte
+        game.soundManager?.playDeath();
 
         // Iniciar animação de morte
         this.dying = true;

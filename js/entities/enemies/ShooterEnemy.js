@@ -125,6 +125,9 @@ export class ShooterEnemy extends Enemy {
             game.projectiles = [];
         }
 
+        // Som de disparo
+        game.soundManager?.playShoot();
+
         // Calcular direção do projétil (mirar no jogador)
         const startX = this.x + this.width / 2;
         const startY = this.y + this.height / 2;
