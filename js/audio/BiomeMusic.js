@@ -49,36 +49,198 @@ export class BiomeMusic {
     }
 
     // ============================================
-    // PLAINS - Aventura alegre e pastoral
+    // PLAINS - Aventura alegre e pastoral (EXPANDIDA)
     // ============================================
     playPlainsMusic() {
         const now = this.ctx.currentTime;
         const beatLength = 0.4; // 150 BPM
+        let time = 0;
 
-        // Progressão: I-V-vi-IV (C-G-Am-F)
-        const progression = [
-            // Compasso 1: C major
-            { chord: [261.63, 329.63, 392.00], bass: 130.81, melody: [523.25, 587.33, 659.25, 587.33] },
-            // Compasso 2: G major
-            { chord: [392.00, 493.88, 587.33], bass: 196.00, melody: [783.99, 659.25, 587.33, 659.25] },
-            // Compasso 3: A minor
-            { chord: [440.00, 523.25, 659.25], bass: 220.00, melody: [880.00, 783.99, 659.25, 783.99] },
-            // Compasso 4: F major
-            { chord: [349.23, 440.00, 523.25], bass: 174.61, melody: [698.46, 659.25, 587.33, 523.25] }
+        // ===== SEÇÃO 1: INTRODUÇÃO (5 compassos com transição suave) =====
+        // Introdução suave com arpejo e acordes graduais
+        const intro = [
+            { chord: [261.63, 329.63, 392.00], bass: 130.81, arp: [261.63, 329.63, 392.00, 523.25], melody: null },
+            { chord: [392.00, 493.88, 587.33], bass: 196.00, arp: [392.00, 493.88, 587.33, 783.99], melody: null },
+            { chord: [440.00, 523.25, 659.25], bass: 220.00, arp: [440.00, 523.25, 659.25, 880.00], melody: [880.00, 783.99] }, // Começa melodia suave
+            { chord: [349.23, 440.00, 523.25], bass: 174.61, arp: [349.23, 440.00, 523.25, 698.46], melody: [698.46, 659.25, 587.33, 523.25] }, // Melodia mais presente
+            { chord: [392.00, 493.88, 587.33], bass: [196.00, 220.00, 246.94, 261.63], arp: null, melody: [783.99, 659.25, 587.33, 659.25], transition: true } // Compasso de transição
         ];
 
-        let time = 0;
-        progression.forEach((bar, barIdx) => {
-            // Bass (baixo walking)
-            this.createNote(bar.bass, now + time, beatLength * 4, 'triangle', 0.05);
+        intro.forEach((bar, idx) => {
+            const volume = 0.015 + (idx * 0.004); // Volume crescente gradual
 
-            // Chord (acorde sustentado)
-            this.createChord(bar.chord, now + time, beatLength * 4, 'sine', 0.02);
+            // Bass
+            if (Array.isArray(bar.bass)) {
+                // Walking bass no último compasso
+                bar.bass.forEach((freq, i) => {
+                    this.createNote(freq, now + time + (i * beatLength), beatLength * 0.8, 'triangle', 0.045);
+                });
+            } else {
+                const bassWave = bar.transition ? 'triangle' : 'sine';
+                const bassVol = bar.transition ? 0.045 : 0.03 + (idx * 0.004);
+                this.createNote(bar.bass, now + time, beatLength * 4, bassWave, bassVol);
+            }
 
-            // Melody (melodia dançante)
+            // Chord atmosférico
+            this.createChord(bar.chord, now + time, beatLength * 4, 'sine', volume);
+
+            // Arpejo introdutório
+            if (bar.arp) {
+                bar.arp.forEach((freq, i) => {
+                    this.createNote(freq, now + time + (i * beatLength), beatLength * 0.9, 'triangle', 0.025 + (idx * 0.004));
+                });
+            }
+
+            // Melodia (entra gradualmente a partir do 3º compasso)
+            if (bar.melody) {
+                bar.melody.forEach((freq, i) => {
+                    const melodyVol = bar.transition ? 0.04 : 0.03;
+                    const melodyWave = bar.transition ? 'square' : 'sine';
+                    const noteDuration = bar.melody.length === 2 ? beatLength * 2 : beatLength * 0.8;
+                    const noteStart = bar.melody.length === 2 ? i * beatLength * 2 : i * beatLength;
+                    this.createNote(freq, now + time + noteStart, noteDuration, melodyWave, melodyVol);
+                });
+            }
+
+            // Adicionar contra-melodia suave no compasso de transição
+            if (bar.transition) {
+                const counter = [587.33, 523.25, 493.88, 523.25];
+                counter.forEach((freq, i) => {
+                    this.createNote(freq, now + time + (i * beatLength), beatLength * 0.8, 'triangle', 0.025);
+                });
+
+                // Hihat suave nos 4 beats
+                for (let i = 0; i < 4; i++) {
+                    this.createNote(8000, now + time + (i * beatLength), 0.03, 'square', 0.007);
+                }
+            }
+
+            time += beatLength * 4;
+        });
+
+        // ===== SEÇÃO 2: VERSO PRINCIPAL (8 compassos) =====
+        // Progressão expandida: C-G-Am-F-C-Em-F-G (I-V-vi-IV-I-iii-IV-V)
+        const verse = [
+            { chord: [261.63, 329.63, 392.00], bass: [130.81, 146.83, 164.81, 174.61], melody: [523.25, 587.33, 659.25, 587.33], counter: [392.00, 440.00, 523.25, 440.00] },
+            { chord: [392.00, 493.88, 587.33], bass: [196.00, 220.00, 246.94, 261.63], melody: [783.99, 659.25, 587.33, 659.25], counter: [587.33, 523.25, 493.88, 523.25] },
+            { chord: [440.00, 523.25, 659.25], bass: [220.00, 246.94, 261.63, 293.66], melody: [880.00, 783.99, 659.25, 783.99], counter: [659.25, 587.33, 523.25, 587.33] },
+            { chord: [349.23, 440.00, 523.25], bass: [174.61, 196.00, 220.00, 233.08], melody: [698.46, 659.25, 587.33, 523.25], counter: [523.25, 493.88, 440.00, 392.00] },
+
+            { chord: [261.63, 329.63, 392.00], bass: [130.81, 146.83, 164.81, 174.61], melody: [523.25, 659.25, 783.99, 659.25], counter: [392.00, 493.88, 587.33, 493.88] },
+            { chord: [329.63, 392.00, 493.88], bass: [164.81, 174.61, 196.00, 220.00], melody: [659.25, 783.99, 880.00, 783.99], counter: [493.88, 587.33, 659.25, 587.33] },
+            { chord: [349.23, 440.00, 523.25], bass: [174.61, 196.00, 220.00, 233.08], melody: [698.46, 783.99, 880.00, 783.99], counter: [523.25, 587.33, 659.25, 587.33] },
+            { chord: [392.00, 493.88, 587.33], bass: [196.00, 220.00, 246.94, 261.63], melody: [783.99, 880.00, 1046.50, 880.00], counter: [587.33, 659.25, 783.99, 659.25] }
+        ];
+
+        verse.forEach((bar, idx) => {
+            // Walking bass (4 notas por compasso)
+            bar.bass.forEach((freq, i) => {
+                this.createNote(freq, now + time + (i * beatLength), beatLength * 0.8, 'triangle', 0.05);
+            });
+
+            // Chord sustentado
+            this.createChord(bar.chord, now + time, beatLength * 4, 'sine', 0.022);
+
+            // Melodia principal
             bar.melody.forEach((freq, i) => {
                 this.createNote(freq, now + time + (i * beatLength), beatLength * 0.8, 'square', 0.045);
             });
+
+            // Contra-melodia (harmonia)
+            bar.counter.forEach((freq, i) => {
+                this.createNote(freq, now + time + (i * beatLength), beatLength * 0.8, 'triangle', 0.028);
+            });
+
+            // Percussão - hihat (chhh)
+            for (let i = 0; i < 4; i++) {
+                const noiseStart = now + time + (i * beatLength);
+                this.createNote(8000 + Math.random() * 2000, noiseStart, 0.03, 'square', 0.008);
+            }
+
+            // Percussão - kick (bump) em tempo forte
+            if (idx % 2 === 0) {
+                this.createNote(60, now + time, 0.08, 'sine', 0.06);
+                this.createNote(60, now + time + (beatLength * 2), 0.08, 'sine', 0.06);
+            }
+
+            time += beatLength * 4;
+        });
+
+        // ===== SEÇÃO 3: BRIDGE/VARIAÇÃO (8 compassos) =====
+        // Mudança de atmosfera com acordes sus4 e variações climáticas
+        const bridge = [
+            // Parte 1: Subida climática (4 compassos)
+            { chord: [261.63, 349.23, 392.00], bass: 130.81, arp: [523.25, 698.46, 783.99, 1046.50, 783.99, 698.46, 523.25, 698.46], melody: [1046.50, 987.77, 880.00, 783.99], counter: [783.99, 659.25, 587.33, 523.25], isLast: false }, // Csus4
+            { chord: [293.66, 392.00, 440.00], bass: 146.83, arp: [587.33, 783.99, 880.00, 1174.66, 880.00, 783.99, 587.33, 783.99], melody: [1174.66, 1046.50, 987.77, 880.00], counter: [880.00, 783.99, 659.25, 587.33], isLast: false }, // Dsus4
+            { chord: [349.23, 440.00, 523.25], bass: 174.61, arp: [698.46, 880.00, 1046.50, 1396.91, 1046.50, 880.00, 698.46, 880.00], melody: [1396.91, 1318.51, 1174.66, 1046.50], counter: [1046.50, 987.77, 880.00, 783.99], isLast: false }, // F
+            { chord: [392.00, 493.88, 587.33], bass: 196.00, arp: [783.99, 987.77, 1174.66, 1567.98, 1174.66, 987.77, 783.99, 987.77], melody: [1567.98, 1396.91, 1318.51, 1174.66], counter: [1174.66, 1046.50, 987.77, 880.00], isLast: false }, // G (pico)
+
+            // Parte 2: Variação e descida (4 compassos)
+            { chord: [261.63, 329.63, 392.00], bass: [130.81, 164.81, 196.00, 220.00], arp: [1046.50, 783.99, 659.25, 523.25, 659.25, 783.99, 1046.50, 783.99], melody: [1046.50, 1174.66, 1318.51, 1174.66], counter: [783.99, 880.00, 987.77, 880.00], isLast: false }, // C (com walking bass)
+            { chord: [220.00, 261.63, 329.63], bass: [110.00, 130.81, 164.81, 174.61], arp: [880.00, 659.25, 523.25, 440.00, 523.25, 659.25, 880.00, 659.25], melody: [880.00, 1046.50, 1174.66, 1046.50], counter: [659.25, 783.99, 880.00, 783.99], isLast: false }, // Am
+            { chord: [349.23, 440.00, 523.25], bass: [174.61, 196.00, 220.00, 233.08], arp: [698.46, 880.00, 1046.50, 1396.91, 1046.50, 880.00, 698.46, 880.00], melody: [1396.91, 1318.51, 1174.66, 1046.50], counter: [1046.50, 987.77, 880.00, 783.99], isLast: false }, // F (reprise)
+            { chord: [392.00, 493.88, 587.33], bass: 196.00, arp: [783.99, 659.25, 587.33, 523.25, 392.00, 329.63, 261.63, 329.63], melody: [783.99, 659.25, 587.33, 523.25], counter: [587.33, 523.25, 440.00, 392.00], isLast: true }  // G → transição descendente para loop
+        ];
+
+        bridge.forEach((bar, idx) => {
+            const volumeFactor = bar.isLast ? 0.85 : 1.0; // Reduz volume no último compasso
+            const isPart2 = idx >= 4; // Segunda parte do bridge (compassos 5-8)
+
+            // Bass
+            if (Array.isArray(bar.bass)) {
+                // Walking bass (compassos 5 e 6)
+                bar.bass.forEach((freq, i) => {
+                    this.createNote(freq, now + time + (i * beatLength), beatLength * 0.8, 'triangle', 0.055 * volumeFactor);
+                });
+            } else {
+                this.createNote(bar.bass, now + time, beatLength * 4, 'triangle', 0.055 * volumeFactor);
+            }
+
+            // Chord
+            this.createChord(bar.chord, now + time, beatLength * 4, 'sine', 0.025 * volumeFactor);
+
+            // Arpejo rápido (8 notas)
+            bar.arp.forEach((freq, i) => {
+                const noteVolume = bar.isLast ? 0.035 * (1 - i * 0.08) : 0.035; // Fade out no último
+                this.createNote(freq, now + time + (i * beatLength * 0.5), beatLength * 0.45, 'triangle', noteVolume * volumeFactor);
+            });
+
+            // Melodia alta (climática)
+            bar.melody.forEach((freq, i) => {
+                const noteVolume = bar.isLast ? 0.04 * (1 - i * 0.15) : 0.04; // Fade out no último
+                this.createNote(freq, now + time + (i * beatLength), beatLength * 0.9, 'sine', noteVolume * volumeFactor);
+            });
+
+            // Contra-melodia (harmonia rica)
+            if (bar.counter) {
+                bar.counter.forEach((freq, i) => {
+                    const counterVolume = bar.isLast ? 0.028 * (1 - i * 0.12) : 0.028;
+                    this.createNote(freq, now + time + (i * beatLength), beatLength * 0.9, 'triangle', counterVolume * volumeFactor);
+                });
+            }
+
+            // Percussão energética
+            if (!bar.isLast) {
+                for (let i = 0; i < 8; i++) {
+                    const noiseStart = now + time + (i * beatLength * 0.5);
+                    const noiseVol = isPart2 ? 0.010 : 0.012; // Levemente reduzida na parte 2
+                    this.createNote(7000 + Math.random() * 3000, noiseStart, 0.025, 'square', noiseVol);
+                }
+            } else {
+                // Percussão mais espaçada no último compasso (fade out)
+                for (let i = 0; i < 4; i++) {
+                    const noiseStart = now + time + (i * beatLength);
+                    this.createNote(7000 + Math.random() * 2000, noiseStart, 0.02, 'square', 0.008 * (1 - i * 0.2));
+                }
+            }
+
+            // Kick reforçado
+            if (!bar.isLast) {
+                this.createNote(55, now + time, 0.1, 'sine', 0.07);
+                this.createNote(55, now + time + (beatLength * 2), 0.1, 'sine', 0.07);
+            } else {
+                this.createNote(55, now + time, 0.1, 'sine', 0.05); // Kick mais suave no final
+            }
 
             time += beatLength * 4;
         });
