@@ -18,7 +18,7 @@ export class SoundSynthesizer {
     // SONS DO PLAYER
     // ============================================
 
-    // Som de pulo - bounce com pitch subindo
+    // Som de pulo - bounce suave e agradável
     jump() {
         const now = this.audioContext.currentTime;
 
@@ -28,19 +28,19 @@ export class SoundSynthesizer {
         oscillator.connect(gainNode);
         gainNode.connect(this.audioContext.destination);
 
-        // Onda quadrada para som "retro"
-        oscillator.type = 'square';
+        // Onda senoidal para som mais suave
+        oscillator.type = 'sine';
 
-        // Pitch sobe rapidamente (200Hz -> 400Hz)
-        oscillator.frequency.setValueAtTime(200, now);
-        oscillator.frequency.exponentialRampToValueAtTime(400, now + 0.1);
+        // Pitch sobe suavemente (300Hz -> 500Hz) - menos agudo
+        oscillator.frequency.setValueAtTime(300, now);
+        oscillator.frequency.exponentialRampToValueAtTime(500, now + 0.08);
 
-        // Envelope: attack rápido, decay curto
-        gainNode.gain.setValueAtTime(0.3, now);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+        // Envelope: attack rápido, decay mais suave
+        gainNode.gain.setValueAtTime(0.18, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
 
         oscillator.start(now);
-        oscillator.stop(now + 0.15);
+        oscillator.stop(now + 0.12);
     }
 
     // Som de aterrissagem - thump baixo

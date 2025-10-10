@@ -326,34 +326,164 @@ export class BiomeMusic {
     }
 
     // ============================================
-    // DESERT - Exótico, oriental e quente
+    // DESERT - Exótico, árabe e contemplativo
     // ============================================
     playDesertMusic() {
         const now = this.ctx.currentTime;
-        const beatLength = 0.45; // 133 BPM
-
-        // Escala árabe: E menor harmônico
-        const melody1 = [329.63, 369.99, 415.30, 440.00, 493.88, 523.25, 587.33, 659.25];
-        const melody2 = [659.25, 587.33, 523.25, 493.88, 440.00, 493.88, 523.25, 440.00];
-
+        const beatLength = 0.42; // 143 BPM - ritmo moderado árabe
         let time = 0;
 
-        // Parte 1
-        const drone = 164.81; // Drone em E
-        this.createNote(drone, now + time, beatLength * 8, 'sine', 0.04);
+        // Escala Hijaz em D (D - Eb - F# - G - A - Bb - C# - D)
+        // Característica da música árabe/persa
+        const scale = {
+            D: 293.66,
+            Eb: 311.13,
+            Fsharp: 369.99,
+            G: 392.00,
+            A: 440.00,
+            Bb: 466.16,
+            Csharp: 554.37,
+            Dhigh: 587.33
+        };
 
-        melody1.forEach((freq, i) => {
-            this.createNote(freq, now + time + (i * beatLength), beatLength * 0.7, 'sawtooth', 0.035);
+        // ===== INTRODUÇÃO (2 compassos) =====
+        // Drone D constante (típico da música árabe)
+        this.createNote(scale.D / 2, now + time, beatLength * 16, 'sine', 0.045);
+
+        // Flauta ney introdutória (melodia contemplativa)
+        const intro = [scale.D, scale.Fsharp, scale.G, scale.A];
+        intro.forEach((freq, i) => {
+            this.createNote(freq, now + time + (i * beatLength * 2), beatLength * 1.8, 'sine', 0.045);
         });
         time += beatLength * 8;
 
-        // Parte 2
-        this.createNote(drone, now + time, beatLength * 8, 'sine', 0.04);
+        // ===== SEÇÃO 1: MELODIA PRINCIPAL (4 compassos) =====
+        const melodySection1 = [
+            // Compasso 1 - frase ascendente
+            { notes: [scale.D, scale.Eb, scale.Fsharp, scale.G], durations: [1, 0.5, 0.5, 2] },
+            // Compasso 2 - ornamentação
+            { notes: [scale.A, scale.G, scale.Fsharp, scale.G, scale.A], durations: [0.75, 0.5, 0.5, 0.5, 1.75] },
+            // Compasso 3 - subida para registro agudo
+            { notes: [scale.Bb, scale.A, scale.Bb, scale.Csharp], durations: [0.75, 0.5, 0.75, 2] },
+            // Compasso 4 - descida ornamentada
+            { notes: [scale.Dhigh, scale.Csharp, scale.Bb, scale.A, scale.G], durations: [1, 0.75, 0.5, 0.75, 1] }
+        ];
 
-        melody2.forEach((freq, i) => {
-            this.createNote(freq, now + time + (i * beatLength), beatLength * 0.7, 'sawtooth', 0.035);
-            // Harmonia em terças
-            this.createNote(freq * 1.25, now + time + (i * beatLength), beatLength * 0.7, 'triangle', 0.02);
+        melodySection1.forEach(bar => {
+            let barTime = 0;
+            bar.notes.forEach((freq, i) => {
+                const duration = bar.durations[i] * beatLength;
+
+                // Flauta ney principal
+                this.createNote(freq, now + time + barTime, duration, 'sine', 0.050);
+
+                // Vibrato sutil (característica da flauta ney)
+                const vibrato = this.ctx.createOscillator();
+                const vibratoGain = this.ctx.createGain();
+                vibrato.connect(vibratoGain);
+                vibratoGain.connect(this.manager.musicGainNode);
+
+                vibrato.frequency.setValueAtTime(freq, now + time + barTime);
+                vibrato.frequency.setValueAtTime(freq * 1.008, now + time + barTime + duration/3);
+                vibrato.frequency.setValueAtTime(freq, now + time + barTime + 2*duration/3);
+
+                vibratoGain.gain.setValueAtTime(0, now + time + barTime);
+                vibratoGain.gain.linearRampToValueAtTime(0.020, now + time + barTime + 0.02);
+                vibratoGain.gain.linearRampToValueAtTime(0, now + time + barTime + duration);
+
+                vibrato.start(now + time + barTime);
+                vibrato.stop(now + time + barTime + duration);
+                this.manager.musicOscillators.push(vibrato);
+
+                barTime += duration;
+            });
+            time += beatLength * 4;
+        });
+
+        // ===== SEÇÃO 2: VARIAÇÃO COM OUD (4 compassos) =====
+        // Drone continua
+        this.createNote(scale.D / 2, now + time, beatLength * 16, 'sine', 0.045);
+
+        const oudMelody = [
+            // Compasso 1 - arpejo característico
+            { notes: [scale.D, scale.A, scale.D, scale.Fsharp, scale.A], durations: [0.75, 0.5, 0.5, 0.75, 1.5] },
+            // Compasso 2 - resposta melódica
+            { notes: [scale.G, scale.Fsharp, scale.Eb, scale.D], durations: [1, 1, 1, 1] },
+            // Compasso 3 - tensão crescente
+            { notes: [scale.D, scale.Fsharp, scale.A, scale.Bb, scale.Csharp], durations: [0.5, 0.5, 0.75, 0.75, 1.5] },
+            // Compasso 4 - resolução
+            { notes: [scale.Dhigh, scale.Bb, scale.A, scale.G, scale.Fsharp], durations: [1.25, 0.5, 0.75, 0.75, 0.75] }
+        ];
+
+        oudMelody.forEach(bar => {
+            let barTime = 0;
+            bar.notes.forEach((freq, i) => {
+                const duration = bar.durations[i] * beatLength;
+
+                // Oud (som triangular/cordas dedilhadas)
+                this.createNote(freq, now + time + barTime, duration, 'triangle', 0.045);
+                // Harmônico da corda
+                this.createNote(freq * 2, now + time + barTime, duration * 0.3, 'sine', 0.018);
+
+                barTime += duration;
+            });
+            time += beatLength * 4;
+        });
+
+        // ===== SEÇÃO 3: CLÍMAX COM PERCUSSÃO (4 compassos) =====
+        const climax = [
+            // Compasso 1
+            { notes: [scale.Dhigh, scale.Csharp, scale.Dhigh, scale.A], durations: [0.75, 0.5, 1, 1.75], percussion: true },
+            // Compasso 2
+            { notes: [scale.Bb, scale.Csharp, scale.Dhigh, scale.Csharp, scale.Bb], durations: [0.5, 0.5, 1, 1, 1], percussion: true },
+            // Compasso 3
+            { notes: [scale.A, scale.G, scale.Fsharp, scale.G, scale.A, scale.Bb], durations: [0.5, 0.5, 0.5, 0.5, 1, 1], percussion: true },
+            // Compasso 4 - resolução final
+            { notes: [scale.A, scale.G, scale.Fsharp, scale.D], durations: [1, 1, 1, 1], percussion: false }
+        ];
+
+        climax.forEach((bar, barIdx) => {
+            let barTime = 0;
+
+            // Drone continua
+            this.createNote(scale.D / 2, now + time, beatLength * 4, 'sine', 0.045);
+
+            // Melodia principal
+            bar.notes.forEach((freq, i) => {
+                const duration = bar.durations[i] * beatLength;
+
+                // Flauta dupla (oitavas)
+                this.createNote(freq, now + time + barTime, duration, 'sine', 0.050);
+                this.createNote(freq * 2, now + time + barTime, duration, 'sine', 0.028);
+
+                barTime += duration;
+            });
+
+            // Percussão árabe (darbuka pattern)
+            if (bar.percussion) {
+                // Dum (grave) - beats 1 e 3
+                this.createNote(80, now + time, 0.08, 'sine', 0.060);
+                this.createNote(80, now + time + (beatLength * 2), 0.08, 'sine', 0.060);
+
+                // Tak (agudo) - padrão rítmico
+                const takPattern = [1, 1.5, 2.5, 3, 3.5];
+                takPattern.forEach(beat => {
+                    this.createNote(800 + Math.random() * 400, now + time + (beat * beatLength), 0.04, 'square', 0.020);
+                });
+            }
+
+            time += beatLength * 4;
+        });
+
+        // ===== CONCLUSÃO (2 compassos - fade suave) =====
+        // Drone final
+        this.createNote(scale.D / 2, now + time, beatLength * 8, 'sine', 0.045);
+
+        // Flauta conclusiva (descida gradual)
+        const outro = [scale.A, scale.G, scale.Fsharp, scale.D];
+        outro.forEach((freq, i) => {
+            const volume = 0.045 * (1 - i * 0.15); // Fade out
+            this.createNote(freq, now + time + (i * beatLength * 2), beatLength * 1.8, 'sine', volume);
         });
         time += beatLength * 8;
 
