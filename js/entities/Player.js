@@ -743,8 +743,25 @@ export class Player {
             const chunk = game.chunks.get(chunkIdx);
             if (!chunk) continue;
 
+            // Coletar todas as plataformas que colidem
+            const collidingPlatforms = [];
             chunk.platforms.forEach(platform => {
                 if (this.intersects(platform)) {
+                    collidingPlatforms.push(platform);
+                }
+            });
+
+            // Processar colisões (priorizar plataformas mais próximas ao topo do player)
+            if (collidingPlatforms.length > 0) {
+                // Ordenar por proximidade ao topo do player (menor distância Y primeiro)
+                collidingPlatforms.sort((a, b) => {
+                    const distA = Math.abs(a.y - (this.y + this.height));
+                    const distB = Math.abs(b.y - (this.y + this.height));
+                    return distA - distB;
+                });
+
+                // Processar cada colisão
+                for (const platform of collidingPlatforms) {
                     // Detectar de que lado veio a colisão
                     const overlapLeft = (this.x + this.width) - platform.x;
                     const overlapRight = (platform.x + platform.width) - this.x;
@@ -753,8 +770,8 @@ export class Player {
 
                     const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
 
-                    // Colisão vertical
-                    if (minOverlap === overlapTop && this.vy > 0) {
+                    // Colisão vertical (de cima)
+                    if (minOverlap === overlapTop && this.vy >= 0) {
                         this.y = platform.y - this.height;
                         this.vy = 0;
 
@@ -764,11 +781,13 @@ export class Player {
                         }
 
                         this.grounded = true;
+                        break; // Parar após primeira colisão vertical válida
                     }
-                    // Head bump
+                    // Head bump (batida de cabeça)
                     else if (minOverlap === overlapBottom && this.vy < 0) {
                         this.y = platform.y + platform.height;
                         this.vy = 0;
+                        break;
                     }
                     // Colisão horizontal
                     else if (minOverlap === overlapLeft) {
@@ -780,7 +799,7 @@ export class Player {
                         this.vx = 0;
                     }
                 }
-            });
+            }
         }
     }
 

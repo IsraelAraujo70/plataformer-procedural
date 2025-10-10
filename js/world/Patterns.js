@@ -333,10 +333,12 @@ export const BIOMES = {
         colors: {
             cloud: '#ecf0f1',
             cloudDark: '#d5dbdb',
-            accent: '#3498db'
+            accent: '#3498db',
+            grass: '#aef5a4', // Grama celestial
+            grassDark: '#8fd687'
         },
         allowedTypes: ['floating', 'bouncy', 'moving'],
-        decorations: ['cloud', 'bird', 'star'],
+        decorations: ['cloud', 'bird', 'star', 'light_ray', 'balloon', 'kite', 'celestial_crystal'],
         heightBias: -2 // Tende para cima
     },
 

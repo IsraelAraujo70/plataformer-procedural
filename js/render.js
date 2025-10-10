@@ -887,29 +887,29 @@ function drawSkyBackground(ctx) {
     let skyTop, skyMiddle, skyBottom;
 
     if (progression < 0.25) {
-        // Dia → Pôr do sol
+        // Dia → Pôr do sol (mais vibrante e celestial)
         const t = progression * 4;
-        skyTop = interpolateColor('#87CEEB', '#FFB347', t);
-        skyMiddle = interpolateColor('#B0E0E6', '#FFC966', t);
-        skyBottom = interpolateColor('#E0F6FF', '#FFD88A', t);
+        skyTop = interpolateColor('#5DADE2', '#FF9A56', t);       // Azul celeste → Laranja vibrante
+        skyMiddle = interpolateColor('#85C1E9', '#FFB84D', t);    // Azul claro → Dourado
+        skyBottom = interpolateColor('#AED6F1', '#FFD88F', t);    // Azul muito claro → Amarelo pálido
     } else if (progression < 0.5) {
-        // Pôr do sol → Noite
+        // Pôr do sol → Noite estrelada
         const t = (progression - 0.25) * 4;
-        skyTop = interpolateColor('#FFB347', '#1a1a4e', t);
-        skyMiddle = interpolateColor('#FFC966', '#2a2a6e', t);
-        skyBottom = interpolateColor('#FFD88A', '#3a3a8e', t);
+        skyTop = interpolateColor('#FF9A56', '#2C3E7A', t);       // Laranja → Azul noite profundo
+        skyMiddle = interpolateColor('#FFB84D', '#3D5A9E', t);    // Dourado → Azul noite médio
+        skyBottom = interpolateColor('#FFD88F', '#5876B8', t);    // Amarelo → Azul noite claro
     } else if (progression < 0.75) {
-        // Noite → Amanhecer
+        // Noite → Amanhecer rosado
         const t = (progression - 0.5) * 4;
-        skyTop = interpolateColor('#1a1a4e', '#FFB347', t);
-        skyMiddle = interpolateColor('#2a2a6e', '#FFC966', t);
-        skyBottom = interpolateColor('#3a3a8e', '#FFD88A', t);
+        skyTop = interpolateColor('#2C3E7A', '#FF6B9D', t);       // Azul noite → Rosa vibrante
+        skyMiddle = interpolateColor('#3D5A9E', '#FFA7C4', t);    // Azul noite médio → Rosa claro
+        skyBottom = interpolateColor('#5876B8', '#FFD4E5', t);    // Azul noite claro → Rosa pálido
     } else {
-        // Amanhecer → Dia
+        // Amanhecer → Dia celestial
         const t = (progression - 0.75) * 4;
-        skyTop = interpolateColor('#FFB347', '#87CEEB', t);
-        skyMiddle = interpolateColor('#FFC966', '#B0E0E6', t);
-        skyBottom = interpolateColor('#FFD88A', '#E0F6FF', t);
+        skyTop = interpolateColor('#FF6B9D', '#5DADE2', t);       // Rosa → Azul celeste
+        skyMiddle = interpolateColor('#FFA7C4', '#85C1E9', t);    // Rosa claro → Azul claro
+        skyBottom = interpolateColor('#FFD4E5', '#AED6F1', t);    // Rosa pálido → Azul muito claro
     }
 
     const gradient = ctx.createLinearGradient(0, 0, 0, game.height);
@@ -919,7 +919,99 @@ function drawSkyBackground(ctx) {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, game.width, game.height);
 
-    // Estrelas (fase noturna)
+    // Sol/Lua celestial (mais detalhado)
+    const time = Date.now() / 1000;
+    let celestialX = game.width * 0.7;
+    let celestialY;
+
+    if (progression < 0.5) {
+        // Sol durante o dia
+        celestialY = game.height * 0.25 + Math.sin(progression * Math.PI * 2) * 50;
+
+        // Raios de luz do sol (god rays)
+        if (progression < 0.4) {
+            const rayCount = 12;
+            const rayOpacity = 0.1 * (1 - progression / 0.4);
+
+            for (let i = 0; i < rayCount; i++) {
+                const angle = (i * Math.PI * 2 / rayCount) + time * 0.2;
+                const rayLength = 150 + Math.sin(time + i) * 30;
+
+                const rayGradient = ctx.createLinearGradient(
+                    celestialX, celestialY,
+                    celestialX + Math.cos(angle) * rayLength,
+                    celestialY + Math.sin(angle) * rayLength
+                );
+                rayGradient.addColorStop(0, `rgba(255, 230, 150, ${rayOpacity * 0.6})`);
+                rayGradient.addColorStop(1, 'rgba(255, 230, 150, 0)');
+
+                ctx.fillStyle = rayGradient;
+                ctx.beginPath();
+                ctx.moveTo(celestialX, celestialY);
+                ctx.arc(celestialX, celestialY, rayLength, angle - 0.1, angle + 0.1);
+                ctx.closePath();
+                ctx.fill();
+            }
+        }
+
+        // Brilho do sol
+        const sunGlow = ctx.createRadialGradient(celestialX, celestialY, 0, celestialX, celestialY, 80);
+        sunGlow.addColorStop(0, 'rgba(255, 255, 200, 0.4)');
+        sunGlow.addColorStop(0.5, 'rgba(255, 230, 150, 0.2)');
+        sunGlow.addColorStop(1, 'rgba(255, 200, 100, 0)');
+        ctx.fillStyle = sunGlow;
+        ctx.beginPath();
+        ctx.arc(celestialX, celestialY, 80, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Corpo do sol
+        const sunGradient = ctx.createRadialGradient(celestialX - 15, celestialY - 15, 10, celestialX, celestialY, 50);
+        sunGradient.addColorStop(0, '#fffef0');
+        sunGradient.addColorStop(0.6, '#ffe066');
+        sunGradient.addColorStop(1, '#ffb347');
+        ctx.fillStyle = sunGradient;
+        ctx.beginPath();
+        ctx.arc(celestialX, celestialY, 50, 0, Math.PI * 2);
+        ctx.fill();
+
+    } else {
+        // Lua durante a noite
+        celestialY = game.height * 0.25 + Math.sin((progression - 0.5) * Math.PI * 2) * 50;
+
+        // Brilho da lua
+        const moonGlow = ctx.createRadialGradient(celestialX, celestialY, 0, celestialX, celestialY, 70);
+        moonGlow.addColorStop(0, 'rgba(220, 230, 255, 0.3)');
+        moonGlow.addColorStop(0.6, 'rgba(200, 210, 255, 0.15)');
+        moonGlow.addColorStop(1, 'rgba(180, 190, 255, 0)');
+        ctx.fillStyle = moonGlow;
+        ctx.beginPath();
+        ctx.arc(celestialX, celestialY, 70, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Corpo da lua
+        const moonGradient = ctx.createRadialGradient(celestialX - 10, celestialY - 10, 5, celestialX, celestialY, 40);
+        moonGradient.addColorStop(0, '#f0f0ff');
+        moonGradient.addColorStop(0.7, '#d0d0e8');
+        moonGradient.addColorStop(1, '#b0b0cc');
+        ctx.fillStyle = moonGradient;
+        ctx.beginPath();
+        ctx.arc(celestialX, celestialY, 40, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Crateras da lua
+        ctx.fillStyle = 'rgba(150, 150, 180, 0.3)';
+        ctx.beginPath();
+        ctx.arc(celestialX + 10, celestialY - 8, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(celestialX - 12, celestialY + 5, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(celestialX + 5, celestialY + 15, 6, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Estrelas e constelações (fase noturna) - melhoradas
     if (progression >= 0.25 && progression <= 0.75) {
         let starOpacity;
         if (progression < 0.5) {
@@ -928,18 +1020,52 @@ function drawSkyBackground(ctx) {
             starOpacity = 1 - ((progression - 0.5) * 4);
         }
 
-        ctx.fillStyle = `rgba(255, 255, 255, ${starOpacity * 0.9})`;
         const starSeed = Math.floor(game.camera.x / 1000);
-        for (let i = 0; i < 80; i++) {
-            const x = ((i * 137 + starSeed * 73) % game.width);
-            const y = ((i * 211 + starSeed * 97) % (game.height * 0.7));
-            const size = 1 + (i % 4) * 0.5;
 
-            // Piscar estrelas
-            const twinkle = 0.5 + Math.sin(Date.now() / 300 + i) * 0.5;
-            ctx.globalAlpha = starOpacity * twinkle;
-            ctx.fillRect(x, y, size, size);
-            ctx.globalAlpha = 1;
+        // Estrelas normais (maiores e mais vibrantes)
+        for (let i = 0; i < 100; i++) {
+            const x = ((i * 137 + starSeed * 73) % game.width);
+            const y = ((i * 211 + starSeed * 97) % (game.height * 0.8));
+            const size = 1.5 + (i % 5) * 0.5;
+            const twinkle = 0.5 + Math.sin(time * 2 + i) * 0.5;
+
+            // Brilho da estrela
+            ctx.fillStyle = `rgba(255, 255, 255, ${starOpacity * twinkle * 0.3})`;
+            ctx.beginPath();
+            ctx.arc(x, y, size * 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Corpo da estrela
+            ctx.fillStyle = `rgba(255, 255, 220, ${starOpacity * twinkle})`;
+            ctx.fillRect(x - size/2, y - size/2, size, size);
+
+            // Brilho interno
+            ctx.fillStyle = `rgba(255, 255, 255, ${starOpacity * twinkle})`;
+            ctx.fillRect(x - size/4, y - size/4, size/2, size/2);
+        }
+
+        // Estrelas cadentes ocasionais
+        if (Math.sin(time * 0.5) > 0.95) {
+            const shootingStarX = game.width * 0.2 + (time * 100) % (game.width * 0.6);
+            const shootingStarY = game.height * 0.2 + Math.sin(time * 2) * 100;
+
+            const tailGradient = ctx.createLinearGradient(shootingStarX, shootingStarY, shootingStarX - 60, shootingStarY + 30);
+            tailGradient.addColorStop(0, `rgba(255, 255, 255, ${starOpacity * 0.8})`);
+            tailGradient.addColorStop(0.5, `rgba(200, 220, 255, ${starOpacity * 0.4})`);
+            tailGradient.addColorStop(1, 'rgba(150, 180, 255, 0)');
+
+            ctx.strokeStyle = tailGradient;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(shootingStarX, shootingStarY);
+            ctx.lineTo(shootingStarX - 60, shootingStarY + 30);
+            ctx.stroke();
+
+            // Estrela principal
+            ctx.fillStyle = `rgba(255, 255, 255, ${starOpacity})`;
+            ctx.beginPath();
+            ctx.arc(shootingStarX, shootingStarY, 3, 0, Math.PI * 2);
+            ctx.fill();
         }
     }
 
@@ -975,114 +1101,335 @@ function drawSkyBackground(ctx) {
         ctx.fill();
     }
 
-    // Camada 3 - Ilhas flutuantes melhoradas (plataformas celestiais)
+    // Camada 3 - Ilhas flutuantes celestiais (REFORMULADAS)
     const parallax3 = game.camera.x * 0.35;
     const floatTime = Date.now() / 2000;
 
-    for (let i = -1; i < 8; i++) {
-        const baseX = i * 300 - (parallax3 % 300);
-        const baseY = 300 + (i % 3) * 80;
-        const islandWidth = 100 + (i % 3) * 40;
-        const floatOffset = Math.sin(floatTime + i * 0.7) * 15;
+    // Definir tipos de ilhas (pequena, média, grande)
+    const islandTypes = [
+        { width: 120, height: 60, type: 'small' },
+        { width: 180, height: 90, type: 'medium' },
+        { width: 240, height: 110, type: 'large' }
+    ];
+
+    for (let i = -1; i < 7; i++) {
+        const islandType = islandTypes[((i % 3) + 3) % 3];
+        const spacing = 400; // Mais espaço entre ilhas
+        const baseX = i * spacing - (parallax3 % spacing);
+        const baseY = 250 + (i % 4) * 90; // Mais variação vertical
+        const floatOffset = Math.sin(floatTime + i * 0.7) * 18;
         const y = baseY + floatOffset;
         const x = baseX;
+        const islandWidth = islandType.width;
+        const islandHeight = islandType.height;
 
-        // Sombra embaixo (deslocada)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        // Sombra difusa embaixo
+        ctx.fillStyle = 'rgba(100, 100, 150, 0.12)';
         ctx.beginPath();
-        ctx.ellipse(x + islandWidth/2, baseY + 70, islandWidth/2.2, 12, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + islandWidth/2, baseY + islandHeight + 20, islandWidth/1.8, 18, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Base rochosa inferior (pedras penduradas)
-        const bottomRockGradient = ctx.createLinearGradient(x, y + 20, x, y + 50);
-        bottomRockGradient.addColorStop(0, '#8b7355');
-        bottomRockGradient.addColorStop(1, '#5a4a3a');
+        // Base rochosa inferior (cristais e pedras penduradas) - mais detalhada
+        const bottomRockGradient = ctx.createLinearGradient(x, y + islandHeight * 0.6, x, y + islandHeight);
+        bottomRockGradient.addColorStop(0, '#9b8b7e');
+        bottomRockGradient.addColorStop(0.5, '#7a6a5d');
+        bottomRockGradient.addColorStop(1, '#5a4a3d');
         ctx.fillStyle = bottomRockGradient;
-        ctx.beginPath();
-        ctx.ellipse(x + islandWidth/2, y + 35, islandWidth/2.5, 15, 0, 0, Math.PI * 2);
-        ctx.fill();
 
-        // Base rochosa principal da ilha
-        const islandGradient = ctx.createLinearGradient(x, y - 10, x, y + 30);
-        islandGradient.addColorStop(0, '#a89070');
-        islandGradient.addColorStop(0.6, '#8b7355');
-        islandGradient.addColorStop(1, '#6a5a4a');
+        // Múltiplos "estalactites" de rocha
+        for (let s = 0; s < 3; s++) {
+            const stalX = x + islandWidth * (0.3 + s * 0.2);
+            const stalWidth = 15 + s * 8;
+            const stalHeight = 20 + s * 5;
+
+            ctx.beginPath();
+            ctx.moveTo(stalX - stalWidth/2, y + islandHeight * 0.65);
+            ctx.quadraticCurveTo(stalX, y + islandHeight * 0.65 + stalHeight, stalX + stalWidth/2, y + islandHeight * 0.65);
+            ctx.closePath();
+            ctx.fill();
+
+            // Highlight nas pedras
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.beginPath();
+            ctx.arc(stalX - stalWidth/4, y + islandHeight * 0.68, stalWidth/5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = bottomRockGradient;
+        }
+
+        // Corpo principal da ilha - formato mais orgânico
+        const islandGradient = ctx.createLinearGradient(x, y, x, y + islandHeight * 0.7);
+        islandGradient.addColorStop(0, '#d4c4b0');
+        islandGradient.addColorStop(0.3, '#b4a490');
+        islandGradient.addColorStop(0.7, '#948470');
+        islandGradient.addColorStop(1, '#746450');
         ctx.fillStyle = islandGradient;
 
-        // Formato irregular de ilha
+        // Formato irregular mais natural (usando múltiplas curvas)
         ctx.beginPath();
-        ctx.moveTo(x + islandWidth * 0.2, y + 10);
-        ctx.quadraticCurveTo(x + islandWidth/2, y - 15, x + islandWidth * 0.8, y + 10);
-        ctx.quadraticCurveTo(x + islandWidth * 0.9, y + 25, x + islandWidth * 0.5, y + 20);
-        ctx.quadraticCurveTo(x + islandWidth * 0.1, y + 25, x + islandWidth * 0.2, y + 10);
+        ctx.moveTo(x + islandWidth * 0.15, y + islandHeight * 0.5);
+        // Lado esquerdo
+        ctx.quadraticCurveTo(x + islandWidth * 0.1, y + islandHeight * 0.3, x + islandWidth * 0.2, y + islandHeight * 0.15);
+        ctx.quadraticCurveTo(x + islandWidth * 0.3, y, x + islandWidth * 0.5, y - 5);
+        // Topo
+        ctx.quadraticCurveTo(x + islandWidth * 0.7, y, x + islandWidth * 0.8, y + islandHeight * 0.15);
+        // Lado direito
+        ctx.quadraticCurveTo(x + islandWidth * 0.9, y + islandHeight * 0.3, x + islandWidth * 0.85, y + islandHeight * 0.5);
+        // Base
+        ctx.quadraticCurveTo(x + islandWidth * 0.8, y + islandHeight * 0.65, x + islandWidth * 0.5, y + islandHeight * 0.7);
+        ctx.quadraticCurveTo(x + islandWidth * 0.2, y + islandHeight * 0.65, x + islandWidth * 0.15, y + islandHeight * 0.5);
         ctx.closePath();
         ctx.fill();
 
-        // Detalhes de rocha (textura)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-        for (let r = 0; r < 4; r++) {
-            const rx = x + (islandWidth * 0.3) + (r * islandWidth * 0.15);
-            const ry = y + 5 + ((r % 2) * 8);
-            ctx.fillRect(rx, ry, 8, 6);
+        // Textura de rocha (fissuras e detalhes)
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.lineWidth = 2;
+        for (let r = 0; r < 5; r++) {
+            const rx = x + (islandWidth * 0.25) + (r * islandWidth * 0.12);
+            const ry = y + islandHeight * 0.3 + ((r % 2) * islandHeight * 0.15);
+            const crackLength = 15 + (r % 3) * 8;
+
+            ctx.beginPath();
+            ctx.moveTo(rx, ry);
+            ctx.lineTo(rx + crackLength, ry + crackLength * 0.5);
+            ctx.stroke();
         }
 
-        // Camada de grama/solo no topo
-        const grassGradient = ctx.createLinearGradient(x, y - 15, x, y - 5);
-        grassGradient.addColorStop(0, '#6fa865');
-        grassGradient.addColorStop(1, '#52d681');
+        // Cristais brilhantes na rocha
+        const crystalColors = ['rgba(138, 92, 246, 0.6)', 'rgba(167, 139, 250, 0.6)', 'rgba(196, 181, 253, 0.6)'];
+        for (let c = 0; c < 3; c++) {
+            const cx = x + islandWidth * (0.3 + c * 0.2);
+            const cy = y + islandHeight * (0.35 + (c % 2) * 0.15);
+            const cSize = 6 + (c % 2) * 4;
+
+            ctx.fillStyle = crystalColors[c % 3];
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - cSize);
+            ctx.lineTo(cx + cSize/2, cy);
+            ctx.lineTo(cx, cy - cSize/3);
+            ctx.lineTo(cx - cSize/2, cy);
+            ctx.closePath();
+            ctx.fill();
+
+            // Brilho do cristal
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.beginPath();
+            ctx.arc(cx, cy - cSize * 0.7, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Camada de terra/grama celestial no topo
+        const grassGradient = ctx.createLinearGradient(x, y - 8, x, y + 12);
+        grassGradient.addColorStop(0, '#8fd687');
+        grassGradient.addColorStop(0.5, '#6fb867');
+        grassGradient.addColorStop(1, '#5a9d56');
         ctx.fillStyle = grassGradient;
+
         ctx.beginPath();
-        ctx.moveTo(x + islandWidth * 0.25, y);
-        ctx.quadraticCurveTo(x + islandWidth/2, y - 18, x + islandWidth * 0.75, y);
-        ctx.quadraticCurveTo(x + islandWidth * 0.8, y + 5, x + islandWidth * 0.5, y + 3);
-        ctx.quadraticCurveTo(x + islandWidth * 0.2, y + 5, x + islandWidth * 0.25, y);
+        ctx.moveTo(x + islandWidth * 0.2, y + islandHeight * 0.15);
+        ctx.quadraticCurveTo(x + islandWidth * 0.35, y - 8, x + islandWidth * 0.5, y - 10);
+        ctx.quadraticCurveTo(x + islandWidth * 0.65, y - 8, x + islandWidth * 0.8, y + islandHeight * 0.15);
+        ctx.quadraticCurveTo(x + islandWidth * 0.75, y + islandHeight * 0.25, x + islandWidth * 0.5, y + islandHeight * 0.22);
+        ctx.quadraticCurveTo(x + islandWidth * 0.25, y + islandHeight * 0.25, x + islandWidth * 0.2, y + islandHeight * 0.15);
         ctx.closePath();
         ctx.fill();
 
-        // Tufos de grama
-        ctx.fillStyle = '#4CAF50';
-        for (let g = 0; g < 5; g++) {
-            const gx = x + (islandWidth * 0.3) + (g * islandWidth * 0.12);
-            const gy = y - 10 + Math.sin(g * 1.5) * 3;
-            ctx.fillRect(gx, gy, 3, 6);
+        // Highlight na grama
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.beginPath();
+        ctx.ellipse(x + islandWidth * 0.5, y - 5, islandWidth * 0.2, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Tufos de grama mais detalhados
+        ctx.fillStyle = '#5a9d56';
+        const grassCount = Math.floor(islandWidth / 20);
+        for (let g = 0; g < grassCount; g++) {
+            const gx = x + islandWidth * (0.25 + g * 0.1);
+            const gy = y - 2 + Math.sin(g * 1.5) * 4;
+            const tuftHeight = 8 + (g % 3) * 2;
+
+            // Tufo com outline
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.moveTo(gx, gy);
+            ctx.lineTo(gx - 2, gy + tuftHeight);
+            ctx.lineTo(gx + 2, gy + tuftHeight);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#6fb867';
+            ctx.beginPath();
+            ctx.moveTo(gx, gy);
+            ctx.lineTo(gx - 1.5, gy + tuftHeight);
+            ctx.lineTo(gx + 1.5, gy + tuftHeight);
+            ctx.closePath();
+            ctx.fill();
         }
 
-        // Árvore pequena (em algumas ilhas)
-        if (i % 3 === 0) {
-            const treeX = x + islandWidth * 0.6;
-            const treeY = y - 12;
+        // Elementos decorativos baseados no tipo de ilha
+        if (islandType.type === 'large') {
+            // Ilha grande: árvore celestial + ruínas
+            const treeX = x + islandWidth * 0.65;
+            const treeY = y - 5;
 
-            // Tronco
-            ctx.fillStyle = '#6d4c41';
-            ctx.fillRect(treeX - 3, treeY, 6, 20);
+            // Tronco com textura
+            const trunkGradient = ctx.createLinearGradient(treeX - 5, treeY, treeX + 5, treeY + 35);
+            trunkGradient.addColorStop(0, '#8b6f47');
+            trunkGradient.addColorStop(1, '#6d4c41');
+            ctx.fillStyle = trunkGradient;
+            ctx.fillRect(treeX - 5, treeY, 10, 35);
 
-            // Copa (3 camadas de folhagem)
-            ctx.fillStyle = '#2e7d32';
-            ctx.beginPath();
-            ctx.arc(treeX - 6, treeY + 2, 10, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#388e3c';
-            ctx.beginPath();
-            ctx.arc(treeX + 5, treeY + 1, 9, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#4caf50';
-            ctx.beginPath();
-            ctx.arc(treeX, treeY - 5, 11, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        // Flores (em algumas ilhas)
-        if (i % 2 === 1) {
-            const flowerColors = ['#ff6b9d', '#ffd93d', '#a78bfa'];
-            for (let f = 0; f < 3; f++) {
-                const fx = x + (islandWidth * 0.35) + (f * islandWidth * 0.15);
-                const fy = y - 8;
-                ctx.fillStyle = flowerColors[f % 3];
+            // Textura do tronco
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 1;
+            for (let t = 0; t < 3; t++) {
                 ctx.beginPath();
-                ctx.arc(fx, fy, 3, 0, Math.PI * 2);
+                ctx.moveTo(treeX - 4, treeY + 10 + t * 8);
+                ctx.lineTo(treeX + 4, treeY + 10 + t * 8);
+                ctx.stroke();
+            }
+
+            // Copa com múltiplas camadas
+            const foliageColors = ['#4a7c59', '#5a9d56', '#6fb867', '#8fd687'];
+            for (let l = 3; l >= 0; l--) {
+                ctx.fillStyle = foliageColors[l];
+                ctx.beginPath();
+                ctx.arc(treeX + (l % 2 === 0 ? -8 : 8), treeY + 5 + l * 6, 13 - l * 1.5, 0, Math.PI * 2);
                 ctx.fill();
             }
+
+            // Brilho na copa
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.beginPath();
+            ctx.arc(treeX - 8, treeY + 8, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Ruínas antigas (pilar quebrado)
+            const ruinX = x + islandWidth * 0.25;
+            const ruinY = y + 5;
+
+            ctx.fillStyle = '#9b9b9b';
+            ctx.fillRect(ruinX, ruinY, 15, 25);
+
+            // Detalhes da ruína
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+            ctx.fillRect(ruinX + 2, ruinY + 5, 11, 2);
+            ctx.fillRect(ruinX + 2, ruinY + 15, 11, 2);
+
+            // Topo quebrado
+            ctx.fillStyle = '#7b7b7b';
+            ctx.beginPath();
+            ctx.moveTo(ruinX - 2, ruinY);
+            ctx.lineTo(ruinX + 8, ruinY - 8);
+            ctx.lineTo(ruinX + 17, ruinY);
+            ctx.closePath();
+            ctx.fill();
+
+        } else if (islandType.type === 'medium') {
+            // Ilha média: arbusto celestial + flores
+            const bushX = x + islandWidth * 0.6;
+            const bushY = y + 5;
+
+            // Arbusto celestial
+            const bushColors = ['#6fb867', '#8fd687', '#aef5a4'];
+            for (let b = 2; b >= 0; b--) {
+                ctx.fillStyle = bushColors[b];
+                ctx.beginPath();
+                ctx.arc(bushX + (b % 2 === 0 ? -6 : 6), bushY - 8 + b * 3, 12 - b * 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Flores celestiais brilhantes
+            const flowerColors = ['#ff6bcf', '#ffd93d', '#a78bfa', '#4dd0e1'];
+            const flowerCount = 4;
+            for (let f = 0; f < flowerCount; f++) {
+                const fx = x + islandWidth * (0.25 + f * 0.15);
+                const fy = y + 2;
+
+                // Haste
+                ctx.strokeStyle = '#6fb867';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(fx, fy);
+                ctx.lineTo(fx, fy - 10);
+                ctx.stroke();
+
+                // Flor com brilho
+                ctx.fillStyle = flowerColors[f % 4];
+                ctx.beginPath();
+                ctx.arc(fx, fy - 12, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Pétalas
+                for (let p = 0; p < 6; p++) {
+                    const angle = (p * Math.PI * 2 / 6);
+                    const px = fx + Math.cos(angle) * 5;
+                    const py = fy - 12 + Math.sin(angle) * 5;
+                    ctx.beginPath();
+                    ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Centro brilhante
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.beginPath();
+                ctx.arc(fx, fy - 12, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+        } else {
+            // Ilha pequena: cogumelos brilhantes
+            const mushroomCount = 2;
+            for (let m = 0; m < mushroomCount; m++) {
+                const mx = x + islandWidth * (0.35 + m * 0.3);
+                const my = y + 8;
+                const mSize = 8 + (m % 2) * 3;
+
+                // Caule
+                ctx.fillStyle = '#f5f5dc';
+                ctx.fillRect(mx - 2, my - mSize, 4, mSize);
+
+                // Chapéu brilhante
+                const capGradient = ctx.createRadialGradient(mx, my - mSize, 0, mx, my - mSize, mSize);
+                capGradient.addColorStop(0, '#ff6bcf');
+                capGradient.addColorStop(0.7, '#d946ef');
+                capGradient.addColorStop(1, '#a855f7');
+                ctx.fillStyle = capGradient;
+                ctx.beginPath();
+                ctx.ellipse(mx, my - mSize, mSize * 0.8, mSize * 0.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Brilho mágico
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.beginPath();
+                ctx.arc(mx - 2, my - mSize - 1, 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Partículas de luz ao redor
+                const particleTime = Date.now() / 800;
+                for (let pp = 0; pp < 3; pp++) {
+                    const pAngle = particleTime + pp * (Math.PI * 2 / 3);
+                    const pDist = 12 + Math.sin(particleTime * 2 + pp) * 3;
+                    const ppx = mx + Math.cos(pAngle) * pDist;
+                    const ppy = my - mSize + Math.sin(pAngle) * pDist;
+                    const pOpacity = 0.4 + Math.sin(particleTime * 3 + pp) * 0.3;
+
+                    ctx.fillStyle = `rgba(255, 107, 207, ${pOpacity})`;
+                    ctx.beginPath();
+                    ctx.arc(ppx, ppy, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
         }
+
+        // Efeito de névoa/aura celestial ao redor da ilha
+        const auraGradient = ctx.createRadialGradient(x + islandWidth/2, y + islandHeight/2, islandWidth * 0.3, x + islandWidth/2, y + islandHeight/2, islandWidth * 0.8);
+        auraGradient.addColorStop(0, 'rgba(196, 181, 253, 0.08)');
+        auraGradient.addColorStop(0.5, 'rgba(167, 139, 250, 0.04)');
+        auraGradient.addColorStop(1, 'rgba(138, 92, 246, 0)');
+        ctx.fillStyle = auraGradient;
+        ctx.beginPath();
+        ctx.ellipse(x + islandWidth/2, y + islandHeight/2, islandWidth * 0.8, islandHeight * 0.8, 0, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     // Camada 4 - Pássaros voando

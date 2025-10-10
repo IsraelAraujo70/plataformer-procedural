@@ -866,6 +866,16 @@ export class Chunk {
                 this.drawBird(ctx, screenX, screenY, decor.variant);
             } else if (decor.type === 'star') {
                 this.drawStar(ctx, screenX, screenY, decor.variant);
+            } else if (decor.type === 'rainbow') {
+                this.drawRainbow(ctx, screenX, screenY, decor.variant);
+            } else if (decor.type === 'light_ray') {
+                this.drawLightRay(ctx, screenX, screenY, decor.variant);
+            } else if (decor.type === 'balloon') {
+                this.drawBalloon(ctx, screenX, screenY, decor.variant);
+            } else if (decor.type === 'kite') {
+                this.drawKite(ctx, screenX, screenY, decor.variant);
+            } else if (decor.type === 'celestial_crystal') {
+                this.drawCelestialCrystal(ctx, screenX, screenY, decor.variant);
             }
         });
     }
@@ -990,6 +1000,108 @@ export class Chunk {
     }
 
     drawFloatingPlatform(ctx, x, y, width, height) {
+        // Plataformas flutuantes se adaptam ao bioma
+        if (this.biome.name === 'Sky') {
+            // NUVEM SÓLIDA para bioma Sky
+            this.drawCloudPlatform(ctx, x, y, width, height);
+        } else {
+            // Plataforma cristalina padrão para outros biomas
+            this.drawCrystalPlatform(ctx, x, y, width, height);
+        }
+    }
+
+    drawCloudPlatform(ctx, x, y, width, height) {
+        const time = Date.now() / 1000;
+        const seed = Math.floor(x / 100);
+
+        // Sombra suave embaixo da nuvem
+        ctx.fillStyle = 'rgba(100, 120, 150, 0.15)';
+        ctx.beginPath();
+        ctx.ellipse(x + width/2, y + height + 8, width/2 - 5, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Hitbox visual para debug (outline da área real de colisão)
+        // Desenhar retângulo sólido simplificado para colisão clara
+        ctx.fillStyle = 'rgba(180, 200, 220, 0.3)';
+        ctx.fillRect(x, y, width, height);
+
+        // Base da nuvem - formato orgânico com cores mais saturadas e distintas
+        const cloudGradient = ctx.createLinearGradient(x, y - 5, x, y + height + 5);
+        cloudGradient.addColorStop(0, '#e8f4f8');      // Azul claro suave
+        cloudGradient.addColorStop(0.3, '#d4e8f0');    // Azul claro médio
+        cloudGradient.addColorStop(0.7, '#c0dce8');    // Azul acinzentado
+        cloudGradient.addColorStop(1, '#a8c8d8');      // Azul mais escuro
+        ctx.fillStyle = cloudGradient;
+
+        // Corpo principal (forma irregular de nuvem)
+        const puffCount = Math.max(3, Math.floor(width / 40));
+        for (let i = 0; i < puffCount; i++) {
+            const puffX = x + (i * width / (puffCount - 1));
+            const puffRadius = (width / puffCount) * (0.6 + (seed + i) % 10 / 20);
+            const puffY = y + height/2 - 5 + Math.sin(time * 0.5 + i) * 2;
+
+            ctx.beginPath();
+            ctx.ellipse(puffX, puffY, puffRadius, height * 0.8, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Topo da nuvem (camada extra para dar volume)
+        const topGradient = ctx.createLinearGradient(x, y - 8, x, y + height * 0.4);
+        topGradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+        topGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = topGradient;
+
+        for (let i = 0; i < puffCount; i++) {
+            const puffX = x + (i * width / (puffCount - 1));
+            const puffRadius = (width / puffCount) * 0.5;
+            const puffY = y - 3;
+
+            ctx.beginPath();
+            ctx.ellipse(puffX, puffY, puffRadius, height * 0.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Brilho suave no topo
+        const highlightGradient = ctx.createRadialGradient(x + width/2, y, 0, x + width/2, y, width/2);
+        highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.6)');
+        highlightGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.2)');
+        highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = highlightGradient;
+        ctx.beginPath();
+        ctx.ellipse(x + width/2, y + 2, width/2.5, height * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Partículas de névoa ao redor
+        const particleCount = Math.max(4, Math.floor(width / 25));
+        for (let i = 0; i < particleCount; i++) {
+            const angle = time * 0.8 + i * (Math.PI * 2 / particleCount);
+            const radius = width/2 + 15 + Math.sin(time * 2 + i) * 8;
+            const px = x + width/2 + Math.cos(angle) * radius;
+            const py = y + height/2 + Math.sin(angle) * (height/2 + 10);
+            const opacity = 0.3 + Math.sin(time * 3 + i) * 0.2;
+            const size = 3 + Math.sin(time * 2.5 + i) * 2;
+
+            ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+            ctx.beginPath();
+            ctx.arc(px, py, size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Contorno sutil apenas
+        ctx.strokeStyle = 'rgba(140, 170, 200, 0.3)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let i = 0; i < puffCount; i++) {
+            const puffX = x + (i * width / (puffCount - 1));
+            const puffRadius = (width / puffCount) * (0.6 + (seed + i) % 10 / 20);
+            const puffY = y + height/2 - 5;
+
+            ctx.ellipse(puffX, puffY, puffRadius, height * 0.8, 0, 0, Math.PI * 2);
+        }
+        ctx.stroke();
+    }
+
+    drawCrystalPlatform(ctx, x, y, width, height) {
         // OUTLINE PRETO GROSSO (estilo cartoon) - arredondado
         ctx.fillStyle = '#000000';
         ctx.beginPath();
@@ -1399,5 +1511,250 @@ export class Chunk {
         ctx.beginPath();
         ctx.arc(x, y - 8, 1, 0, Math.PI * 2);
         ctx.fill();
+    }
+
+    // Novas decorações do bioma SKY
+    drawRainbow(ctx, x, y, variant) {
+        const width = 80 + variant * 20;
+        const height = 40 + variant * 10;
+        const colors = [
+            'rgba(255, 0, 0, 0.5)',      // Vermelho
+            'rgba(255, 127, 0, 0.5)',    // Laranja
+            'rgba(255, 255, 0, 0.5)',    // Amarelo
+            'rgba(0, 255, 0, 0.5)',      // Verde
+            'rgba(0, 0, 255, 0.5)',      // Azul
+            'rgba(75, 0, 130, 0.5)',     // Índigo
+            'rgba(148, 0, 211, 0.5)'     // Violeta
+        ];
+
+        ctx.lineWidth = 4;
+        for (let i = colors.length - 1; i >= 0; i--) {
+            ctx.strokeStyle = colors[i];
+            ctx.beginPath();
+            ctx.arc(x + width/2, y + height, width/2 - (i * 5), height - (i * 5), Math.PI, 0, true);
+            ctx.stroke();
+        }
+
+        // Brilho suave
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x + width/2, y + height, width/2 + 2, height + 2, Math.PI, 0, true);
+        ctx.stroke();
+    }
+
+    drawLightRay(ctx, x, y, variant) {
+        const time = Date.now() / 1000;
+        const opacity = 0.15 + Math.sin(time + variant) * 0.1;
+        const rayWidth = 30 + variant * 15;
+        const rayLength = 100 + variant * 40;
+
+        // Raio de luz com gradiente
+        const gradient = ctx.createLinearGradient(x, y - rayLength, x, y);
+        gradient.addColorStop(0, `rgba(255, 255, 200, ${opacity * 0.5})`);
+        gradient.addColorStop(0.5, `rgba(255, 255, 220, ${opacity})`);
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.moveTo(x - rayWidth/2, y - rayLength);
+        ctx.lineTo(x + rayWidth/2, y - rayLength);
+        ctx.lineTo(x + rayWidth * 1.5, y);
+        ctx.lineTo(x - rayWidth * 1.5, y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Brilho central mais intenso
+        const centerGradient = ctx.createLinearGradient(x, y - rayLength, x, y);
+        centerGradient.addColorStop(0, `rgba(255, 255, 255, ${opacity * 0.8})`);
+        centerGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+        ctx.fillStyle = centerGradient;
+        ctx.beginPath();
+        ctx.moveTo(x - rayWidth/6, y - rayLength);
+        ctx.lineTo(x + rayWidth/6, y - rayLength);
+        ctx.lineTo(x + rayWidth/2, y);
+        ctx.lineTo(x - rayWidth/2, y);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    drawBalloon(ctx, x, y, variant) {
+        const time = Date.now() / 1000;
+        const floatOffset = Math.sin(time * 2 + variant) * 4;
+        const balloonY = y - 20 + floatOffset;
+        const balloonColors = ['#ff6b9d', '#ffd93d', '#a78bfa'];
+        const color = balloonColors[variant % 3];
+        const size = 10 + variant * 2;
+
+        // Linha (corda)
+        ctx.strokeStyle = 'rgba(100, 100, 100, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, balloonY + size);
+        ctx.stroke();
+
+        // Balão (corpo oval)
+        const balloonGradient = ctx.createRadialGradient(x - size/3, balloonY - size/3, 0, x, balloonY, size);
+        balloonGradient.addColorStop(0, color);
+        balloonGradient.addColorStop(0.7, color);
+        balloonGradient.addColorStop(1, 'rgba(0, 0, 0, 0.2)');
+        ctx.fillStyle = balloonGradient;
+
+        ctx.beginPath();
+        ctx.ellipse(x, balloonY, size * 0.8, size, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Brilho
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.beginPath();
+        ctx.arc(x - size/3, balloonY - size/2, size/3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Nó do balão
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, balloonY + size, 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawKite(ctx, x, y, variant) {
+        const time = Date.now() / 1000;
+        const kiteY = y - 25 + Math.sin(time * 1.5 + variant) * 5;
+        const kiteX = x + Math.sin(time + variant) * 3;
+        const size = 12 + variant * 3;
+        const kiteColors = [
+            { main: '#ff6b9d', accent: '#ff1744' },
+            { main: '#ffd93d', accent: '#ffa726' },
+            { main: '#4dd0e1', accent: '#0097a7' }
+        ];
+        const colors = kiteColors[variant % 3];
+
+        // Linha (corda ondulante)
+        ctx.strokeStyle = 'rgba(100, 100, 100, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        for (let i = 0; i <= 10; i++) {
+            const segY = y - (i * (kiteY - y + size) / 10);
+            const segX = x + Math.sin(time * 2 + i * 0.5) * 2;
+            ctx.lineTo(segX, segY);
+        }
+        ctx.stroke();
+
+        // Pipa (losango)
+        ctx.fillStyle = colors.main;
+        ctx.beginPath();
+        ctx.moveTo(kiteX, kiteY - size);              // Topo
+        ctx.lineTo(kiteX + size * 0.7, kiteY);        // Direita
+        ctx.lineTo(kiteX, kiteY + size);              // Baixo
+        ctx.lineTo(kiteX - size * 0.7, kiteY);        // Esquerda
+        ctx.closePath();
+        ctx.fill();
+
+        // Detalhes (cruz interna)
+        ctx.strokeStyle = colors.accent;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(kiteX, kiteY - size);
+        ctx.lineTo(kiteX, kiteY + size);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(kiteX - size * 0.7, kiteY);
+        ctx.lineTo(kiteX + size * 0.7, kiteY);
+        ctx.stroke();
+
+        // Rabos da pipa
+        const tailCount = 3;
+        for (let i = 0; i < tailCount; i++) {
+            const tailY = kiteY + size + 5 + i * 8;
+            const tailX = kiteX + Math.sin(time * 3 + i) * 4;
+
+            ctx.fillStyle = i % 2 === 0 ? colors.main : colors.accent;
+            ctx.beginPath();
+            ctx.moveTo(tailX - 3, tailY);
+            ctx.lineTo(tailX, tailY + 5);
+            ctx.lineTo(tailX + 3, tailY);
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+
+    drawCelestialCrystal(ctx, x, y, variant) {
+        const time = Date.now() / 1000;
+        const size = 10 + variant * 3;
+        const pulse = 0.7 + Math.sin(time * 3 + variant) * 0.3;
+        const crystalColors = [
+            { main: '#a78bfa', glow: '#c4b5fd' },
+            { main: '#4dd0e1', glow: '#80deea' },
+            { main: '#ffd93d', glow: '#fff176' }
+        ];
+        const colors = crystalColors[variant % 3];
+
+        // Brilho ao redor
+        const glowGradient = ctx.createRadialGradient(x, y - size/2, 0, x, y - size/2, size * 1.5);
+        glowGradient.addColorStop(0, `${colors.glow}${Math.floor(pulse * 0.4 * 255).toString(16).padStart(2, '0')}`);
+        glowGradient.addColorStop(0.5, `${colors.glow}${Math.floor(pulse * 0.2 * 255).toString(16).padStart(2, '0')}`);
+        glowGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = glowGradient;
+        ctx.beginPath();
+        ctx.arc(x, y - size/2, size * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cristal (forma de diamante flutuante)
+        const rotation = time * 0.5 + variant;
+        ctx.save();
+        ctx.translate(x, y - size);
+        ctx.rotate(rotation);
+
+        const crystalGradient = ctx.createLinearGradient(-size/2, -size, size/2, size);
+        crystalGradient.addColorStop(0, colors.glow);
+        crystalGradient.addColorStop(0.5, colors.main);
+        crystalGradient.addColorStop(1, colors.glow);
+        ctx.fillStyle = crystalGradient;
+
+        ctx.beginPath();
+        ctx.moveTo(0, -size);              // Topo
+        ctx.lineTo(size * 0.5, 0);         // Direita
+        ctx.lineTo(0, size * 0.7);         // Baixo
+        ctx.lineTo(-size * 0.5, 0);        // Esquerda
+        ctx.closePath();
+        ctx.fill();
+
+        // Facetas internas (detalhes)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, -size);
+        ctx.lineTo(0, size * 0.7);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-size * 0.5, 0);
+        ctx.lineTo(size * 0.5, 0);
+        ctx.stroke();
+
+        // Brilho central
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.beginPath();
+        ctx.arc(0, -size * 0.4, size * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+
+        // Partículas orbitando
+        const particleCount = 3;
+        for (let i = 0; i < particleCount; i++) {
+            const angle = time * 2 + i * (Math.PI * 2 / particleCount);
+            const radius = size * 1.2;
+            const px = x + Math.cos(angle) * radius;
+            const py = y - size + Math.sin(angle) * radius;
+            const pOpacity = 0.5 + Math.sin(time * 4 + i) * 0.3;
+
+            ctx.fillStyle = `rgba(255, 255, 255, ${pOpacity})`;
+            ctx.beginPath();
+            ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 }
