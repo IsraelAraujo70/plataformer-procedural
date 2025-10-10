@@ -243,156 +243,201 @@ function drawPlainsBackground(ctx) {
 }
 
 // ============================================
-// CAVE BACKGROUND (Caverna/Vulcão - ambiente escuro com lava)
+// CAVE BACKGROUND (Caverna subterrânea misteriosa)
 // ============================================
 function drawCaveBackground(ctx) {
-    // Céu sempre escuro (noite eterna)
+    // Fundo escuro da caverna (gradiente cinza/azul escuro)
     const gradient = ctx.createLinearGradient(0, 0, 0, game.height);
-    gradient.addColorStop(0, '#1a0a0a');
-    gradient.addColorStop(0.5, '#2d1414');
-    gradient.addColorStop(1, '#3d1a1a');
+    gradient.addColorStop(0, '#0a0a15'); // Azul muito escuro
+    gradient.addColorStop(0.5, '#1a1a2e'); // Azul escuro
+    gradient.addColorStop(1, '#2a2a40'); // Azul acinzentado
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, game.width, game.height);
 
-    // Partículas de cinza/fumaça flutuantes
-    const ashParallax = game.camera.x * 0.03;
-    ctx.fillStyle = 'rgba(80, 80, 80, 0.15)';
+    const time = Date.now() / 1000;
+
+    // Partículas de poeira/umidade flutuantes
+    const dustParallax = game.camera.x * 0.03;
+    ctx.fillStyle = 'rgba(150, 150, 160, 0.1)';
     for (let i = 0; i < 40; i++) {
-        const x = ((i * 137 + Math.floor(ashParallax)) % game.width);
+        const x = ((i * 137 + Math.floor(dustParallax)) % game.width);
         const y = ((i * 211 + Date.now() / 100) % game.height);
         const size = 1 + (i % 3);
         ctx.fillRect(x, y, size, size);
     }
 
-    // Camada 1 - Vulcões distantes com lava
+    // Camada 1 - Formações rochosas distantes (paredes da caverna)
     const parallax1 = game.camera.x * 0.1;
-    const time = Date.now() / 1000;
-
     for (let i = -1; i < 3; i++) {
         const x = i * 600 - (parallax1 % 600);
-        const height = 300 + (i % 2) * 50;
+        const height = 280 + (i % 2) * 60;
 
-        // Vulcão base (gradiente escuro para dar profundidade)
-        const volcanoGradient = ctx.createLinearGradient(x + 300, game.height - height, x + 300, game.height);
-        volcanoGradient.addColorStop(0, '#2a1a1a');
-        volcanoGradient.addColorStop(1, '#0a0a0a');
-        ctx.fillStyle = volcanoGradient;
+        // Parede rochosa com gradiente
+        const wallGradient = ctx.createLinearGradient(x + 300, game.height - height, x + 300, game.height);
+        wallGradient.addColorStop(0, '#2c3e50');
+        wallGradient.addColorStop(0.7, '#34495e');
+        wallGradient.addColorStop(1, '#1a1a2a');
+        ctx.fillStyle = wallGradient;
+
         ctx.beginPath();
         ctx.moveTo(x, game.height);
+        ctx.lineTo(x + 200, game.height - height + 50);
         ctx.lineTo(x + 300, game.height - height);
+        ctx.lineTo(x + 400, game.height - height + 60);
         ctx.lineTo(x + 600, game.height);
         ctx.closePath();
         ctx.fill();
 
-        // Brilho de lava no topo (mais sutil, sem bola)
-        const craterGlow = ctx.createRadialGradient(x + 300, game.height - height + 20, 0, x + 300, game.height - height, 100);
-        craterGlow.addColorStop(0, 'rgba(255, 100, 0, 0.6)');
-        craterGlow.addColorStop(0.5, 'rgba(255, 50, 0, 0.3)');
-        craterGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
-        ctx.fillStyle = craterGlow;
-        ctx.fillRect(x + 200, game.height - height - 50, 200, 100);
+        // Cristais brilhantes na parede (roxos/azuis)
+        const crystalPulse = Math.sin(time * 0.8 + i) * 0.3 + 0.7;
 
-        // Lava escorrendo (múltiplos rios)
-        const lavaFlow1 = ctx.createLinearGradient(x + 280, game.height - height, x + 290, game.height);
-        lavaFlow1.addColorStop(0, '#ff6600');
-        lavaFlow1.addColorStop(0.5, '#ff3300');
-        lavaFlow1.addColorStop(1, '#990000');
-        ctx.fillStyle = lavaFlow1;
+        // Cristal 1 (roxo)
+        const crystalGlow1 = ctx.createRadialGradient(x + 250, game.height - height + 80, 0, x + 250, game.height - height + 80, 30);
+        crystalGlow1.addColorStop(0, `rgba(138, 43, 226, ${0.6 * crystalPulse})`); // Blueviolet
+        crystalGlow1.addColorStop(0.5, `rgba(138, 43, 226, ${0.3 * crystalPulse})`);
+        crystalGlow1.addColorStop(1, 'rgba(138, 43, 226, 0)');
+        ctx.fillStyle = crystalGlow1;
+        ctx.fillRect(x + 220, game.height - height + 50, 60, 60);
+
+        // Cristal sólido
+        ctx.fillStyle = '#8a2be2';
         ctx.beginPath();
-        ctx.moveTo(x + 270, game.height - height + 15);
-        ctx.lineTo(x + 285, game.height - height + 15);
-        ctx.lineTo(x + 295, game.height);
-        ctx.lineTo(x + 275, game.height);
-        ctx.closePath();
+        ctx.moveTo(x + 245, game.height - height + 70);
+        ctx.lineTo(x + 250, game.height - height + 55);
+        ctx.lineTo(x + 255, game.height - height + 70);
         ctx.fill();
 
-        // Segundo rio de lava
-        const lavaFlow2 = ctx.createLinearGradient(x + 310, game.height - height, x + 320, game.height);
-        lavaFlow2.addColorStop(0, '#ff6600');
-        lavaFlow2.addColorStop(0.5, '#ff3300');
-        lavaFlow2.addColorStop(1, '#990000');
-        ctx.fillStyle = lavaFlow2;
-        ctx.beginPath();
-        ctx.moveTo(x + 305, game.height - height + 15);
-        ctx.lineTo(x + 320, game.height - height + 15);
-        ctx.lineTo(x + 330, game.height);
-        ctx.lineTo(x + 310, game.height);
-        ctx.closePath();
-        ctx.fill();
+        // Cristal 2 (azul ciano)
+        const crystalGlow2 = ctx.createRadialGradient(x + 380, game.height - height + 100, 0, x + 380, game.height - height + 100, 25);
+        crystalGlow2.addColorStop(0, `rgba(0, 191, 255, ${0.5 * crystalPulse})`); // Deep sky blue
+        crystalGlow2.addColorStop(0.5, `rgba(0, 191, 255, ${0.25 * crystalPulse})`);
+        crystalGlow2.addColorStop(1, 'rgba(0, 191, 255, 0)');
+        ctx.fillStyle = crystalGlow2;
+        ctx.fillRect(x + 360, game.height - height + 80, 40, 40);
 
-        // Fumaça saindo do vulcão
-        const pulseSmoke = Math.sin(time * 0.5 + i) * 0.3 + 0.7;
-        ctx.fillStyle = `rgba(80, 80, 80, ${0.3 * pulseSmoke})`;
+        // Cristal sólido
+        ctx.fillStyle = '#00bfff';
         ctx.beginPath();
-        ctx.arc(x + 300, game.height - height - 20, 40, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(x + 280, game.height - height - 40, 35, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(x + 320, game.height - height - 35, 30, 0, Math.PI * 2);
+        ctx.moveTo(x + 375, game.height - height + 95);
+        ctx.lineTo(x + 380, game.height - height + 82);
+        ctx.lineTo(x + 385, game.height - height + 95);
         ctx.fill();
     }
 
-    // Camada 2 - Rochas vulcânicas médias
-    const parallax2 = game.camera.x * 0.25;
-    for (let i = -1; i < 6; i++) {
-        const x = i * 300 - (parallax2 % 300);
-        const height = 120 + (i % 3) * 40;
+    // Camada 2 - Stalactites (estalactites penduradas no teto)
+    const parallax2 = game.camera.x * 0.2;
+    for (let i = -1; i < 12; i++) {
+        const x = i * 150 - (parallax2 % 150);
+        const length = 80 + (i % 3) * 40;
 
-        // Rocha escura com textura
-        ctx.fillStyle = '#2a2a2a';
+        // Estalactite com gradiente
+        const stalactiteGradient = ctx.createLinearGradient(x + 75, 0, x + 75, length);
+        stalactiteGradient.addColorStop(0, '#4a5568');
+        stalactiteGradient.addColorStop(0.7, '#3a4556');
+        stalactiteGradient.addColorStop(1, '#2a3544');
+        ctx.fillStyle = stalactiteGradient;
+
+        ctx.beginPath();
+        ctx.moveTo(x + 60, 0);
+        ctx.lineTo(x + 75, length);
+        ctx.lineTo(x + 90, 0);
+        ctx.fill();
+
+        // Detalhe de brilho no topo (úmido)
+        ctx.fillStyle = 'rgba(180, 180, 200, 0.3)';
+        ctx.fillRect(x + 70, 0, 10, length * 0.3);
+    }
+
+    // Camada 3 - Formações rochosas médias
+    const parallax3 = game.camera.x * 0.35;
+    for (let i = -1; i < 8; i++) {
+        const x = i * 250 - (parallax3 % 250);
+        const height = 140 + (i % 3) * 30;
+
+        // Rocha com textura
+        const rockGradient = ctx.createLinearGradient(x + 125, game.height - height, x + 125, game.height);
+        rockGradient.addColorStop(0, '#3a4556');
+        rockGradient.addColorStop(0.6, '#2c3544');
+        rockGradient.addColorStop(1, '#1a2332');
+        ctx.fillStyle = rockGradient;
+
         ctx.beginPath();
         ctx.moveTo(x, game.height);
-        ctx.lineTo(x + 100, game.height - height);
-        ctx.lineTo(x + 200, game.height - height + 30);
-        ctx.lineTo(x + 300, game.height);
+        ctx.lineTo(x + 80, game.height - height + 20);
+        ctx.lineTo(x + 125, game.height - height);
+        ctx.lineTo(x + 170, game.height - height + 25);
+        ctx.lineTo(x + 250, game.height);
         ctx.fill();
 
-        // Detalhes brilhantes (magma interno)
-        ctx.fillStyle = '#ff6600';
+        // Musgo bioluminescente (verde suave)
+        if (i % 2 === 0) {
+            const mossGlow = ctx.createRadialGradient(x + 125, game.height - height/2, 0, x + 125, game.height - height/2, 40);
+            mossGlow.addColorStop(0, 'rgba(144, 238, 144, 0.15)');
+            mossGlow.addColorStop(1, 'rgba(144, 238, 144, 0)');
+            ctx.fillStyle = mossGlow;
+            ctx.fillRect(x + 85, game.height - height/2 - 20, 80, 40);
+        }
+    }
+
+    // Camada 4 - Stalagmites próximas (estalagmites no chão)
+    const parallax4 = game.camera.x * 0.5;
+    for (let i = -1; i < 18; i++) {
+        const x = i * 90 - (parallax4 % 90);
+        const height = 70 + (i % 4) * 25;
+
+        // Estalagmite com gradiente
+        const stalagmiteGradient = ctx.createLinearGradient(x + 45, game.height - height, x + 45, game.height);
+        stalagmiteGradient.addColorStop(0, '#4a5568');
+        stalagmiteGradient.addColorStop(0.4, '#3a4556');
+        stalagmiteGradient.addColorStop(1, '#2a3544');
+        ctx.fillStyle = stalagmiteGradient;
+
         ctx.beginPath();
-        ctx.arc(x + 150, game.height - height/2, 3, 0, Math.PI * 2);
+        ctx.moveTo(x + 35, game.height);
+        ctx.lineTo(x + 45, game.height - height);
+        ctx.lineTo(x + 55, game.height);
+        ctx.fill();
+
+        // Highlight na lateral (iluminação ambiente)
+        ctx.fillStyle = 'rgba(180, 180, 200, 0.15)';
+        ctx.beginPath();
+        ctx.moveTo(x + 45, game.height - height);
+        ctx.lineTo(x + 48, game.height - height + 10);
+        ctx.lineTo(x + 48, game.height);
+        ctx.lineTo(x + 45, game.height);
         ctx.fill();
     }
 
-    // Camada 3 - Formações rochosas próximas (estalagmites)
-    const parallax3 = game.camera.x * 0.5;
+    // Camada 5 - Cristais foreground (mais próximos e brilhantes)
+    const parallax5 = game.camera.x * 0.7;
     for (let i = -1; i < 15; i++) {
-        const x = i * 100 - (parallax3 % 100);
-        const height = 60 + (i % 4) * 20;
+        const x = i * 110 - (parallax5 % 110);
 
-        // Estalagmite escura
-        const rockGradient = ctx.createLinearGradient(x + 50, game.height - height, x + 50, game.height);
-        rockGradient.addColorStop(0, '#3a3a3a');
-        rockGradient.addColorStop(1, '#1a1a1a');
-        ctx.fillStyle = rockGradient;
-        ctx.beginPath();
-        ctx.moveTo(x + 40, game.height);
-        ctx.lineTo(x + 50, game.height - height);
-        ctx.lineTo(x + 60, game.height);
-        ctx.fill();
-    }
+        if (i % 3 === 0) { // Não todos, apenas alguns
+            const crystalSize = 15 + (i % 2) * 10;
+            const crystalPulse = Math.sin(time * 1.2 + i * 0.5) * 0.4 + 0.6;
 
-    // Camada 4 - Poças de lava no foreground (brilho forte)
-    const parallax4 = game.camera.x * 0.8;
-    for (let i = -1; i < 20; i++) {
-        const x = i * 120 - (parallax4 % 120);
-        const poolWidth = 40 + (i % 2) * 20;
+            // Cor alternada (roxo ou ciano)
+            const crystalColor = i % 2 === 0 ?
+                { r: 138, g: 43, b: 226 } : // Roxo
+                { r: 0, g: 191, b: 255 };   // Ciano
 
-        // Brilho da lava
-        const poolGlow = ctx.createRadialGradient(x + 60, game.height - 10, 0, x + 60, game.height - 10, poolWidth);
-        poolGlow.addColorStop(0, '#ff9900');
-        poolGlow.addColorStop(0.6, '#ff3300');
-        poolGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
-        ctx.fillStyle = poolGlow;
-        ctx.fillRect(x + 40, game.height - 20, poolWidth, 20);
+            // Brilho do cristal
+            const glow = ctx.createRadialGradient(x + 55, game.height - crystalSize - 10, 0, x + 55, game.height - crystalSize - 10, crystalSize * 2);
+            glow.addColorStop(0, `rgba(${crystalColor.r}, ${crystalColor.g}, ${crystalColor.b}, ${0.8 * crystalPulse})`);
+            glow.addColorStop(0.4, `rgba(${crystalColor.r}, ${crystalColor.g}, ${crystalColor.b}, ${0.4 * crystalPulse})`);
+            glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(x + 30, game.height - crystalSize * 3, crystalSize * 3, crystalSize * 3);
 
-        // Lava líquida (animada)
-        const time = Date.now() / 1000;
-        const wave = Math.sin(time * 2 + i) * 2;
-        ctx.fillStyle = '#ff6600';
-        ctx.fillRect(x + 40, game.height - 15 + wave, poolWidth, 15);
+            // Cristal sólido
+            ctx.fillStyle = `rgb(${crystalColor.r}, ${crystalColor.g}, ${crystalColor.b})`;
+            ctx.beginPath();
+            ctx.moveTo(x + 50, game.height);
+            ctx.lineTo(x + 55, game.height - crystalSize);
+            ctx.lineTo(x + 60, game.height);
+            ctx.fill();
+        }
     }
 }
 
