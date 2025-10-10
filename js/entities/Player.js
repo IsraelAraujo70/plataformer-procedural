@@ -1791,13 +1791,15 @@ export class Player {
         // Desenhar múltiplos chapéus empilhados
         const hatCenterX = screenX + this.width / 2;
         const hatSpacing = 7; // Espaçamento vertical entre chapéus
-        const startY = screenY - 8; // Posição do primeiro chapéu
+        const startY = screenY - 8; // Posição do primeiro chapéu (base)
 
-        // Desenhar cada chapéu da pilha (de baixo para cima)
+        // Desenhar cada chapéu da pilha (do mais recente ao mais antigo)
+        // Invertido: último coletado fica na base, primeiro fica no topo
         for (let i = 0; i < this.hatCount; i++) {
             const hatBaseY = startY - (i * hatSpacing);
-            // Pegar o tipo do chapéu correspondente (se existir)
-            const hatType = this.hatTypes[i] || 'plains'; // Default para cowboy se não tiver tipo
+            // Pegar o tipo do chapéu INVERTIDO (último coletado = base)
+            const hatIndex = this.hatCount - 1 - i;
+            const hatType = this.hatTypes[hatIndex] || 'plains';
             this.drawSingleHat(ctx, hatCenterX, hatBaseY, hatType);
         }
     }

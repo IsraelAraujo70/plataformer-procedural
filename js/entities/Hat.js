@@ -111,8 +111,19 @@ export class Hat {
         this.width = 20;
         this.height = 16;
         this.type = type; // 'collectable' ou 'dropping'
-        this.biomeType = biomeType; // Tipo do bioma para determinar aparência
-        this.hatData = HAT_TYPES[biomeType.toUpperCase()] || HAT_TYPES.PLAINS;
+
+        // Validar e normalizar biomeType
+        const validBiomes = ['plains', 'cave', 'ice', 'desert', 'sky', 'apocalypse', 'moon', 'black_hole'];
+        const normalizedBiome = biomeType.toLowerCase();
+
+        if (!validBiomes.includes(normalizedBiome)) {
+            console.warn(`⚠️ Invalid biome type "${biomeType}", defaulting to "plains"`);
+            this.biomeType = 'plains';
+        } else {
+            this.biomeType = normalizedBiome;
+        }
+
+        this.hatData = HAT_TYPES[this.biomeType.toUpperCase()] || HAT_TYPES.PLAINS;
         this.collected = false;
 
         // Animação
@@ -171,11 +182,9 @@ export class Hat {
 
             // Colisão com Player 1
             if (this.intersects(game.player)) {
-                // Verificar se já tem este tipo de chapéu
-                const hasThisHatType = game.player.hatTypes.includes(this.biomeType);
-
-                if (!hasThisHatType && game.player.hatCount < game.player.maxHats) {
-                    // Novo tipo de chapéu - coletar
+                // Verificar se pode coletar (ainda não atingiu o limite)
+                if (game.player.hatCount < game.player.maxHats) {
+                    // Coletar chapéu (qualquer tipo, pode repetir)
                     this.collected = true;
                     game.player.hatCount++;
                     game.player.hatTypes.push(this.biomeType);
@@ -193,24 +202,6 @@ export class Hat {
                     if (window.createParticles) {
                         window.createParticles(this.x + this.width / 2, this.y + this.height / 2, '#ffd700', 20);
                     }
-                } else if (hasThisHatType) {
-                    // Já tem este tipo - converter em moedas
-                    this.collected = true;
-
-                    // Som de moedas (já que vira moeda)
-                    game.soundManager?.playCoin();
-
-                    // Dar moedas como recompensa
-                    const coinReward = 5;
-                    game.player.score += coinReward;
-
-                    // Efeitos visuais diferentes
-                    if (window.createFloatingText) {
-                        window.createFloatingText(`+${coinReward} COINS!`, this.x + this.width / 2, this.y, '#ffff00');
-                    }
-                    if (window.createParticles) {
-                        window.createParticles(this.x + this.width / 2, this.y + this.height / 2, '#ffff00', 15);
-                    }
                 } else {
                     // Já está no máximo de chapéus
                     if (window.createFloatingText) {
@@ -221,11 +212,9 @@ export class Hat {
 
             // Colisão com Player 2 (se existir)
             if (game.player2 && this.intersects(game.player2)) {
-                // Verificar se já tem este tipo de chapéu
-                const hasThisHatType = game.player2.hatTypes.includes(this.biomeType);
-
-                if (!hasThisHatType && game.player2.hatCount < game.player2.maxHats) {
-                    // Novo tipo de chapéu - coletar
+                // Verificar se pode coletar (ainda não atingiu o limite)
+                if (game.player2.hatCount < game.player2.maxHats) {
+                    // Coletar chapéu (qualquer tipo, pode repetir)
                     this.collected = true;
                     game.player2.hatCount++;
                     game.player2.hatTypes.push(this.biomeType);
@@ -242,24 +231,6 @@ export class Hat {
                     }
                     if (window.createParticles) {
                         window.createParticles(this.x + this.width / 2, this.y + this.height / 2, '#ffd700', 20);
-                    }
-                } else if (hasThisHatType) {
-                    // Já tem este tipo - converter em moedas
-                    this.collected = true;
-
-                    // Som de moedas (já que vira moeda)
-                    game.soundManager?.playCoin();
-
-                    // Dar moedas como recompensa
-                    const coinReward = 5;
-                    game.player2.score += coinReward;
-
-                    // Efeitos visuais diferentes
-                    if (window.createFloatingText) {
-                        window.createFloatingText(`+${coinReward} COINS!`, this.x + this.width / 2, this.y, '#ffff00');
-                    }
-                    if (window.createParticles) {
-                        window.createParticles(this.x + this.width / 2, this.y + this.height / 2, '#ffff00', 15);
                     }
                 } else {
                     // Já está no máximo de chapéus
@@ -385,199 +356,325 @@ export class Hat {
     }
 
     drawCowboyHat(ctx, colors) {
-        // Chapéu de cowboy com aba larga
-        ctx.fillStyle = colors.main;
+        // Chapéu de cowboy com aba larga (COM OUTLINE para combinar com personagem)
+        const centerX = this.width / 2;
+        const baseY = -5; // Ajuste para centralizar melhor no ícone
+
+        // OUTLINE PRETO da aba
+        ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.ellipse(this.width / 2, this.height - 2, 12, 4, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, baseY + 13, 12, 4, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Copa alta
+        // Aba do chapéu
         ctx.fillStyle = colors.main;
-        ctx.fillRect(this.width / 2 - 6, 1, 12, this.height - 5);
-
-        // Topo pontudo
         ctx.beginPath();
-        ctx.ellipse(this.width / 2, 1, 6, 2, 0, 0, Math.PI);
+        ctx.ellipse(centerX, baseY + 13, 10, 3, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Faixa dourada
+        // OUTLINE PRETO da copa
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(centerX - 7, baseY - 3, 14, 16);
+
+        // Copa do chapéu
+        ctx.fillStyle = colors.main;
+        ctx.fillRect(centerX - 6, baseY - 2, 12, 14);
+
+        // OUTLINE PRETO do topo
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.ellipse(centerX, baseY - 2, 7, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Topo do chapéu
+        ctx.fillStyle = colors.main;
+        ctx.beginPath();
+        ctx.ellipse(centerX, baseY - 2, 6, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Faixa decorativa
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(centerX - 7, baseY + 8, 14, 4);
         ctx.fillStyle = colors.accent;
-        ctx.fillRect(this.width / 2 - 6, this.height - 8, 12, 2);
-
-        // Brilho
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-        ctx.fillRect(this.width / 2 - 3, 3, 2, 3);
+        ctx.fillRect(centerX - 6, baseY + 9, 12, 3);
     }
 
     drawMinerHelmet(ctx, colors) {
-        // Capacete de mineiro com lanterna
+        // Capacete de mineiro com lanterna (COM OUTLINE)
+        const centerX = this.width / 2;
+        const baseY = -5;
+
+        // Outline
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(centerX - 8, baseY + 1, 16, 14);
+
+        // Capacete
         ctx.fillStyle = colors.main;
-        ctx.fillRect(this.width / 2 - 7, 3, 14, this.height - 6);
+        ctx.fillRect(centerX - 7, baseY + 2, 14, 12);
+
+        // Topo arredondado outline
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.ellipse(centerX, baseY + 2, 8, 3, 0, 0, Math.PI, true);
+        ctx.fill();
 
         // Topo arredondado
+        ctx.fillStyle = colors.main;
         ctx.beginPath();
-        ctx.ellipse(this.width / 2, 3, 7, 2, 0, 0, Math.PI);
+        ctx.ellipse(centerX, baseY + 2, 7, 2, 0, 0, Math.PI, true);
         ctx.fill();
 
         // Lanterna frontal
         ctx.fillStyle = colors.accent;
-        ctx.fillRect(this.width - 8, 5, 4, 6);
+        ctx.fillRect(centerX - 3, baseY + 5, 4, 5);
         ctx.fillStyle = colors.light || '#FFF8DC';
-        ctx.fillRect(this.width - 7, 6, 2, 4);
+        ctx.fillRect(centerX - 2, baseY + 6, 2, 3);
 
         // Brilho da lanterna
         ctx.shadowColor = colors.light || '#FFF8DC';
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 5;
         ctx.fillStyle = colors.light || '#FFF8DC';
         ctx.beginPath();
-        ctx.arc(this.width - 6, 8, 1, 0, Math.PI * 2);
+        ctx.arc(centerX - 1, baseY + 7, 1, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
     }
 
     drawFurHat(ctx, colors) {
-        // Chapéu de pele com pelos
+        // Chapéu de pele com pelos (COM OUTLINE)
+        const centerX = this.width / 2;
+        const baseY = -5;
+
+        // Outline base
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.ellipse(centerX, baseY + 11, 11, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Base
         ctx.fillStyle = colors.main;
         ctx.beginPath();
-        ctx.ellipse(this.width / 2, this.height - 3, 10, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, baseY + 11, 10, 3, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        // Outline copa
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(centerX - 7, baseY, 14, 12);
 
         // Copa
         ctx.fillStyle = colors.main;
-        ctx.fillRect(this.width / 2 - 6, 2, 12, this.height - 8);
+        ctx.fillRect(centerX - 6, baseY + 1, 12, 10);
 
         // Pelo na borda
         ctx.fillStyle = colors.fur || '#FFFACD';
-        for (let i = 0; i < 8; i++) {
-            const x = this.width / 2 - 6 + i * 1.5;
-            const height = 2 + Math.sin(i) * 1;
-            ctx.fillRect(x, this.height - 6, 1, height);
+        for (let i = 0; i < 10; i++) {
+            const x = centerX - 6 + i * 1.2;
+            ctx.fillRect(x, baseY + 9, 1, 2);
         }
 
         // Faixa azul
         ctx.fillStyle = colors.accent;
-        ctx.fillRect(this.width / 2 - 6, this.height - 8, 12, 2);
+        ctx.fillRect(centerX - 6, baseY + 7, 12, 2);
     }
 
     drawTurban(ctx, colors) {
-        // Turbante enrolado
-        ctx.fillStyle = colors.main;
-        // Camadas do turbante
+        // Turbante enrolado (COM OUTLINE)
+        const centerX = this.width / 2;
+        const baseY = -5;
+
+        // Camadas do turbante (de baixo para cima)
         for (let i = 0; i < 3; i++) {
+            // Outline
+            ctx.fillStyle = '#000000';
             ctx.beginPath();
-            ctx.ellipse(this.width / 2, this.height - 2 - i * 2, 10 - i, 3, 0, 0, Math.PI * 2);
+            ctx.ellipse(centerX, baseY + 11 - i * 2, 11 - i, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Camada
+            ctx.fillStyle = colors.main;
+            ctx.beginPath();
+            ctx.ellipse(centerX, baseY + 11 - i * 2, 10 - i, 3, 0, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // Nó do turbante
-        ctx.fillStyle = colors.band;
+        // Nó decorativo
+        ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.ellipse(this.width / 2 + 3, this.height - 6, 4, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX + 4, baseY + 6, 5, 4, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Padrão decorativo
-        ctx.fillStyle = colors.pattern || colors.accent;
-        ctx.fillRect(this.width / 2 - 2, this.height - 5, 4, 2);
+        ctx.fillStyle = colors.band;
+        ctx.beginPath();
+        ctx.ellipse(centerX + 4, baseY + 6, 4, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Detalhe dourado
+        ctx.fillStyle = colors.accent;
+        ctx.fillRect(centerX - 2, baseY + 7, 4, 2);
     }
 
     drawPilotCap(ctx, colors) {
-        // Quepe de piloto
-        ctx.fillStyle = colors.main;
+        // Quepe de piloto (COM OUTLINE)
+        const centerX = this.width / 2;
+        const baseY = -5;
+
+        // Outline base
+        ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.ellipse(this.width / 2, this.height - 2, 11, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, baseY + 11, 12, 4, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Copa baixa
+        // Base (pala)
         ctx.fillStyle = colors.main;
-        ctx.fillRect(this.width / 2 - 5, 4, 10, this.height - 8);
-
-        // Óculos
-        ctx.fillStyle = colors.goggles || '#000000';
         ctx.beginPath();
-        ctx.ellipse(this.width / 2 - 3, 6, 2, 1.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, baseY + 11, 11, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Outline copa
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(centerX - 6, baseY + 2, 12, 10);
+
+        // Copa
+        ctx.fillStyle = colors.main;
+        ctx.fillRect(centerX - 5, baseY + 3, 10, 8);
+
+        // Óculos de aviador
+        const goggles = colors.goggles || '#000000';
+        ctx.fillStyle = goggles;
+        ctx.beginPath();
+        ctx.ellipse(centerX - 2, baseY + 5, 2, 1.5, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.ellipse(this.width / 2 + 3, 6, 2, 1.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX + 2, baseY + 5, 2, 1.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Ponte dos óculos
-        ctx.fillRect(this.width / 2 - 1, 5, 2, 1);
+        ctx.fillRect(centerX - 1, baseY + 4, 2, 1);
     }
 
     drawCombatHelmet(ctx, colors) {
-        // Capacete militar
-        ctx.fillStyle = colors.main;
-        ctx.fillRect(this.width / 2 - 7, 2, 14, this.height - 4);
+        // Capacete militar (COM OUTLINE)
+        const centerX = this.width / 2;
+        const baseY = -5;
 
-        // Topo arredondado
+        // Outline capacete
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(centerX - 8, baseY + 1, 16, 13);
+
+        // Capacete
+        ctx.fillStyle = colors.main;
+        ctx.fillRect(centerX - 7, baseY + 2, 14, 11);
+
+        // Topo arredondado outline
+        ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.ellipse(this.width / 2, 2, 7, 2, 0, 0, Math.PI);
+        ctx.ellipse(centerX, baseY + 2, 8, 3, 0, 0, Math.PI, true);
         ctx.fill();
 
-        // Camuflagem
+        // Topo arredondado
+        ctx.fillStyle = colors.main;
+        ctx.beginPath();
+        ctx.ellipse(centerX, baseY + 2, 7, 2, 0, 0, Math.PI, true);
+        ctx.fill();
+
+        // Padrão de camuflagem
         ctx.fillStyle = colors.camo || '#696969';
-        for (let i = 0; i < 3; i++) {
-            ctx.fillRect(this.width / 2 - 5 + i * 3, 4 + i, 2, 2);
-        }
+        ctx.fillRect(centerX - 5, baseY + 4, 2, 2);
+        ctx.fillRect(centerX, baseY + 6, 2, 2);
+        ctx.fillRect(centerX + 3, baseY + 5, 2, 2);
 
         // Detalhes vermelhos
         ctx.fillStyle = colors.accent;
-        ctx.fillRect(this.width / 2 - 6, 3, 12, 1);
-        ctx.fillRect(this.width / 2 - 6, this.height - 4, 12, 1);
+        ctx.fillRect(centerX - 6, baseY + 3, 12, 1);
+        ctx.fillRect(centerX - 6, baseY + 11, 12, 1);
     }
 
     drawAstronautHelmet(ctx, colors) {
-        // Capacete de astronauta com visor
-        ctx.fillStyle = colors.main;
-        ctx.fillRect(this.width / 2 - 7, 3, 14, this.height - 6);
+        // Capacete de astronauta com visor (COM OUTLINE)
+        const centerX = this.width / 2;
+        const baseY = -5;
 
-        // Topo arredondado
+        // Outline capacete
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(centerX - 8, baseY + 1, 16, 13);
+
+        // Capacete
+        ctx.fillStyle = colors.main;
+        ctx.fillRect(centerX - 7, baseY + 2, 14, 11);
+
+        // Topo arredondado outline
+        ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.ellipse(this.width / 2, 3, 7, 2, 0, 0, Math.PI);
+        ctx.ellipse(centerX, baseY + 2, 8, 3, 0, 0, Math.PI, true);
         ctx.fill();
 
-        // Visor
+        // Topo arredondado
+        ctx.fillStyle = colors.main;
+        ctx.beginPath();
+        ctx.ellipse(centerX, baseY + 2, 7, 2, 0, 0, Math.PI, true);
+        ctx.fill();
+
+        // Visor azul
         ctx.fillStyle = colors.visor || colors.accent;
-        ctx.fillRect(this.width / 2 - 5, 5, 10, 6);
+        ctx.fillRect(centerX - 5, baseY + 4, 10, 7);
 
         // Reflexo no visor
         ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-        ctx.fillRect(this.width / 2 - 3, 6, 2, 1);
-        ctx.fillRect(this.width / 2 + 1, 8, 1, 2);
+        ctx.fillRect(centerX - 3, baseY + 5, 2, 1);
+        ctx.fillRect(centerX + 1, baseY + 7, 1, 2);
     }
 
     drawVoidCrown(ctx, colors) {
-        // Coroa do vazio com energia
-        ctx.fillStyle = colors.main;
-        // Pontas da coroa
+        // Coroa do vazio com energia (COM OUTLINE)
+        const centerX = this.width / 2;
+        const baseY = -5;
+
+        // Pontas da coroa (5 pontas) - OUTLINE
+        ctx.fillStyle = '#000000';
         for (let i = 0; i < 5; i++) {
-            const x = this.width / 2 - 6 + i * 3;
+            const x = centerX - 7 + i * 3.5;
             ctx.beginPath();
-            ctx.moveTo(x, this.height - 2);
-            ctx.lineTo(x + 1, this.height - 6);
-            ctx.lineTo(x + 2, this.height - 2);
+            ctx.moveTo(x, baseY + 11);
+            ctx.lineTo(x + 1.5, baseY + 4);
+            ctx.lineTo(x + 3, baseY + 11);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Pontas coloridas
+        ctx.fillStyle = colors.main;
+        for (let i = 0; i < 5; i++) {
+            const x = centerX - 7 + i * 3.5;
+            ctx.beginPath();
+            ctx.moveTo(x + 0.5, baseY + 11);
+            ctx.lineTo(x + 1.5, baseY + 5);
+            ctx.lineTo(x + 2.5, baseY + 11);
             ctx.closePath();
             ctx.fill();
         }
 
         // Base da coroa
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(centerX - 7, baseY + 9, 14, 4);
+
         ctx.fillStyle = colors.band;
-        ctx.fillRect(this.width / 2 - 6, this.height - 4, 12, 3);
+        ctx.fillRect(centerX - 6, baseY + 10, 12, 2);
 
         // Energia pulsante
         const time = Date.now() / 1000;
         const pulse = Math.sin(time * 4) * 0.5 + 0.5;
+
         ctx.shadowColor = colors.energy || colors.accent;
-        ctx.shadowBlur = 6 * pulse;
+        ctx.shadowBlur = 4 * pulse;
         ctx.fillStyle = colors.energy || colors.accent;
 
-        // Orbes de energia
+        // Pequenos orbes de energia
         for (let i = 0; i < 3; i++) {
             const angle = time * 2 + (i * Math.PI * 2 / 3);
-            const x = this.width / 2 + Math.cos(angle) * 8;
-            const y = this.height - 6 + Math.sin(angle) * 2;
+            const x = centerX + Math.cos(angle) * 6;
+            const y = baseY + 7 + Math.sin(angle) * 1;
             ctx.beginPath();
-            ctx.arc(x, y, 1 + pulse, 0, Math.PI * 2);
+            ctx.arc(x, y, 1, 0, Math.PI * 2);
             ctx.fill();
         }
         ctx.shadowBlur = 0;

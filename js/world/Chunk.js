@@ -584,8 +584,23 @@ export class Chunk {
 
             // Só adicionar se não colidir com outros itens
             if (canPlaceItem(hatX, hatY, 20, 20, allItems)) {
-                // Passar o bioma atual para o chapéu
-                const biomeType = this.biome.name.toLowerCase().replace(/\s+/g, '_');
+                // Passar o bioma atual para o chapéu - mapeamento correto
+                let biomeType = this.biome.name.toLowerCase().replace(/\s+/g, '_');
+
+                // Validar e corrigir nomes de biomas conhecidos
+                const biomeMapping = {
+                    'plains': 'plains',
+                    'cave': 'cave',
+                    'underground_cave': 'cave',
+                    'ice': 'ice',
+                    'desert': 'desert',
+                    'sky': 'sky',
+                    'apocalypse': 'apocalypse',
+                    'moon': 'moon',
+                    'black_hole': 'black_hole'
+                };
+
+                biomeType = biomeMapping[biomeType] || 'plains';
                 console.log(`Spawning hat in biome: ${this.biome.name} -> ${biomeType}`);
                 this.hats.push(new Hat(hatX, hatY, 'collectable', biomeType));
             }
