@@ -69,8 +69,11 @@ function gameLoop(currentTime) {
     for (let i = 0; i < updateCount; i++) {
         updateChunks();
 
-        // Atualizar bioma atual baseado na posição da câmera com transição suave
-        const currentChunkIndex = Math.floor(game.camera.x / (CONFIG.CHUNK_WIDTH * CONFIG.TILE_SIZE));
+        // Lógica de transição de bioma baseada no jogador mais avançado
+        const playerXForBiome = game.twoPlayerMode && game.player2 ?
+            Math.max(game.player.x, game.player2.x) :
+            game.player.x;
+        const currentChunkIndex = Math.floor(playerXForBiome / (CONFIG.CHUNK_WIDTH * CONFIG.TILE_SIZE));
         const newBiome = getBiome(currentChunkIndex);
 
         // Detectar mudança de bioma
