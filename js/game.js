@@ -31,6 +31,9 @@ export const game = {
     currentBiome: null, // Bioma atual baseado na posição da câmera
     previousBiome: null, // Bioma anterior (para transições)
     biomeTransition: 0, // 0 a 1, progresso da transição entre biomas
+    biomeTransitionStage: 'normal', // Estado especial do chunk atual (normal/transition_in/transition_out)
+    biomeTransitionStageProgress: 0, // Progresso dentro do chunk de transição (0 a 1)
+    upcomingBiome: null, // Próximo bioma previsto durante a transição
     gameStartTime: 0, // Timestamp do início do jogo
     gameEndTime: 0, // Timestamp do fim do jogo
     victoryTriggered: false, // Flag para controlar fim do jogo aos 2000m

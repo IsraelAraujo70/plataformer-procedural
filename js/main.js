@@ -8,7 +8,7 @@ import { FloatingText } from './entities/FloatingText.js';
 import { drawModifierTimers } from './ui/ModifierTimers.js';
 import { drawOffscreenBubble } from './ui/OffscreenBubble.js';
 import { CONFIG } from './config.js';
-import { getBiome } from './world/Patterns.js';
+import { getBiomeContext } from './world/Patterns.js';
 import { rewardedAdsManager } from './ads/RewardedAds.js';
 import { setupContinueModal, resetContinueFlag } from './ui/ContinueModal.js';
 import { soundManager } from './audio/SoundManager.js';
@@ -73,8 +73,17 @@ function gameLoop(currentTime) {
         const playerXForBiome = game.twoPlayerMode && game.player2 ?
             Math.max(game.player.x, game.player2.x) :
             game.player.x;
-        const currentChunkIndex = Math.floor(playerXForBiome / (CONFIG.CHUNK_WIDTH * CONFIG.TILE_SIZE));
-        const newBiome = getBiome(currentChunkIndex);
+        const chunkWidthPx = CONFIG.CHUNK_WIDTH * CONFIG.TILE_SIZE;
+        const currentChunkIndex = Math.floor(playerXForBiome / chunkWidthPx);
+        const biomeContext = getBiomeContext(currentChunkIndex);
+        const newBiome = biomeContext.biome;
+
+        game.biomeTransitionStage = biomeContext.stage;
+        game.upcomingBiome = biomeContext.nextBiome;
+
+        const chunkStartX = currentChunkIndex * chunkWidthPx;
+        const progress = (playerXForBiome - chunkStartX) / chunkWidthPx;
+        game.biomeTransitionStageProgress = Math.max(0, Math.min(1, progress));
 
         // Detectar mudança de bioma
         if (game.currentBiome && game.currentBiome.name !== newBiome.name) {

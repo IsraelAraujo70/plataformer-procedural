@@ -28,6 +28,25 @@ export function drawBackground(ctx) {
         // Sem transição, desenhar apenas bioma atual
         drawBiomeBackground(ctx, currentBiomeType);
     }
+
+    if (game.biomeTransitionStage === 'transition_out' && game.upcomingBiome) {
+        const previewStrength = Math.max(0, Math.min(1, (game.biomeTransitionStageProgress - 0.3) * 1.5));
+        if (previewStrength > 0) {
+            ctx.save();
+            ctx.globalAlpha = previewStrength * 0.45;
+            drawBiomeBackground(ctx, game.upcomingBiome.backgroundType || 'plains');
+            ctx.restore();
+
+            ctx.save();
+            ctx.globalAlpha = previewStrength * 0.35;
+            const glowGradient = ctx.createLinearGradient(0, 0, 0, game.height);
+            glowGradient.addColorStop(0, 'rgba(255, 255, 255, 0.0)');
+            glowGradient.addColorStop(1, 'rgba(255, 255, 255, 0.12)');
+            ctx.fillStyle = glowGradient;
+            ctx.fillRect(0, 0, game.width, game.height);
+            ctx.restore();
+        }
+    }
 }
 
 // Função auxiliar para desenhar um bioma específico

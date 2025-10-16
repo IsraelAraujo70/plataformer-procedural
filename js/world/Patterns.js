@@ -385,16 +385,41 @@ export const BIOMES = {
     }
 };
 
-// Retorna bioma baseado no chunk index
-export function getBiome(chunkIndex) {
-    // Trocar bioma a cada 8 chunks
+// Retorna informações de bioma e contexto de transição baseado no chunk index
+export function getBiomeContext(chunkIndex) {
     const biomeLength = 8;
-    const biomeIndex = Math.floor(chunkIndex / biomeLength);
     const biomes = Object.keys(BIOMES);
 
-    // Se chegou no buraco negro (última fase), manter nele
+    const biomeIndex = Math.floor(chunkIndex / biomeLength);
     const maxBiomeIndex = biomes.length - 1;
-    const currentBiomeIndex = Math.min(biomeIndex, maxBiomeIndex);
+    const clampedIndex = Math.min(biomeIndex, maxBiomeIndex);
+    const biomeKey = biomes[clampedIndex];
 
-    return BIOMES[biomes[currentBiomeIndex]];
+    const biome = BIOMES[biomeKey];
+    const previousBiome = clampedIndex > 0 ? BIOMES[biomes[Math.max(0, clampedIndex - 1)]] : null;
+    const nextBiome = clampedIndex < maxBiomeIndex ? BIOMES[biomes[Math.min(maxBiomeIndex, clampedIndex + 1)]] : biome;
+
+    const chunkOffset = chunkIndex % biomeLength;
+    let stage = 'normal';
+
+    if (chunkOffset === biomeLength - 1 && clampedIndex < maxBiomeIndex) {
+        stage = 'transition_out';
+    } else if (chunkOffset === 0 && chunkIndex !== 0 && clampedIndex > 0) {
+        stage = 'transition_in';
+    }
+
+    return {
+        biome,
+        previousBiome,
+        nextBiome,
+        stage,
+        biomeIndex: clampedIndex,
+        chunkOffset,
+        biomeLength
+    };
+}
+
+// Compatibilidade: mantém função original retornando apenas o bioma
+export function getBiome(chunkIndex) {
+    return getBiomeContext(chunkIndex).biome;
 }

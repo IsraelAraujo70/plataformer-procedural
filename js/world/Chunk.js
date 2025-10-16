@@ -8,9 +8,62 @@ import { ShooterEnemy } from '../entities/enemies/ShooterEnemy.js';
 import { Coin } from '../entities/Coin.js';
 import { Modifier } from '../entities/Modifier.js';
 import { Hat } from '../entities/Hat.js';
-import { PATTERNS, getDifficultyConfig, selectPattern, getBiome, BIOMES } from './Patterns.js';
+import { PATTERNS, getDifficultyConfig, selectPattern, getBiomeContext, BIOMES } from './Patterns.js';
 
 const ABSOLUTE_MAX_GAP = CONFIG.TILE_SIZE * 5.5;
+
+function resolveBiomeColor(biome, keys, fallback = '#777777') {
+    if (!biome || !biome.colors) return fallback;
+    for (const key of keys) {
+        if (biome.colors[key]) {
+            return biome.colors[key];
+        }
+    }
+    return fallback;
+}
+
+function adjustColor(hex, amount) {
+    if (!hex || typeof hex !== 'string') return hex;
+    let color = hex.replace('#', '');
+    if (color.length === 3) {
+        color = color.split('').map(c => c + c).join('');
+    }
+
+    const num = parseInt(color, 16);
+    if (Number.isNaN(num)) return hex;
+
+    let r = (num >> 16) + amount;
+    let g = ((num >> 8) & 0xff) + amount;
+    let b = (num & 0xff) + amount;
+
+    r = Math.max(0, Math.min(255, r));
+    g = Math.max(0, Math.min(255, g));
+    b = Math.max(0, Math.min(255, b));
+
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
+function hexToRgba(hex, alpha = 1) {
+    if (!hex || typeof hex !== 'string') {
+        return `rgba(255, 255, 255, ${alpha})`;
+    }
+
+    let color = hex.replace('#', '');
+    if (color.length === 3) {
+        color = color.split('').map(c => c + c).join('');
+    }
+
+    const num = parseInt(color, 16);
+    if (Number.isNaN(num)) {
+        return `rgba(255, 255, 255, ${alpha})`;
+    }
+
+    const r = num >> 16;
+    const g = (num >> 8) & 0xff;
+    const b = num & 0xff;
+
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 // ============================================
 // ENEMY TYPE SELECTION
@@ -147,8 +200,12 @@ export class Chunk {
         this.previousChunk = previousChunk;
         this.entryPlatform = this.getEntryPlatform();
 
-        // Determinar bioma deste chunk
-        this.biome = getBiome(index);
+        this.biomeContext = getBiomeContext(index);
+        this.biome = this.biomeContext.biome;
+        this.transitionStage = this.biomeContext.stage;
+        this.nextBiome = this.biomeContext.nextBiome;
+        this.previousBiome = this.biomeContext.previousBiome;
+        this.transitionStructures = [];
 
         this.generate(random);
 
@@ -237,6 +294,16 @@ export class Chunk {
         const tileSize = CONFIG.TILE_SIZE;
         const chunkWidth = CONFIG.CHUNK_WIDTH * tileSize;
         const startX = this.x;
+
+        if (this.transitionStage === 'transition_out') {
+            this.generateTransitionOutChunk(rng, tileSize, chunkWidth, startX);
+            return;
+        }
+
+        if (this.transitionStage === 'transition_in') {
+            this.generateTransitionInChunk(rng, tileSize, chunkWidth, startX);
+            return;
+        }
 
         // Obter configuração de dificuldade
         const diffConfig = getDifficultyConfig(this.index);
@@ -657,6 +724,253 @@ export class Chunk {
         }
     }
 
+    generateTransitionOutChunk(rng, tileSize, chunkWidth, startX) {
+        const margin = tileSize * 2;
+        const minHeight = game.height / 3;
+        const maxHeight = game.height - 120;
+        const defaultHeight = game.height - 180;
+        const baseY = clamp(this.entryPlatform ? this.entryPlatform.y : defaultHeight, minHeight, maxHeight);
+
+        const leftStart = startX + margin;
+        const rightEnd = startX + chunkWidth - margin;
+
+        let rightStart = leftStart + Math.max(tileSize * 12, chunkWidth * 0.55);
+        rightStart = Math.min(rightStart, rightEnd - tileSize * 6);
+        if (rightStart <= leftStart + tileSize * 4) {
+            rightStart = leftStart + tileSize * 12;
+        }
+
+        let leftWidth = Math.max(tileSize * 8, rightStart - leftStart);
+        rightStart = leftStart + leftWidth;
+
+        if (rightStart > rightEnd - tileSize * 5) {
+            rightStart = rightEnd - tileSize * 5;
+            leftWidth = rightStart - leftStart;
+        }
+
+        const rightWidth = Math.max(tileSize * 5, rightEnd - rightStart);
+
+        const plainsPlatform = {
+            x: leftStart,
+            y: baseY,
+            width: leftWidth,
+            height: tileSize * 3,
+            type: 'ground'
+        };
+
+        const gatewayPlatform = {
+            x: rightStart,
+            y: baseY,
+            width: rightWidth,
+            height: tileSize * 3,
+            type: 'ground',
+            biomeOverride: this.nextBiome
+        };
+
+        this.platforms.push(plainsPlatform, gatewayPlatform);
+
+        const totalSpan = rightEnd - leftStart;
+        const coinCount = 6;
+        for (let i = 1; i <= coinCount; i++) {
+            const t = i / (coinCount + 1);
+            const wave = Math.sin(t * Math.PI);
+            const coinX = leftStart + totalSpan * t;
+            const coinY = baseY - tileSize * 2 - wave * tileSize * 0.6;
+            this.coins.push(new Coin(coinX, coinY));
+        }
+
+        if (rng.next() < 0.35) {
+            const modifierX = leftStart + totalSpan * 0.55;
+            const modifierY = baseY - tileSize * 2.5;
+            this.modifiers.push(new Modifier(modifierX, modifierY));
+        }
+
+        if (this.biome.decorations && this.biome.decorations.length > 0) {
+            const decorCount = 2;
+            for (let i = 0; i < decorCount; i++) {
+                const offset = (i + 1) / (decorCount + 1);
+                this.decorations.push({
+                    x: plainsPlatform.x + plainsPlatform.width * offset,
+                    y: plainsPlatform.y,
+                    type: rng.choice(this.biome.decorations),
+                    variant: rng.int(0, 2)
+                });
+            }
+        }
+
+        if (this.nextBiome && this.nextBiome.decorations && this.nextBiome.decorations.length > 0) {
+            const decorCount = 3;
+            for (let i = 0; i < decorCount; i++) {
+                const offset = (i + 1) / (decorCount + 1);
+                this.decorations.push({
+                    x: gatewayPlatform.x + gatewayPlatform.width * offset,
+                    y: gatewayPlatform.y,
+                    type: rng.choice(this.nextBiome.decorations),
+                    variant: rng.int(0, 2)
+                });
+            }
+        }
+
+        const gateWidth = tileSize * 8;
+        const gateHeight = tileSize * 6;
+        const gateX = gatewayPlatform.x - tileSize * 2;
+        const gateY = baseY - gateHeight + tileSize * 2;
+
+        this.transitionStructures.push({
+            type: 'biome_gate',
+            stage: 'transition_out',
+            fromBiome: this.biome,
+            toBiome: this.nextBiome,
+            x: gateX,
+            y: gateY,
+            width: gateWidth,
+            height: gateHeight
+        });
+
+        this.transitionStructures.push({
+            type: 'biome_preview_particles',
+            stage: 'transition_out',
+            fromBiome: this.biome,
+            toBiome: this.nextBiome,
+            palette: 'to',
+            area: {
+                x: gatewayPlatform.x - tileSize * 2,
+                y: baseY - tileSize * 5,
+                width: gateWidth + tileSize * 6,
+                height: tileSize * 6
+            }
+        });
+    }
+
+    generateTransitionInChunk(rng, tileSize, chunkWidth, startX) {
+        const margin = tileSize * 2;
+        const minHeight = game.height / 3;
+        const maxHeight = game.height - 120;
+        const defaultHeight = game.height - 180;
+        const baseY = clamp(this.entryPlatform ? this.entryPlatform.y : defaultHeight, minHeight, maxHeight);
+
+        const entryStart = startX + margin;
+        const endX = startX + chunkWidth - margin;
+        const corridorWidth = endX - entryStart;
+
+        const entryWidth = Math.max(tileSize * 6, Math.min(tileSize * 10, corridorWidth * 0.32));
+        let mainStart = entryStart + entryWidth - tileSize * 2;
+
+        let mainWidth = Math.max(tileSize * 12, endX - mainStart);
+        if (mainStart + mainWidth > endX) {
+            mainWidth = endX - mainStart;
+        }
+        if (mainWidth < tileSize * 10) {
+            mainWidth = tileSize * 10;
+            mainStart = Math.max(entryStart + tileSize * 4, endX - mainWidth);
+        }
+
+        const entryPlatform = {
+            x: entryStart,
+            y: baseY + tileSize,
+            width: entryWidth,
+            height: tileSize * 4,
+            type: 'ground',
+            biomeOverride: this.previousBiome || this.biome
+        };
+
+        const mainPlatform = {
+            x: mainStart,
+            y: baseY,
+            width: mainWidth,
+            height: tileSize * 3,
+            type: 'ground'
+        };
+
+        this.platforms.push(entryPlatform, mainPlatform);
+
+        const span = endX - entryStart;
+        const coinCount = 6;
+        for (let i = 1; i <= coinCount; i++) {
+            const t = i / (coinCount + 1);
+            const bob = Math.sin(t * Math.PI);
+            const coinX = entryStart + span * t;
+            const coinY = baseY - tileSize * 2 - bob * tileSize * 0.5;
+            this.coins.push(new Coin(coinX, coinY));
+        }
+
+        if (rng.next() < 0.4) {
+            const modifierX = mainPlatform.x + mainPlatform.width * 0.4;
+            const modifierY = baseY - tileSize * 2.5;
+            this.modifiers.push(new Modifier(modifierX, modifierY));
+        }
+
+        if (this.previousBiome && this.previousBiome.decorations && this.previousBiome.decorations.length > 0) {
+            const decorCount = 2;
+            for (let i = 0; i < decorCount; i++) {
+                const offset = (i + 1) / (decorCount + 1);
+                this.decorations.push({
+                    x: entryPlatform.x + entryPlatform.width * offset,
+                    y: entryPlatform.y,
+                    type: rng.choice(this.previousBiome.decorations),
+                    variant: rng.int(0, 2)
+                });
+            }
+        }
+
+        if (this.biome.decorations && this.biome.decorations.length > 0) {
+            const decorCount = 3;
+            for (let i = 0; i < decorCount; i++) {
+                const offset = (i + 1) / (decorCount + 1);
+                this.decorations.push({
+                    x: mainPlatform.x + mainPlatform.width * offset,
+                    y: mainPlatform.y,
+                    type: rng.choice(this.biome.decorations),
+                    variant: rng.int(0, 2)
+                });
+            }
+        }
+
+        const gateWidth = tileSize * 7;
+        const gateHeight = tileSize * 6;
+        const gateX = entryPlatform.x + tileSize * 0.5;
+        const gateY = baseY - gateHeight + tileSize * 2;
+
+        this.transitionStructures.push({
+            type: 'biome_gate',
+            stage: 'transition_in',
+            fromBiome: this.previousBiome,
+            toBiome: this.biome,
+            x: gateX,
+            y: gateY,
+            width: gateWidth,
+            height: gateHeight
+        });
+
+        this.transitionStructures.push({
+            type: 'biome_preview_particles',
+            stage: 'transition_in',
+            fromBiome: this.previousBiome,
+            toBiome: this.biome,
+            palette: 'from',
+            area: {
+                x: gateX - tileSize * 2,
+                y: baseY - tileSize * 5,
+                width: gateWidth + tileSize * 4,
+                height: tileSize * 6
+            }
+        });
+
+        this.transitionStructures.push({
+            type: 'biome_preview_particles',
+            stage: 'transition_in',
+            fromBiome: this.previousBiome,
+            toBiome: this.biome,
+            palette: 'to',
+            area: {
+                x: mainPlatform.x + tileSize * 2,
+                y: baseY - tileSize * 4,
+                width: Math.max(tileSize * 8, mainPlatform.width * 0.6),
+                height: tileSize * 5
+            }
+        });
+    }
+
     generateSimpleFallback(rng, diffConfig, seedHeight, currentX, startBoundary, endX, computeGap, pickHeightNear, ensureReachable) {
         const tileSize = CONFIG.TILE_SIZE;
         const maxPlatformsPerChunk = 15;
@@ -833,9 +1147,13 @@ export class Chunk {
             if (platform.type === 'floating') {
                 this.drawFloatingPlatform(ctx, screenX, screenY, platform.width, platform.height);
             } else {
-                this.drawGroundPlatform(ctx, screenX, screenY, platform.width, platform.height);
+                this.drawGroundPlatform(ctx, screenX, screenY, platform.width, platform.height, platform);
             }
         });
+
+        if (this.transitionStructures && this.transitionStructures.length > 0) {
+            this.drawTransitionStructures(ctx);
+        }
 
         // Desenhar decorações
         this.decorations.forEach(decor => {
@@ -880,9 +1198,314 @@ export class Chunk {
         });
     }
 
-    drawGroundPlatform(ctx, x, y, width, height) {
+    drawTransitionStructures(ctx) {
+        if (!this.transitionStructures) return;
+
+        for (const structure of this.transitionStructures) {
+            if (!structure) continue;
+
+            if (structure.type === 'biome_gate') {
+                this.drawBiomeGate(ctx, structure);
+            } else if (structure.type === 'biome_preview_particles') {
+                this.drawTransitionParticles(ctx, structure);
+            }
+        }
+    }
+
+    drawBiomeGate(ctx, structure) {
+        const fromBiome = structure.fromBiome || this.biome;
+        const toBiome = structure.toBiome || this.biome;
+        const stage = structure.stage || this.transitionStage;
+
+        const screenX = structure.x - game.camera.x;
+        const screenY = structure.y - game.camera.y;
+        const width = structure.width;
+        const height = structure.height;
+
+        const fromPrimary = resolveBiomeColor(fromBiome, ['ground', 'sand', 'cloud', 'grass'], '#6b6b6b');
+        const fromSecondary = resolveBiomeColor(fromBiome, ['groundDark', 'sandDark', 'cloudDark', 'grassDark', 'ground'], adjustColor(fromPrimary, -40));
+        const toPrimary = resolveBiomeColor(toBiome, ['accent', 'grass', 'ice', 'cloud', 'sand'], '#c0d6ff');
+        const toSecondary = resolveBiomeColor(toBiome, ['ground', 'groundDark', 'sand', 'sandDark', 'cloudDark'], adjustColor(toPrimary, -60));
+        const highlight = adjustColor(toPrimary, 50);
+
+        let portalAlpha = 1;
+        if (stage === 'transition_out') {
+            portalAlpha = Math.max(0, Math.min(1, (game.biomeTransitionStageProgress - 0.25) * 1.6));
+        } else if (stage === 'transition_in') {
+            portalAlpha = Math.max(0.4, Math.min(1, 0.6 + game.biomeTransitionStageProgress * 0.7));
+        }
+
+        const time = Date.now() / 1000;
+
+        ctx.save();
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(screenX + width / 2, screenY + height + 12, Math.max(width / 2.5, 45), 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.roundRect(screenX - 6, screenY - 6, width + 12, height + 12, 18);
+        ctx.fill();
+
+        const outerGradient = ctx.createLinearGradient(screenX, screenY, screenX, screenY + height);
+        outerGradient.addColorStop(0, fromPrimary);
+        outerGradient.addColorStop(1, fromSecondary);
+        ctx.fillStyle = outerGradient;
+        ctx.beginPath();
+        ctx.moveTo(screenX, screenY + height);
+        ctx.lineTo(screenX, screenY + height * 0.35);
+        ctx.quadraticCurveTo(screenX + width / 2, screenY - height * 0.25, screenX + width, screenY + height * 0.35);
+        ctx.lineTo(screenX + width, screenY + height);
+        ctx.closePath();
+        ctx.fill();
+
+        const innerPadding = Math.max(14, width * 0.18);
+        const innerX = screenX + innerPadding;
+        const innerW = width - innerPadding * 2;
+        const innerTop = screenY + innerPadding;
+        const innerBottom = screenY + height - innerPadding * 0.6;
+
+        ctx.fillStyle = '#090909';
+        ctx.beginPath();
+        ctx.moveTo(innerX, innerBottom);
+        ctx.lineTo(innerX, innerTop + innerW * 0.18);
+        ctx.quadraticCurveTo(innerX + innerW / 2, innerTop - innerW * 0.28, innerX + innerW, innerTop + innerW * 0.18);
+        ctx.lineTo(innerX + innerW, innerBottom);
+        ctx.closePath();
+        ctx.fill();
+
+        const glowPadding = 6;
+        const glowX = innerX + glowPadding;
+        const glowW = Math.max(20, innerW - glowPadding * 2);
+        const glowTop = innerTop + glowPadding * 0.5;
+        const glowBottom = innerBottom - glowPadding;
+
+        ctx.save();
+        ctx.globalAlpha = portalAlpha;
+
+        const portalGradient = ctx.createLinearGradient(glowX, glowTop, glowX, glowBottom);
+        portalGradient.addColorStop(0, adjustColor(highlight, 30));
+        portalGradient.addColorStop(0.45, toPrimary);
+        portalGradient.addColorStop(1, toSecondary);
+        ctx.fillStyle = portalGradient;
+        ctx.beginPath();
+        ctx.moveTo(glowX, glowBottom);
+        ctx.lineTo(glowX, glowTop + glowW * 0.22);
+        ctx.quadraticCurveTo(glowX + glowW / 2, glowTop - glowW * 0.24, glowX + glowW, glowTop + glowW * 0.22);
+        ctx.lineTo(glowX + glowW, glowBottom);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = hexToRgba(highlight, 0.8);
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(glowX, glowBottom);
+        ctx.lineTo(glowX, glowTop + glowW * 0.22);
+        ctx.quadraticCurveTo(glowX + glowW / 2, glowTop - glowW * 0.24, glowX + glowW, glowTop + glowW * 0.22);
+        ctx.lineTo(glowX + glowW, glowBottom);
+        ctx.stroke();
+
+        const swirlCount = 10;
+        for (let i = 0; i < swirlCount; i++) {
+            const angle = (i / swirlCount) * Math.PI * 2 + time * 0.6;
+            const radius = glowW / 2.5;
+            const px = glowX + glowW / 2 + Math.cos(angle) * radius * 0.6;
+            const py = (glowTop + glowBottom) / 2 + Math.sin(angle * 1.2) * (glowBottom - glowTop) / 3;
+            const particleAlpha = 0.4 + Math.sin(time * 1.4 + i) * 0.2;
+            ctx.fillStyle = hexToRgba(highlight, particleAlpha * 0.6);
+            ctx.beginPath();
+            ctx.arc(px, py, 3 + (i % 3), 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+
+        switch (toBiome?.name) {
+            case 'Cave': {
+                const stalactiteColor = adjustColor(toSecondary, -20);
+                ctx.fillStyle = stalactiteColor;
+                for (let i = 0; i < 4; i++) {
+                    const spikeX = glowX + (i + 0.5) * (glowW / 4);
+                    ctx.beginPath();
+                    ctx.moveTo(spikeX - glowW / 10, glowTop + glowW * 0.1);
+                    ctx.lineTo(spikeX, glowTop - glowW * 0.2);
+                    ctx.lineTo(spikeX + glowW / 10, glowTop + glowW * 0.1);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+
+                const torchColor = resolveBiomeColor(fromBiome, ['accent', 'grass', 'sand'], '#ffb347');
+                const drawTorch = (xPos) => {
+                    ctx.fillStyle = '#2a2a2a';
+                    ctx.fillRect(xPos - 3, innerBottom - 6, 6, 18);
+                    ctx.fillStyle = hexToRgba(torchColor, 0.85);
+                    ctx.beginPath();
+                    ctx.moveTo(xPos, innerBottom - 10);
+                    ctx.quadraticCurveTo(xPos + 6, innerBottom - 30 + Math.sin(time * 5) * 3, xPos, innerBottom - 36);
+                    ctx.quadraticCurveTo(xPos - 6, innerBottom - 30 + Math.cos(time * 5) * 3, xPos, innerBottom - 10);
+                    ctx.fill();
+                };
+                drawTorch(innerX + 14);
+                drawTorch(innerX + innerW - 14);
+                break;
+            }
+            case 'Ice': {
+                ctx.fillStyle = hexToRgba(highlight, 0.7);
+                for (let i = 0; i < 3; i++) {
+                    const crystalX = glowX + (i + 0.5) * (glowW / 3);
+                    const crystalHeight = 20 + (i % 2) * 10;
+                    ctx.beginPath();
+                    ctx.moveTo(crystalX, innerBottom);
+                    ctx.lineTo(crystalX - 10, innerBottom + 6);
+                    ctx.lineTo(crystalX, innerBottom - crystalHeight);
+                    ctx.lineTo(crystalX + 10, innerBottom + 6);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                break;
+            }
+            case 'Desert': {
+                const sandColor = resolveBiomeColor(toBiome, ['sand', 'ground'], '#f4a460');
+                ctx.fillStyle = hexToRgba(sandColor, 0.75);
+                ctx.beginPath();
+                ctx.moveTo(screenX, screenY + height);
+                ctx.quadraticCurveTo(screenX + width * 0.2, screenY + height - 18, screenX + width * 0.45, screenY + height - 6);
+                ctx.quadraticCurveTo(screenX + width * 0.7, screenY + height - 2, screenX + width, screenY + height - 12);
+                ctx.lineTo(screenX + width, screenY + height);
+                ctx.closePath();
+                ctx.fill();
+                break;
+            }
+            case 'Sky': {
+                ctx.strokeStyle = hexToRgba(highlight, 0.6);
+                ctx.lineWidth = 3;
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    const arcRadius = glowW / 2 + i * 10;
+                    ctx.arc(glowX + glowW / 2, glowTop + (glowBottom - glowTop) / 2, arcRadius, Math.PI * 0.2, Math.PI * 0.8);
+                    ctx.stroke();
+                }
+                break;
+            }
+            case 'Apocalypse': {
+                const fireColor = resolveBiomeColor(toBiome, ['accent'], '#ff4500');
+                for (let i = 0; i < 4; i++) {
+                    const fx = innerX + (i + 0.8) * (innerW / 5);
+                    ctx.fillStyle = hexToRgba(fireColor, 0.9);
+                    ctx.beginPath();
+                    ctx.moveTo(fx, innerBottom - 6);
+                    ctx.quadraticCurveTo(fx + 6, innerBottom - 28, fx, innerBottom - 42);
+                    ctx.quadraticCurveTo(fx - 6, innerBottom - 28, fx, innerBottom - 6);
+                    ctx.fill();
+                }
+                break;
+            }
+            case 'Moon': {
+                ctx.fillStyle = hexToRgba(highlight, 0.8 * portalAlpha);
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i / 6) * Math.PI * 2;
+                    const radius = glowW / 2.8;
+                    const px = glowX + glowW / 2 + Math.cos(angle) * radius;
+                    const py = glowTop + (glowBottom - glowTop) / 2 + Math.sin(angle) * (glowBottom - glowTop) / 2.8;
+                    ctx.beginPath();
+                    ctx.arc(px, py, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                break;
+            }
+            case 'Black Hole': {
+                ctx.strokeStyle = hexToRgba(highlight, 0.8 * portalAlpha);
+                ctx.lineWidth = 4;
+                const centerX = glowX + glowW / 2;
+                const centerY = glowTop + (glowBottom - glowTop) / 2;
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY, glowW / 2.6, (glowBottom - glowTop) / 2.4, time * 0.4, 0, Math.PI * 2);
+                ctx.stroke();
+                break;
+            }
+            default:
+                break;
+        }
+
+        const runeCount = 6;
+        ctx.strokeStyle = hexToRgba(highlight, 0.4);
+        ctx.lineWidth = 2;
+        for (let i = 0; i < runeCount; i++) {
+            const progress = (i + 1) / (runeCount + 1);
+            const angle = Math.PI * (1 - progress) + Math.PI * 0.15;
+            const rx = screenX + width / 2 + Math.cos(angle) * (width / 2 - 16);
+            const ry = screenY + height / 2 + Math.sin(angle) * (height / 2 - 20);
+            ctx.beginPath();
+            ctx.moveTo(rx - 4, ry - 6);
+            ctx.lineTo(rx + 4, ry + 6);
+            ctx.moveTo(rx + 4, ry - 6);
+            ctx.lineTo(rx - 4, ry + 6);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
+    drawTransitionParticles(ctx, structure) {
+        const area = structure.area;
+        if (!area) return;
+
+        const stage = structure.stage || this.transitionStage;
+        let stageFactor = 1;
+        if (stage === 'transition_out') {
+            stageFactor = Math.max(0, Math.min(1, (game.biomeTransitionStageProgress - 0.2) * 1.5));
+        } else if (stage === 'transition_in') {
+            stageFactor = Math.max(0.35, Math.min(1, 0.5 + game.biomeTransitionStageProgress * 0.8));
+        }
+
+        if (stageFactor <= 0.05) return;
+
+        const paletteBiome = structure.palette === 'from' ? structure.fromBiome : structure.toBiome;
+        const baseColor = resolveBiomeColor(paletteBiome, ['accent', 'grass', 'ice', 'cloud', 'sand', 'ground'], '#ffffff');
+        const highlight = adjustColor(baseColor, 45);
+        const shadow = adjustColor(baseColor, -45);
+
+        const density = Math.max(10, Math.floor(area.width / 28));
+        const time = Date.now() / 1000;
+        const baseSeedX = Math.floor(game.camera.x / 25);
+        const baseSeedY = Math.floor(game.camera.y / 25);
+
+        for (let i = 0; i < density; i++) {
+            const rawX = (i * 73 + baseSeedX * 37) % area.width;
+            const rawY = (i * 61 + baseSeedY * 53) % area.height;
+            const wave = Math.sin(time * 1.2 + i) * 0.5 + 0.5;
+
+            const px = area.x - game.camera.x + (rawX < 0 ? rawX + area.width : rawX);
+            const pyBase = area.y - game.camera.y + (rawY < 0 ? rawY + area.height : rawY);
+            const py = pyBase + wave * area.height * 0.15;
+
+            const alpha = (0.25 + Math.sin(time * 1.4 + i) * 0.2 + 0.2) * stageFactor;
+            const radius = 2.5 + (i % 4);
+
+            ctx.fillStyle = hexToRgba(shadow, alpha * 0.45);
+            ctx.beginPath();
+            ctx.arc(px + 1.5, py + 1.5, radius + 1, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = hexToRgba(baseColor, alpha * 0.9);
+            ctx.beginPath();
+            ctx.arc(px, py, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = hexToRgba(highlight, alpha * 0.7);
+            ctx.beginPath();
+            ctx.arc(px - 1, py - 1, radius * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    drawGroundPlatform(ctx, x, y, width, height, platform = null) {
         const tileSize = 16;
-        const colors = this.biome.colors;
+        const overrideBiome = platform?.biomeOverride;
+        const colors = overrideBiome?.colors || this.biome.colors;
+        const biomeName = overrideBiome?.name || this.biome.name;
 
         // OUTLINE PRETO GROSSO (estilo cartoon) - com topo arredondado
         ctx.fillStyle = '#000000';
@@ -923,9 +1546,9 @@ export class Chunk {
         const grassHeight = 8;
 
         // Camada de grama/topo (se bioma tiver) - com topo arredondado
-        if (colors.grass || colors.cloud) {
-            const topColor = colors.grass || colors.cloud;
-            const topDark = colors.grassDark || colors.cloudDark;
+        if (colors.grass || colors.cloud || colors.sand) {
+            const topColor = colors.grass || colors.cloud || colors.sand;
+            const topDark = colors.grassDark || colors.cloudDark || colors.sandDark;
 
             const grassGradient = ctx.createLinearGradient(x, y, x, y + grassHeight);
             grassGradient.addColorStop(0, topColor);
@@ -948,7 +1571,7 @@ export class Chunk {
             ctx.fillRect(x + 4, y + 1, width - 8, 2);
 
             // Detalhes de grama/tufos (apenas em Plains) - mais visíveis
-            if (this.biome.name === 'Plains') {
+            if (biomeName === 'Plains') {
                 ctx.fillStyle = topColor;
                 for (let i = 0; i < width; i += 8) {
                     const tuftHeight = 4 + (i % 3);
