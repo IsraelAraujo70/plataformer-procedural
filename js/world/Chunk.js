@@ -826,21 +826,34 @@ export class Chunk {
     }
 
     draw(ctx) {
-        this.platforms.forEach(platform => {
+        const padding = 128;
+        const viewportWidth = game.width;
+        const viewportHeight = game.height;
+
+        for (const platform of this.platforms) {
             const screenX = platform.x - game.camera.x;
             const screenY = platform.y - game.camera.y;
+
+            if (screenX + platform.width < -padding || screenX - padding > viewportWidth) continue;
+            if (screenY + platform.height < -padding || screenY - padding > viewportHeight) continue;
 
             if (platform.type === 'floating') {
                 this.drawFloatingPlatform(ctx, screenX, screenY, platform.width, platform.height);
             } else {
                 this.drawGroundPlatform(ctx, screenX, screenY, platform.width, platform.height);
             }
-        });
+        }
 
         // Desenhar decorações
-        this.decorations.forEach(decor => {
+        for (const decor of this.decorations) {
             const screenX = decor.x - game.camera.x;
             const screenY = decor.y - game.camera.y;
+            const baseSize = decor.size ?? (decor.radius ? decor.radius * 2 : CONFIG.TILE_SIZE * 4);
+            const decorWidth = decor.width ?? baseSize;
+            const decorHeight = decor.height ?? baseSize;
+
+            if (screenX + decorWidth < -padding || screenX - padding > viewportWidth) continue;
+            if (screenY + decorHeight < -padding || screenY - padding > viewportHeight) continue;
 
             if (decor.type === 'flower') {
                 this.drawFlower(ctx, screenX, screenY, decor.variant);
@@ -877,7 +890,7 @@ export class Chunk {
             } else if (decor.type === 'celestial_crystal') {
                 this.drawCelestialCrystal(ctx, screenX, screenY, decor.variant);
             }
-        });
+        }
     }
 
     drawGroundPlatform(ctx, x, y, width, height) {

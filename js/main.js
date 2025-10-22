@@ -32,16 +32,44 @@ window.createParticles = createParticles;
 function gameLoop(currentTime) {
     requestAnimationFrame(gameLoop);
 
-    if (game.state !== 'playing') return;
+    const targetFrameTime = 1000 / 60; // ~16.67ms
+
+    if (game.state !== 'playing') {
+        game.lastTime = currentTime;
+        game.deltaTime = targetFrameTime;
+        game.deltaTimeFactor = 1;
+        return;
+    }
+
+    if (!game.lastTime) {
+        game.lastTime = currentTime;
+        game.deltaTime = targetFrameTime;
+        game.deltaTimeFactor = 1;
+        return;
+    }
 
     // Delta time - normalizado para 60 FPS
-    const rawDeltaTime = currentTime - game.lastTime;
+    let frameDelta = currentTime - game.lastTime;
     game.lastTime = currentTime;
 
-    // Calcular fator de normalização (16.67ms = 60 FPS)
-    const targetFrameTime = 1000 / 60; // ~16.67ms
-    game.deltaTime = rawDeltaTime;
-    game.deltaTimeFactor = rawDeltaTime / targetFrameTime; // Fator de escala (1.0 = 60 FPS)
+    if (frameDelta < 0) {
+        frameDelta = targetFrameTime;
+    }
+
+    // Limitar grandes saltos (ex.: ao voltar de abas/pause)
+    const maxFrameDelta = targetFrameTime * 3;
+    if (frameDelta > maxFrameDelta) {
+        frameDelta = maxFrameDelta;
+    }
+
+    // Calcular fator de normalização suavizado para reduzir jitter
+    const frameFactor = frameDelta / targetFrameTime;
+    const previousFactor = game.deltaTimeFactor || 1;
+    const smoothing = 0.15;
+    const smoothedFactor = previousFactor + (frameFactor - previousFactor) * smoothing;
+
+    game.deltaTime = targetFrameTime * smoothedFactor;
+    game.deltaTimeFactor = smoothedFactor; // Fator de escala (1.0 = 60 FPS)
 
     // Time Warp: executar updates múltiplos se algum jogador tiver time warp ativo
     let updateCount = 1;
