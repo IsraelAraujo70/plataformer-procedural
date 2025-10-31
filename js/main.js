@@ -13,6 +13,8 @@ import { rewardedAdsManager } from './ads/RewardedAds.js';
 import { setupContinueModal, resetContinueFlag } from './ui/ContinueModal.js';
 import { soundManager } from './audio/SoundManager.js';
 
+let uiElements = null;
+
 // ============================================
 // HELPERS GLOBAIS
 // ============================================
@@ -193,35 +195,75 @@ function gameLoop(currentTime) {
             }
         }
 
+        const chunkPixelWidth = CONFIG.CHUNK_WIDTH * CONFIG.TILE_SIZE;
+        const horizontalBuffer = chunkPixelWidth;
+        const verticalBuffer = CONFIG.TILE_SIZE * 12;
+        const updateViewLeft = game.camera.x - horizontalBuffer;
+        const updateViewRight = game.camera.x + game.width + horizontalBuffer;
+        const updateViewTop = game.camera.y - verticalBuffer;
+        const updateViewBottom = game.camera.y + game.height + verticalBuffer;
+
         game.player.update();
         if (game.twoPlayerMode && game.player2) {
             game.player2.update();
         }
-        game.coins.forEach(coin => coin.update());
-        game.enemies.forEach(enemy => enemy.update());
-        game.modifiers.forEach(modifier => modifier.update());
+        for (let ci = 0; ci < game.coins.length; ci++) {
+            const coin = game.coins[ci];
+            if (coin.x + coin.width < updateViewLeft || coin.x > updateViewRight) continue;
+            if (coin.y + coin.height < updateViewTop || coin.y > updateViewBottom) continue;
+            coin.update();
+        }
 
-        // Atualizar projéteis
-        if (game.projectiles) {
-            game.projectiles.forEach(projectile => projectile.update());
-            // Remover projéteis mortos
+        for (let ei = 0; ei < game.enemies.length; ei++) {
+            const enemy = game.enemies[ei];
+            if (enemy.x + enemy.width < updateViewLeft || enemy.x > updateViewRight) continue;
+            if (enemy.y + enemy.height < updateViewTop || enemy.y > updateViewBottom) continue;
+            enemy.update();
+        }
+
+        for (let mi = 0; mi < game.modifiers.length; mi++) {
+            const modifier = game.modifiers[mi];
+            if (modifier.x + modifier.width < updateViewLeft || modifier.x > updateViewRight) continue;
+            if (modifier.y + modifier.height < updateViewTop || modifier.y > updateViewBottom) continue;
+            modifier.update();
+        }
+
+        if (game.projectiles && game.projectiles.length > 0) {
+            for (let pi = 0; pi < game.projectiles.length; pi++) {
+                game.projectiles[pi].update();
+            }
             game.projectiles = game.projectiles.filter(p => p.alive);
         }
 
-        // Atualizar chapéus dos chunks
-        game.chunks.forEach(chunk => {
-            chunk.hats.forEach(hat => hat.update());
-        });
+        for (const chunk of game.chunks.values()) {
+            const chunkLeft = chunk.x;
+            const chunkRight = chunkLeft + chunkPixelWidth;
+            if (chunkRight < updateViewLeft || chunkLeft > updateViewRight) continue;
 
-        // Atualizar chapéus temporários (dropping)
-        if (game.droppingHats) {
-            game.droppingHats.forEach(hat => hat.update());
-            // Remover chapéus coletados/expirados
+            const hats = chunk.hats;
+            for (let hi = 0; hi < hats.length; hi++) {
+                const hat = hats[hi];
+                if (hat.x + hat.width < updateViewLeft || hat.x > updateViewRight) continue;
+                if (hat.y + hat.height < updateViewTop || hat.y > updateViewBottom) continue;
+                hat.update();
+            }
+        }
+
+        if (game.droppingHats && game.droppingHats.length > 0) {
+            for (let dhi = 0; dhi < game.droppingHats.length; dhi++) {
+                const hat = game.droppingHats[dhi];
+                hat.update();
+            }
             game.droppingHats = game.droppingHats.filter(hat => !hat.collected);
         }
 
-        game.particles.forEach(particle => particle.update());
-        game.floatingTexts.forEach(text => text.update());
+        for (let pi = 0; pi < game.particles.length; pi++) {
+            game.particles[pi].update();
+        }
+
+        for (let ti = 0; ti < game.floatingTexts.length; ti++) {
+            game.floatingTexts[ti].update();
+        }
 
         // Atualizar partículas ambientes
         initAmbientParticles();
@@ -233,23 +275,37 @@ function gameLoop(currentTime) {
     game.floatingTexts = game.floatingTexts.filter(t => t.life > 0);
 
     // Atualizar HUD
-    document.getElementById('p1-score').textContent = game.player.score;
-    document.getElementById('p1-hat').textContent = game.player.hatCount;
-    // Cores baseadas na quantidade: 0=cinza, 1=vermelho, 2=amarelo, 3+=verde
-    const p1Color = game.player.hatCount === 0 ? '#999' :
-                    game.player.hatCount === 1 ? '#f44336' :
-                    game.player.hatCount === 2 ? '#FFC107' : '#4CAF50';
-    document.getElementById('p1-hat').style.color = p1Color;
+    if (uiElements) {
+        const p1Color = game.player.hatCount === 0 ? '#999' :
+                        game.player.hatCount === 1 ? '#f44336' :
+                        game.player.hatCount === 2 ? '#FFC107' : '#4CAF50';
 
-    if (game.twoPlayerMode && game.player2) {
-        document.getElementById('p2-score').textContent = game.player2.score;
-        document.getElementById('p2-hat').textContent = game.player2.hatCount;
-        const p2Color = game.player2.hatCount === 0 ? '#999' :
-                        game.player2.hatCount === 1 ? '#f44336' :
-                        game.player2.hatCount === 2 ? '#FFC107' : '#4CAF50';
-        document.getElementById('p2-hat').style.color = p2Color;
+        if (uiElements.p1Score) {
+            uiElements.p1Score.textContent = game.player.score;
+        }
+        if (uiElements.p1Hat) {
+            uiElements.p1Hat.textContent = game.player.hatCount;
+            uiElements.p1Hat.style.color = p1Color;
+        }
+
+        if (game.twoPlayerMode && game.player2) {
+            const p2Color = game.player2.hatCount === 0 ? '#999' :
+                            game.player2.hatCount === 1 ? '#f44336' :
+                            game.player2.hatCount === 2 ? '#FFC107' : '#4CAF50';
+
+            if (uiElements.p2Score) {
+                uiElements.p2Score.textContent = game.player2.score;
+            }
+            if (uiElements.p2Hat) {
+                uiElements.p2Hat.textContent = game.player2.hatCount;
+                uiElements.p2Hat.style.color = p2Color;
+            }
+        }
+
+        if (uiElements.distance) {
+            uiElements.distance.textContent = game.distance;
+        }
     }
-    document.getElementById('distance').textContent = game.distance;
 
     updateCamera();
 
@@ -269,29 +325,84 @@ function gameLoop(currentTime) {
     drawAmbientParticles(ctx);
 
     // Chunks (terreno)
-    game.chunks.forEach(chunk => chunk.draw(ctx));
+    const drawChunkWidth = CONFIG.CHUNK_WIDTH * CONFIG.TILE_SIZE;
+    const drawBufferX = drawChunkWidth;
+    const drawBufferY = CONFIG.TILE_SIZE * 12;
+    const drawViewLeft = game.camera.x - drawBufferX;
+    const drawViewRight = game.camera.x + game.width + drawBufferX;
+    const drawViewTop = game.camera.y - drawBufferY;
+    const drawViewBottom = game.camera.y + game.height + drawBufferY;
 
-    // Entities
-    game.coins.forEach(coin => coin.draw(ctx));
-    game.enemies.forEach(enemy => enemy.draw(ctx));
-    game.modifiers.forEach(modifier => modifier.draw(ctx));
-
-    // Projéteis
-    if (game.projectiles) {
-        game.projectiles.forEach(projectile => projectile.draw(ctx));
+    const visibleChunks = [];
+    for (const chunk of game.chunks.values()) {
+        const chunkLeft = chunk.x;
+        const chunkRight = chunkLeft + drawChunkWidth;
+        if (chunkRight < drawViewLeft || chunkLeft > drawViewRight) continue;
+        visibleChunks.push(chunk);
+        chunk.draw(ctx);
     }
 
-    // Chapéus dos chunks (coletáveis)
-    game.chunks.forEach(chunk => {
-        chunk.hats.forEach(hat => hat.draw(ctx));
-    });
-
-    // Chapéus temporários (dropping)
-    if (game.droppingHats) {
-        game.droppingHats.forEach(hat => hat.draw(ctx));
+    for (let ci = 0; ci < game.coins.length; ci++) {
+        const coin = game.coins[ci];
+        if (coin.collected) continue;
+        if (coin.x + coin.width < drawViewLeft || coin.x > drawViewRight) continue;
+        if (coin.y + coin.height < drawViewTop || coin.y > drawViewBottom) continue;
+        coin.draw(ctx);
     }
 
-    game.particles.forEach(particle => particle.draw(ctx));
+    for (let ei = 0; ei < game.enemies.length; ei++) {
+        const enemy = game.enemies[ei];
+        if (!enemy.alive) continue;
+        if (enemy.x + enemy.width < drawViewLeft || enemy.x > drawViewRight) continue;
+        if (enemy.y + enemy.height < drawViewTop || enemy.y > drawViewBottom) continue;
+        enemy.draw(ctx);
+    }
+
+    for (let mi = 0; mi < game.modifiers.length; mi++) {
+        const modifier = game.modifiers[mi];
+        if (modifier.collected) continue;
+        if (modifier.x + modifier.width < drawViewLeft || modifier.x > drawViewRight) continue;
+        if (modifier.y + modifier.height < drawViewTop || modifier.y > drawViewBottom) continue;
+        modifier.draw(ctx);
+    }
+
+    if (game.projectiles && game.projectiles.length > 0) {
+        for (let pi = 0; pi < game.projectiles.length; pi++) {
+            const projectile = game.projectiles[pi];
+            if (projectile.x + projectile.width < drawViewLeft || projectile.x > drawViewRight) continue;
+            if (projectile.y + projectile.height < drawViewTop || projectile.y > drawViewBottom) continue;
+            projectile.draw(ctx);
+        }
+    }
+
+    for (let cIndex = 0; cIndex < visibleChunks.length; cIndex++) {
+        const chunk = visibleChunks[cIndex];
+        const hats = chunk.hats;
+        for (let hi = 0; hi < hats.length; hi++) {
+            const hat = hats[hi];
+            if (hat.collected) continue;
+            if (hat.x + hat.width < drawViewLeft || hat.x > drawViewRight) continue;
+            if (hat.y + hat.height < drawViewTop || hat.y > drawViewBottom) continue;
+            hat.draw(ctx);
+        }
+    }
+
+    if (game.droppingHats && game.droppingHats.length > 0) {
+        for (let dhi = 0; dhi < game.droppingHats.length; dhi++) {
+            const hat = game.droppingHats[dhi];
+            if (hat.x + hat.width < drawViewLeft || hat.x > drawViewRight) continue;
+            if (hat.y + hat.height < drawViewTop || hat.y > drawViewBottom) continue;
+            hat.draw(ctx);
+        }
+    }
+
+    for (let pi = 0; pi < game.particles.length; pi++) {
+        const particle = game.particles[pi];
+        const particleSize = particle.size || 0;
+        if (particle.x + particleSize < drawViewLeft || particle.x > drawViewRight) continue;
+        if (particle.y + particleSize < drawViewTop || particle.y > drawViewBottom) continue;
+        particle.draw(ctx);
+    }
 
     // Players
     game.player.draw(ctx);
@@ -300,7 +411,10 @@ function gameLoop(currentTime) {
     }
 
     // Floating texts (por cima de tudo)
-    game.floatingTexts.forEach(text => text.draw(ctx));
+    for (let ti = 0; ti < game.floatingTexts.length; ti++) {
+        const text = game.floatingTexts[ti];
+        text.draw(ctx);
+    }
 
     // Timers de modificadores (centralizados no topo)
     drawModifierTimers(ctx);
@@ -344,6 +458,14 @@ window.addEventListener('load', async () => {
     // IMPORTANTE: Manter loading screen visível enquanto SDK carrega
     const loadingScreen = document.getElementById('loadingScreen');
     const menu = document.getElementById('menu');
+
+    uiElements = {
+        p1Score: document.getElementById('p1-score'),
+        p1Hat: document.getElementById('p1-hat'),
+        p2Score: document.getElementById('p2-score'),
+        p2Hat: document.getElementById('p2-hat'),
+        distance: document.getElementById('distance')
+    };
 
     // Inicializar SDK de anúncios ANTES de mostrar o menu
     try {

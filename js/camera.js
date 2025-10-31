@@ -22,23 +22,49 @@ export function updateChunks() {
 
     const playerChunk = Math.floor(referenceX / (CONFIG.CHUNK_WIDTH * CONFIG.TILE_SIZE));
 
-    // Gerar chunks à frente e atrás (apenas chunks 0+)
-    for (let i = Math.max(0, playerChunk - CONFIG.VIEW_DISTANCE); i <= playerChunk + CONFIG.VIEW_DISTANCE; i++) {
-        // Parar geração de chunks após o chunk 69
-        if (i > 69) continue;
+    const queue = game.chunkGenerationQueue;
+    const queueSet = game.chunkGenerationSet;
 
-        if (!game.chunks.has(i)) {
-            // Criar seed única para este chunk baseada na seed global
-            const chunkRandom = new Random(game.seed + i * 1000);
-            const previousChunk = game.chunks.get(i - 1) || null;
-            const chunk = new Chunk(i, chunkRandom, previousChunk);
-            game.chunks.set(i, chunk);
+    // Solicitar novos chunks dentro da janela
+    let queueDirty = false;
+    const startIndex = Math.max(0, playerChunk - CONFIG.VIEW_DISTANCE);
+    const endIndex = playerChunk + CONFIG.VIEW_DISTANCE;
 
-            // Adicionar entidades do chunk às listas globais
-            game.coins.push(...chunk.coins);
-            game.enemies.push(...chunk.enemies);
-            game.modifiers.push(...chunk.modifiers);
+    for (let i = startIndex; i <= endIndex; i++) {
+        if (i > 69) break; // Parar geração após o chunk 69
+        if (game.chunks.has(i) || queueSet.has(i)) continue;
+
+        queue.push(i);
+        queueSet.add(i);
+        queueDirty = true;
+    }
+
+    if (queueDirty && queue.length > 1) {
+        queue.sort((a, b) => a - b);
+    }
+
+    // Gerar um número limitado de chunks por frame para evitar travadas
+    const maxPerFrame = game.chunks.size === 0 ? queue.length : Math.max(1, game.maxChunksPerFrame || 2);
+    let generatedThisFrame = 0;
+
+    while (queue.length > 0 && generatedThisFrame < maxPerFrame) {
+        const index = queue.shift();
+        queueSet.delete(index);
+
+        if (game.chunks.has(index) || index < 0 || index > 69) {
+            continue;
         }
+
+        const chunkRandom = new Random(game.seed + index * 1000);
+        const previousChunk = game.chunks.get(index - 1) || null;
+        const chunk = new Chunk(index, chunkRandom, previousChunk);
+        game.chunks.set(index, chunk);
+
+        game.coins.push(...chunk.coins);
+        game.enemies.push(...chunk.enemies);
+        game.modifiers.push(...chunk.modifiers);
+
+        generatedThisFrame++;
     }
 
     // Remover chunks muito distantes (culling)
@@ -51,6 +77,16 @@ export function updateChunks() {
 
     chunksToRemove.forEach(index => {
         const chunk = game.chunks.get(index);
+        if (!chunk) return;
+
+        if (queueSet.has(index)) {
+            queueSet.delete(index);
+            const queuePos = queue.indexOf(index);
+            if (queuePos !== -1) {
+                queue.splice(queuePos, 1);
+            }
+        }
+
         // Remover entidades do chunk
         game.coins = game.coins.filter(c => !chunk.coins.includes(c));
         game.enemies = game.enemies.filter(e => !chunk.enemies.includes(e));

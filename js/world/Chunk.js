@@ -8,7 +8,7 @@ import { ShooterEnemy } from '../entities/enemies/ShooterEnemy.js';
 import { Coin } from '../entities/Coin.js';
 import { Modifier } from '../entities/Modifier.js';
 import { Hat } from '../entities/Hat.js';
-import { PATTERNS, getDifficultyConfig, selectPattern, getBiome, BIOMES } from './Patterns.js';
+import { PATTERNS, PLATFORM_TYPES, getDifficultyConfig, selectPattern, getBiome } from './Patterns.js';
 
 const ABSOLUTE_MAX_GAP = CONFIG.TILE_SIZE * 5.5;
 
@@ -229,6 +229,7 @@ export class Chunk {
             y: result.y,
             width: result.width,
             height: result.height,
+            renderHeight: result.renderHeight,
             type: result.type
         };
     }
@@ -241,6 +242,82 @@ export class Chunk {
         // Obter configuração de dificuldade
         const diffConfig = getDifficultyConfig(this.index);
         const difficulty = Math.min(this.index / 10, 3);
+
+        const biomeAllowedList = Array.isArray(this.biome.allowedTypes) && this.biome.allowedTypes.length > 0
+            ? this.biome.allowedTypes
+            : ['ground', 'floating'];
+        const biomeAllowedSet = new Set(biomeAllowedList);
+
+        const difficultyUnlocks = {
+            moving: diffConfig.allowMoving,
+            crumbling: diffConfig.allowCrumbling,
+            ice: diffConfig.allowIce,
+            bouncy: diffConfig.allowBouncy
+        };
+
+        const isDifficultyUnlocked = (type) => {
+            if (Object.prototype.hasOwnProperty.call(difficultyUnlocks, type)) {
+                return Boolean(difficultyUnlocks[type]);
+            }
+            return true;
+        };
+
+    // Ajusta o tipo da plataforma para respeitar o bioma e os desbloqueios de dificuldade
+    const resolvePlatformType = (desiredType = 'ground') => {
+            const order = [];
+            const pushType = (candidate) => {
+                if (candidate && !order.includes(candidate)) {
+                    order.push(candidate);
+                }
+            };
+
+            pushType(desiredType);
+            if (desiredType !== 'floating') pushType('floating');
+            if (desiredType !== 'ground') pushType('ground');
+            pushType('bouncy');
+            pushType('moving');
+            pushType('ice');
+            pushType('crumbling');
+
+            for (const candidate of order) {
+                if (!isDifficultyUnlocked(candidate)) continue;
+                if (biomeAllowedSet.has(candidate)) {
+                    return candidate;
+                }
+            }
+
+            for (const candidate of order) {
+                if (isDifficultyUnlocked(candidate)) {
+                    return candidate;
+                }
+            }
+
+            return 'ground';
+        };
+
+    // Aplica metadados (hitbox, render, atrito, movimento) conforme o tipo escolhido
+    const applyTypeSettings = (platform, type) => {
+            const settings = PLATFORM_TYPES[type] || PLATFORM_TYPES.ground;
+            platform.type = type;
+            platform.height = settings.hitboxHeight || tileSize * 3;
+            platform.renderHeight = settings.renderHeight || platform.height;
+            platform.friction = settings.friction ?? CONFIG.FRICTION;
+            platform.solid = settings.solid !== false;
+
+            if (settings.bounceForce !== undefined) {
+                platform.bounceForce = settings.bounceForce;
+            } else if (platform.bounceForce !== undefined) {
+                delete platform.bounceForce;
+            }
+
+            if (settings.movement) {
+                platform.movement = { ...settings.movement };
+            } else if (platform.movement) {
+                delete platform.movement;
+            }
+
+            return platform;
+        };
 
         const endX = startX + chunkWidth;
         const jumpSpeed = Math.abs(CONFIG.JUMP_STRENGTH);
@@ -342,13 +419,12 @@ export class Chunk {
 
         // CHUNK 0: Criar plataforma inicial garantida para spawn dos jogadores
         if (this.index === 0) {
-            const spawnPlatform = {
+            const spawnType = resolvePlatformType('ground');
+            const spawnPlatform = applyTypeSettings({
                 x: 0,
                 y: game.height - 150,
-                width: 400,
-                height: tileSize * 3,
-                type: 'ground'
-            };
+                width: 400
+            }, spawnType);
             this.platforms.push(spawnPlatform);
 
             x = spawnPlatform.x + spawnPlatform.width;
@@ -384,13 +460,12 @@ export class Chunk {
 
                 for (let index = 0; index < pattern.platforms.length && platformCount < maxPlatformsPerChunk; index++) {
                     const platDef = pattern.platforms[index];
-                    const platform = {
+                    const platformType = resolvePlatformType(platDef.type || 'ground');
+                    const platform = applyTypeSettings({
                         x: patternStartX + platDef.offsetX * tileSize,
                         y: clamp(patternStartY + platDef.offsetY * tileSize, minHeight, maxHeight),
-                        width: platDef.width * tileSize,
-                        height: platDef.type === 'floating' ? tileSize : tileSize * 3,
-                        type: platDef.type
-                    };
+                        width: platDef.width * tileSize
+                    }, platformType);
 
                     const reachBase = placed > 0 ? this.platforms[this.platforms.length - 1] : prevPlatform;
                     if (!ensureReachable(reachBase, platform)) {
@@ -441,10 +516,10 @@ export class Chunk {
             }
 
             if (platformCount === 0) {
-                this.generateSimpleFallback(rng, diffConfig, lastHeight, x, startX, endX, computeGap, pickHeightNear, ensureReachable);
+                this.generateSimpleFallback(rng, diffConfig, lastHeight, x, startX, endX, computeGap, pickHeightNear, ensureReachable, resolvePlatformType, applyTypeSettings);
             }
         } else {
-            this.generateSimpleFallback(rng, diffConfig, lastHeight, x, startX, endX, computeGap, pickHeightNear, ensureReachable);
+            this.generateSimpleFallback(rng, diffConfig, lastHeight, x, startX, endX, computeGap, pickHeightNear, ensureReachable, resolvePlatformType, applyTypeSettings);
         }
 
         // Adicionar plataformas flutuantes (com verificação de alcançabilidade)
@@ -458,13 +533,12 @@ export class Chunk {
                 const floatingY = game.height * 0.3 + rng.range(0, game.height * 0.3);
                 const floatingWidth = tileSize * rng.int(2, 5);
 
-                const newFloating = {
+                const floatingType = resolvePlatformType('floating');
+                const newFloating = applyTypeSettings({
                     x: floatingX,
                     y: floatingY,
-                    width: floatingWidth,
-                    height: tileSize,
-                    type: 'floating'
-                };
+                    width: floatingWidth
+                }, floatingType);
 
                 // Verificar se não colide com outras plataformas (margem aumentada)
                 let collides = false;
@@ -657,7 +731,7 @@ export class Chunk {
         }
     }
 
-    generateSimpleFallback(rng, diffConfig, seedHeight, currentX, startBoundary, endX, computeGap, pickHeightNear, ensureReachable) {
+    generateSimpleFallback(rng, diffConfig, seedHeight, currentX, startBoundary, endX, computeGap, pickHeightNear, ensureReachable, resolvePlatformType, applyTypeSettings) {
         const tileSize = CONFIG.TILE_SIZE;
         const maxPlatformsPerChunk = 15;
         const minHeight = game.height / 3;
@@ -692,13 +766,12 @@ export class Chunk {
                 break;
             }
 
-            const platform = {
+            const resolvedType = resolvePlatformType('ground');
+            const platform = applyTypeSettings({
                 x: platformX,
                 y: platformY,
-                width: platformWidth,
-                height: tileSize * 3,
-                type: 'ground'
-            };
+                width: platformWidth
+            }, resolvedType);
 
             if (!ensureReachable(prevPlatform, platform)) {
                 x = platformX + tileSize;
@@ -796,13 +869,12 @@ export class Chunk {
             const availableWidth = endX - startBridge - tileSize;
 
             if (availableWidth >= diffConfig.minPlatformSize) {
-                const fallback = {
+                const fallbackType = resolvePlatformType('ground');
+                const fallback = applyTypeSettings({
                     x: startBridge,
                     y: prevPlatform ? prevPlatform.y : clamp(seedHeight, minHeight, maxHeight),
-                    width: Math.min(diffConfig.maxPlatformSize, availableWidth),
-                    height: tileSize * 3,
-                    type: 'ground'
-                };
+                    width: Math.min(diffConfig.maxPlatformSize, availableWidth)
+                }, fallbackType);
 
                 if (ensureReachable(prevPlatform, fallback)) {
                     let collides = false;
@@ -833,14 +905,16 @@ export class Chunk {
         for (const platform of this.platforms) {
             const screenX = platform.x - game.camera.x;
             const screenY = platform.y - game.camera.y;
+            const drawHeight = platform.renderHeight ?? platform.height;
+            const collisionHeight = platform.height;
 
             if (screenX + platform.width < -padding || screenX - padding > viewportWidth) continue;
-            if (screenY + platform.height < -padding || screenY - padding > viewportHeight) continue;
+            if (screenY + drawHeight < -padding || screenY - padding > viewportHeight) continue;
 
             if (platform.type === 'floating') {
-                this.drawFloatingPlatform(ctx, screenX, screenY, platform.width, platform.height);
+                this.drawFloatingPlatform(ctx, screenX, screenY, platform.width, drawHeight, collisionHeight);
             } else {
-                this.drawGroundPlatform(ctx, screenX, screenY, platform.width, platform.height);
+                this.drawGroundPlatform(ctx, screenX, screenY, platform.width, drawHeight);
             }
         }
 
@@ -1012,18 +1086,18 @@ export class Chunk {
         ctx.fillRect(x, y + height - 2, width, 2);
     }
 
-    drawFloatingPlatform(ctx, x, y, width, height) {
+    drawFloatingPlatform(ctx, x, y, width, height, collisionHeight = height) {
         // Plataformas flutuantes se adaptam ao bioma
         if (this.biome.name === 'Sky') {
             // NUVEM SÓLIDA para bioma Sky
-            this.drawCloudPlatform(ctx, x, y, width, height);
+            this.drawCloudPlatform(ctx, x, y, width, height, collisionHeight);
         } else {
             // Plataforma cristalina padrão para outros biomas
             this.drawCrystalPlatform(ctx, x, y, width, height);
         }
     }
 
-    drawCloudPlatform(ctx, x, y, width, height) {
+    drawCloudPlatform(ctx, x, y, width, height, collisionHeight = height) {
         const time = Date.now() / 1000;
         const seed = Math.floor(x / 100);
 
@@ -1036,7 +1110,7 @@ export class Chunk {
         // Hitbox visual para debug (outline da área real de colisão)
         // Desenhar retângulo sólido simplificado para colisão clara
         ctx.fillStyle = 'rgba(180, 200, 220, 0.3)';
-        ctx.fillRect(x, y, width, height);
+    ctx.fillRect(x, y, width, collisionHeight);
 
         // Base da nuvem - formato orgânico com cores mais saturadas e distintas
         const cloudGradient = ctx.createLinearGradient(x, y - 5, x, y + height + 5);

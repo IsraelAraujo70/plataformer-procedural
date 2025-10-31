@@ -183,17 +183,23 @@ export const PATTERNS = {
 export const PLATFORM_TYPES = {
     ground: {
         solid: true,
-        friction: CONFIG.FRICTION
+        friction: CONFIG.FRICTION,
+        hitboxHeight: T * 3,
+        renderHeight: T * 3
     },
 
     floating: {
         solid: true,
-        friction: CONFIG.FRICTION
+        friction: CONFIG.FRICTION,
+        hitboxHeight: Math.round(T * 1.5),
+        renderHeight: T
     },
 
     moving: {
         solid: true,
         friction: CONFIG.FRICTION,
+        hitboxHeight: Math.round(T * 1.5),
+        renderHeight: T,
         movement: {
             direction: 'horizontal', // ou 'vertical'
             range: 100,
@@ -204,19 +210,25 @@ export const PLATFORM_TYPES = {
     crumbling: {
         solid: true,
         friction: CONFIG.FRICTION,
+        hitboxHeight: T * 3,
+        renderHeight: T * 3,
         lifetime: 120, // frames antes de cair
         respawnTime: 300
     },
 
     ice: {
         solid: true,
-        friction: 0.98 // Super escorregadio
+        friction: 0.98, // Super escorregadio
+        hitboxHeight: T * 3,
+        renderHeight: T * 3
     },
 
     bouncy: {
         solid: true,
         friction: CONFIG.FRICTION,
-        bounceForce: 1.5 // Multiplica força do pulo
+        bounceForce: 1.5, // Multiplica força do pulo
+        hitboxHeight: Math.round(T * 1.5),
+        renderHeight: T
     }
 };
 
