@@ -12,6 +12,7 @@ import { getBiome } from './world/Patterns.js';
 import { rewardedAdsManager } from './ads/RewardedAds.js';
 import { setupContinueModal, resetContinueFlag } from './ui/ContinueModal.js';
 import { soundManager } from './audio/SoundManager.js';
+import { initializeNewSystems, updateNewSystems, renderNewSystems, applyCameraTransform, restoreCameraTransform, renderDebugStats } from './integration.js';
 
 let uiElements = null;
 
@@ -93,6 +94,13 @@ function gameLoop(currentTime) {
             game.player2.timeWarp = false;
             game.player2.timeWarpMaxTime = 0;
         }
+    }
+
+    // 🚀 Atualizar novos sistemas (Screen Effects, Particles, etc)
+    const shouldContinue = updateNewSystems(game.deltaTimeFactor);
+    if (!shouldContinue) {
+        // Freeze frame ativo - renderizar mas não atualizar
+        return;
     }
 
     // Update (executar múltiplas vezes se time warp ativo)
@@ -324,6 +332,9 @@ function gameLoop(currentTime) {
     // Partículas ambientes (atrás de tudo, mas na frente do background)
     drawAmbientParticles(ctx);
 
+    // 🚀 Aplicar transformações de câmera (shake, zoom)
+    applyCameraTransform(ctx);
+
     // Chunks (terreno)
     const drawChunkWidth = CONFIG.CHUNK_WIDTH * CONFIG.TILE_SIZE;
     const drawBufferX = drawChunkWidth;
@@ -416,6 +427,12 @@ function gameLoop(currentTime) {
         text.draw(ctx);
     }
 
+    // 🚀 Restaurar transformações de câmera
+    restoreCameraTransform(ctx);
+
+    // 🚀 Renderizar novos sistemas (Partículas, Screen Effects)
+    renderNewSystems(ctx);
+
     // Timers de modificadores (centralizados no topo)
     drawModifierTimers(ctx);
 
@@ -424,6 +441,9 @@ function gameLoop(currentTime) {
 
     // Dev Mode UI (por cima de absolutamente tudo)
     drawDevModeUI(ctx);
+
+    // 🚀 Debug stats dos novos sistemas (se dev mode ativo)
+    renderDebugStats(ctx);
 }
 
 // ============================================
@@ -446,6 +466,9 @@ window.addEventListener('load', async () => {
 
     // Inicializar sistema de som
     game.soundManager = soundManager;
+
+    // 🚀 INICIALIZAR NOVOS SISTEMAS (Animation, Particles, Screen Effects, Pooling)
+    initializeNewSystems();
 
     // Configurar canvas responsivo
     resizeCanvas();
