@@ -48,26 +48,32 @@ export class PlayerSpriteGenerator {
         ctx.ellipse(0, stretchedHeight / 2 + 2, stretchedWidth / 2, 4, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // OUTLINE GROSSO PRETO (cartoon style)
-        const outlineWidth = 3;
-        ctx.strokeStyle = '#000000';
+        // Contorno escuro e pesado: a mesma leitura de silhueta da key art.
+        const outlineWidth = 4;
+        ctx.strokeStyle = '#080b22';
         ctx.lineWidth = outlineWidth;
+        ctx.lineJoin = 'round';
 
         // CORPO (forma arredondada)
-        const bodyPath = new Path2D();
-        const bodyW = stretchedWidth * 0.8;
-        const bodyH = stretchedHeight * 0.6;
+        const bodyW = stretchedWidth * 0.9;
+        const bodyH = stretchedHeight * 0.62;
         const bodyY = stretchedHeight * 0.2;
 
         ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.roundRect(-bodyW / 2, bodyY - bodyH / 2, bodyW, bodyH, bodyW * 0.3);
+        ctx.ellipse(0, bodyY, bodyW / 2, bodyH / 2, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
+        // Sombra inferior saturada deixa o boneco menos chapado.
+        ctx.fillStyle = 'rgba(8, 35, 92, 0.26)';
+        ctx.beginPath();
+        ctx.ellipse(0, bodyY + bodyH * 0.18, bodyW * 0.38, bodyH * 0.19, 0, 0, Math.PI * 2);
+        ctx.fill();
+
         // CABEÇA (círculo)
-        const headRadius = stretchedWidth * 0.4;
-        const headY = -stretchedHeight * 0.15;
+        const headRadius = stretchedWidth * 0.46;
+        const headY = -stretchedHeight * 0.13;
 
         // Cabeça - outline
         ctx.beginPath();
@@ -76,6 +82,12 @@ export class PlayerSpriteGenerator {
         ctx.fill();
         ctx.stroke();
 
+        // Reflexo largo, como no personagem da capa.
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.24)';
+        ctx.beginPath();
+        ctx.ellipse(-headRadius * 0.28, headY - headRadius * 0.32, headRadius * 0.2, headRadius * 0.12, -0.55, 0, Math.PI * 2);
+        ctx.fill();
+
         // OLHOS
         this.drawEyes(ctx, 0, headY, headRadius, expression, frame);
 
@@ -83,10 +95,10 @@ export class PlayerSpriteGenerator {
         this.drawMouth(ctx, 0, headY + headRadius * 0.3, headRadius * 0.4, expression);
 
         // BRAÇOS (simples)
-        this.drawArms(ctx, stretchedWidth, bodyY, frame, facingRight);
+        this.drawArms(ctx, stretchedWidth, bodyY, frame, facingRight, color);
 
         // PERNAS (simples)
-        this.drawLegs(ctx, stretchedWidth, bodyY + bodyH / 2, stretchedHeight, frame);
+        this.drawLegs(ctx, stretchedWidth, bodyY + bodyH / 2, stretchedHeight, frame, color);
 
         // ANTENA/TOPETE (com física de pêndulo)
         this.drawAntenna(ctx, 0, headY - headRadius, headRadius, options.antennaAngle || 0);
@@ -104,8 +116,8 @@ export class PlayerSpriteGenerator {
      */
     drawEyes(ctx, x, y, headRadius, expression, frame) {
         const eyeOffsetX = headRadius * 0.25;
-        const eyeOffsetY = -headRadius * 0.1;
-        const eyeSize = headRadius * 0.15;
+        const eyeOffsetY = -headRadius * 0.06;
+        const eyeSize = headRadius * 0.21;
 
         // Piscada (frame-based)
         const blinkFrame = frame % 180; // Pisca a cada 3 segundos (180 frames)
@@ -125,8 +137,8 @@ export class PlayerSpriteGenerator {
             // Brancos dos olhos
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
-            ctx.arc(x - eyeOffsetX, y + eyeOffsetY, eyeSize, 0, Math.PI * 2);
-            ctx.arc(x + eyeOffsetX, y + eyeOffsetY, eyeSize, 0, Math.PI * 2);
+            ctx.ellipse(x - eyeOffsetX, y + eyeOffsetY, eyeSize * 0.86, eyeSize * 1.2, 0, 0, Math.PI * 2);
+            ctx.ellipse(x + eyeOffsetX, y + eyeOffsetY, eyeSize * 0.86, eyeSize * 1.2, 0, 0, Math.PI * 2);
             ctx.fill();
 
             // Pupilas (variam com expressão)
@@ -244,9 +256,9 @@ export class PlayerSpriteGenerator {
     /**
      * Desenha braços (animados)
      */
-    drawArms(ctx, bodyWidth, bodyY, frame, facingRight) {
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 4;
+    drawArms(ctx, bodyWidth, bodyY, frame, facingRight, color) {
+        ctx.strokeStyle = '#080b22';
+        ctx.lineWidth = 6;
         ctx.lineCap = 'round';
 
         // Animação de balanço dos braços ao andar
@@ -265,8 +277,17 @@ export class PlayerSpriteGenerator {
         );
         ctx.stroke();
 
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(leftArmX, bodyY);
+        ctx.lineTo(leftArmX + Math.sin(leftArmAngle) * armLength, bodyY + Math.cos(leftArmAngle) * armLength);
+        ctx.stroke();
+
         // Braço direito
         ctx.beginPath();
+        ctx.strokeStyle = '#080b22';
+        ctx.lineWidth = 6;
         const rightArmX = bodyWidth * 0.4;
         const rightArmAngle = -armSwing;
         ctx.moveTo(rightArmX, bodyY);
@@ -275,14 +296,21 @@ export class PlayerSpriteGenerator {
             bodyY + Math.cos(rightArmAngle) * armLength
         );
         ctx.stroke();
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(rightArmX, bodyY);
+        ctx.lineTo(rightArmX + Math.sin(rightArmAngle) * armLength, bodyY + Math.cos(rightArmAngle) * armLength);
+        ctx.stroke();
     }
 
     /**
      * Desenha pernas (animadas)
      */
-    drawLegs(ctx, bodyWidth, bodyBottom, height, frame) {
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 4;
+    drawLegs(ctx, bodyWidth, bodyBottom, height, frame, color) {
+        ctx.strokeStyle = '#080b22';
+        ctx.lineWidth = 7;
         ctx.lineCap = 'round';
 
         // Animação de caminhada
@@ -301,14 +329,30 @@ export class PlayerSpriteGenerator {
         );
         ctx.stroke();
 
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(leftLegX, bodyBottom);
+        ctx.lineTo(leftLegX + Math.sin(legSwing) * legLength * 0.5, bodyBottom + legLength);
+        ctx.stroke();
+
         // Perna direita
         ctx.beginPath();
+        ctx.strokeStyle = '#080b22';
+        ctx.lineWidth = 7;
         const rightLegX = bodyWidth * 0.2;
         ctx.moveTo(rightLegX, bodyBottom);
         ctx.lineTo(
             rightLegX + Math.sin(-legSwing) * legLength * 0.5,
             bodyBottom + legLength
         );
+        ctx.stroke();
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(rightLegX, bodyBottom);
+        ctx.lineTo(rightLegX + Math.sin(-legSwing) * legLength * 0.5, bodyBottom + legLength);
         ctx.stroke();
     }
 

@@ -1,7 +1,7 @@
 import { game } from './game.js';
 import { CONFIG } from './config.js';
 import { Random } from './utils/Random.js';
-import { Chunk } from './world/Chunk.js';
+import { Chunk } from './world/Chunk.js?v=visual-refresh-1';
 
 // ============================================
 // GERAÇÃO E GESTÃO DE CHUNKS

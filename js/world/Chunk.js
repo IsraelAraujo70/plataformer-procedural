@@ -16,8 +16,12 @@ const ABSOLUTE_MAX_GAP = CONFIG.TILE_SIZE * 5.5;
 // ENEMY TYPE SELECTION
 // ============================================
 function selectEnemyType(chunkIndex, platformType, rng) {
-    // Todos os tipos disponíveis desde o início (chances iguais)
-    const availableTypes = ['walker', 'flyer', 'jumper', 'chaser', 'shooter'];
+    // Introduzir inimigos aos poucos para que cada comportamento tenha tempo de ser aprendido.
+    const availableTypes = ['walker'];
+    if (chunkIndex >= 3) availableTypes.push('flyer');
+    if (chunkIndex >= 5) availableTypes.push('jumper');
+    if (chunkIndex >= 8) availableTypes.push('chaser');
+    if (chunkIndex >= 12) availableTypes.push('shooter');
 
     // Preferências baseadas no tipo de plataforma
     if (platformType === 'floating') {
@@ -79,7 +83,8 @@ function clamp(value, min, max) {
 }
 
 // Verifica se uma plataforma é alcançável a partir de outra
-function canReachPlatform(fromPlatform, toPlatform) {
+export function canReachPlatform(fromPlatform, toPlatform) {
+    if (!fromPlatform || !toPlatform) return true;
     // Distância horizontal (do final da plataforma origem até início da destino)
     const dx = toPlatform.x - (fromPlatform.x + fromPlatform.width);
 
@@ -171,8 +176,8 @@ export class Chunk {
             return null;
         }
 
-        const candidates = sourcePlatforms.filter(p => p.type === 'ground');
-        const source = candidates.length > 0 ? candidates : sourcePlatforms;
+        const mainRoute = sourcePlatforms.filter(p => p.routeRole !== 'bonus');
+        const source = mainRoute.length > 0 ? mainRoute : sourcePlatforms;
 
         return source.reduce((best, platform) => {
             if (!best) return { ...platform };
@@ -204,8 +209,8 @@ export class Chunk {
             return null;
         }
 
-        const groundPlatforms = this.platforms.filter(p => p.type === 'ground');
-        const source = groundPlatforms.length > 0 ? groundPlatforms : this.platforms;
+        const mainRoute = this.platforms.filter(p => p.routeRole !== 'bonus');
+        const source = mainRoute.length > 0 ? mainRoute : this.platforms;
 
         const result = source.reduce((best, platform) => {
             if (!best) return platform;
@@ -241,7 +246,8 @@ export class Chunk {
 
         // Obter configuração de dificuldade
         const diffConfig = getDifficultyConfig(this.index);
-        const difficulty = Math.min(this.index / 10, 3);
+        // Liberar novas formas ainda no primeiro bioma, sem despejar tudo no jogador de uma vez.
+        const difficulty = Math.min(this.index / 4, 3);
 
         const biomeAllowedList = Array.isArray(this.biome.allowedTypes) && this.biome.allowedTypes.length > 0
             ? this.biome.allowedTypes
@@ -423,7 +429,8 @@ export class Chunk {
             const spawnPlatform = applyTypeSettings({
                 x: 0,
                 y: game.height - 150,
-                width: 400
+                width: 400,
+                routeRole: 'main'
             }, spawnType);
             this.platforms.push(spawnPlatform);
 
@@ -435,91 +442,126 @@ export class Chunk {
         const usePatterns = rng.next() < diffConfig.patternChance && this.index > 0;
 
         if (usePatterns) {
-            // GERAÇÃO BASEADA EM PATTERNS
+            // GERAÇÃO BASEADA EM PATTERNS. Cada pattern é aceito ou rejeitado como um bloco:
+            // nunca reposicionamos peças individuais, pois isso destrói a forma desenhada.
             let platformCount = 0;
             const maxPlatformsPerChunk = 15;
+            let failedPatternAttempts = 0;
 
-            while (x < endX && platformCount < maxPlatformsPerChunk) {
+            while (x < endX && platformCount < maxPlatformsPerChunk && failedPatternAttempts < 6) {
                 const prevPlatform = this.platforms.length > 0 ? this.platforms[this.platforms.length - 1] : this.entryPlatform;
                 const pattern = selectPattern(rng, difficulty);
                 const firstDef = pattern.platforms[0];
+                if (!firstDef || pattern.platforms.length + platformCount > maxPlatformsPerChunk) break;
 
-                let patternStartX = x;
-                let patternStartY = lastHeight;
+                const gap = prevPlatform ? computeGap(prevPlatform) : 0;
+                const targetFirstX = prevPlatform ? getRightEdge(prevPlatform) + gap : Math.max(x, startX);
+                const desiredFirstY = prevPlatform ? pickHeightNear(prevPlatform) : lastHeight;
+                const minOffsetY = Math.min(...pattern.platforms.map(def => def.offsetY * tileSize));
+                const maxOffsetY = Math.max(...pattern.platforms.map(def => def.offsetY * tileSize));
+                const patternStartX = targetFirstX - firstDef.offsetX * tileSize;
+                const patternStartY = clamp(
+                    desiredFirstY - firstDef.offsetY * tileSize,
+                    minHeight - minOffsetY,
+                    maxHeight - maxOffsetY
+                );
 
-                if (prevPlatform && firstDef) {
-                    const gap = computeGap(prevPlatform);
-                    const targetFirstX = getRightEdge(prevPlatform) + gap;
-                    const targetFirstY = pickHeightNear(prevPlatform);
-                    patternStartX = targetFirstX - firstDef.offsetX * tileSize;
-                    patternStartY = targetFirstY - firstDef.offsetY * tileSize;
+                const candidates = pattern.platforms.map((platDef, patternIndex) => {
+                    const platformType = resolvePlatformType(platDef.type || 'ground');
+                    return applyTypeSettings({
+                        x: patternStartX + platDef.offsetX * tileSize,
+                        y: patternStartY + platDef.offsetY * tileSize,
+                        width: platDef.width * tileSize,
+                        routeRole: 'main',
+                        patternName: pattern.name,
+                        patternInstance: `${this.index}:${patternStartX}`,
+                        patternIndex
+                    }, platformType);
+                });
+
+                const fitsChunk = candidates.every(platform =>
+                    platform.x >= startX && getRightEdge(platform) <= endX - tileSize
+                );
+                const sequenceReachable = candidates.every((platform, index) =>
+                    canReachPlatform(index === 0 ? prevPlatform : candidates[index - 1], platform)
+                );
+                const collidesWithExisting = candidates.some(platform =>
+                    this.platforms.some(existingPlatform => checkOverlap(
+                        platform.x, platform.y, platform.width, platform.height,
+                        existingPlatform.x, existingPlatform.y, existingPlatform.width, existingPlatform.height,
+                        24
+                    ))
+                );
+
+                if (!fitsChunk || !sequenceReachable || collidesWithExisting) {
+                    failedPatternAttempts++;
+                    continue;
                 }
 
-                let placed = 0;
-                let patternMaxRight = patternStartX;
+                this.platforms.push(...candidates);
+                platformCount += candidates.length;
+                failedPatternAttempts = 0;
+                x = Math.max(...candidates.map(getRightEdge));
+                lastHeight = candidates[candidates.length - 1].y;
 
-                for (let index = 0; index < pattern.platforms.length && platformCount < maxPlatformsPerChunk; index++) {
-                    const platDef = pattern.platforms[index];
-                    const platformType = resolvePlatformType(platDef.type || 'ground');
-                    const platform = applyTypeSettings({
-                        x: patternStartX + platDef.offsetX * tileSize,
-                        y: clamp(patternStartY + platDef.offsetY * tileSize, minHeight, maxHeight),
-                        width: platDef.width * tileSize
-                    }, platformType);
-
-                    const reachBase = placed > 0 ? this.platforms[this.platforms.length - 1] : prevPlatform;
-                    if (!ensureReachable(reachBase, platform)) {
-                        continue;
-                    }
-
-                    if (platform.x + platform.width > endX) {
-                        platform.width = Math.max(diffConfig.minPlatformSize, endX - platform.x - tileSize);
-                        if (platform.width < diffConfig.minPlatformSize) {
-                            continue;
-                        }
-                    }
-
-                    let collides = false;
-                    for (let existingPlatform of this.platforms) {
-                        if (checkOverlap(
-                            platform.x, platform.y, platform.width, platform.height,
-                            existingPlatform.x, existingPlatform.y, existingPlatform.width, existingPlatform.height,
-                            48
-                        )) {
-                            collides = true;
-                            break;
-                        }
-                    }
-
-                    if (collides) {
-                        continue;
-                    }
-
-                    this.platforms.push(platform);
-                    platformCount++;
-                    placed++;
-                    patternMaxRight = Math.max(patternMaxRight, getRightEdge(platform));
-
-                    if (pattern.reward === 'modifier' && pattern.rewardPlatform === index) {
-                        const modX = platform.x + platform.width / 2 - 10;
-                        const modY = platform.y - 40;
+                if (pattern.reward === 'modifier' && Number.isInteger(pattern.rewardPlatform)) {
+                    const rewardPlatform = candidates[pattern.rewardPlatform];
+                    if (rewardPlatform) {
+                        const modX = rewardPlatform.x + rewardPlatform.width / 2 - 10;
+                        const modY = rewardPlatform.y - 40;
                         this.modifiers.push(new Modifier(modX, modY));
                     }
                 }
-
-                if (placed === 0) {
-                    x += tileSize * 2;
-                } else {
-                    x = patternMaxRight;
-                    lastHeight = this.platforms[this.platforms.length - 1].y;
-                }
             }
 
-            if (platformCount === 0) {
+            // Completar o restante do chunk com a rota simples se nenhum pattern couber
+            // ou se sobrar espaço suficiente após um pattern inteiro.
+            if (platformCount === 0 || x + diffConfig.minPlatformSize < endX) {
                 this.generateSimpleFallback(rng, diffConfig, lastHeight, x, startX, endX, computeGap, pickHeightNear, ensureReachable, resolvePlatformType, applyTypeSettings);
             }
         } else {
             this.generateSimpleFallback(rng, diffConfig, lastHeight, x, startX, endX, computeGap, pickHeightNear, ensureReachable, resolvePlatformType, applyTypeSettings);
+        }
+
+        // Fechar o chunk perto da borda. Sem este conector, uma rota podia terminar cedo
+        // demais e deixar o início do próximo chunk além do alcance do jogador.
+        const targetExitRight = endX - tileSize;
+        let exitConnectorAttempts = 0;
+        while (exitConnectorAttempts < 6) {
+            const mainPlatforms = this.platforms.filter(platform => platform.routeRole !== 'bonus');
+            const exitBase = mainPlatforms.length > 0
+                ? mainPlatforms.reduce((best, platform) => getRightEdge(platform) > getRightEdge(best) ? platform : best)
+                : this.entryPlatform;
+
+            if (!exitBase || getRightEdge(exitBase) >= targetExitRight) break;
+
+            const remaining = targetExitRight - getRightEdge(exitBase);
+            const safeGap = Math.min(
+                computeMaxReach(exitBase) * 0.6,
+                tileSize * 2.5,
+                Math.max(tileSize, remaining * 0.5)
+            );
+            const connectorX = getRightEdge(exitBase) + safeGap;
+            const connectorWidth = clamp(
+                targetExitRight - connectorX,
+                tileSize * 2,
+                diffConfig.maxPlatformSize
+            );
+            const connectorType = resolvePlatformType('ground');
+            const connector = applyTypeSettings({
+                x: connectorX,
+                y: clamp(exitBase.y + rng.range(-tileSize, tileSize), minHeight, maxHeight),
+                width: connectorWidth,
+                routeRole: 'main',
+                patternName: 'Exit Connector'
+            }, connectorType);
+
+            if (!canReachPlatform(exitBase, connector)) {
+                connector.y = exitBase.y;
+            }
+
+            this.platforms.push(connector);
+            exitConnectorAttempts++;
         }
 
         // Adicionar plataformas flutuantes (com verificação de alcançabilidade)
@@ -537,7 +579,8 @@ export class Chunk {
                 const newFloating = applyTypeSettings({
                     x: floatingX,
                     y: floatingY,
-                    width: floatingWidth
+                    width: floatingWidth,
+                    routeRole: 'bonus'
                 }, floatingType);
 
                 // Verificar se não colide com outras plataformas (margem aumentada)
@@ -580,24 +623,15 @@ export class Chunk {
                 if (!collides && reachable) {
                     this.platforms.push(newFloating);
                     floatingPlaced++;
-
-                    // 60% de chance de ter moeda/modificador
-                    if (rng.next() < 0.6) {
-                        const itemX = floatingX + floatingWidth / 2 - CONFIG.COIN_SIZE / 2;
-                        const itemY = floatingY - tileSize * 1.5;
-
-                        // 20% chance de modificador, senão moeda
-                        if (rng.next() < 0.2 && this.modifiers.length < 2) {
-                            this.modifiers.push(new Modifier(itemX, itemY));
-                        } else {
-                            this.coins.push(new Coin(itemX, itemY));
-                        }
-                    }
                 }
 
                 floatingAttempts++;
             }
         }
+
+        // Popular a geometria em um passe único. Assim patterns e geração simples
+        // obedecem às mesmas regras de encontros, moedas e recompensas.
+        this.populatePlatforms(rng, diffConfig);
 
         // Adicionar decorações nas plataformas baseadas no bioma
         this.platforms.forEach(platform => {
@@ -619,13 +653,8 @@ export class Chunk {
             }
         });
 
-        // Adicionar chapéu com 30% de chance (apenas em chunks >= 1)
-        if (this.index >= 1 && rng.next() < 0.30 && this.platforms.length > 0) {
-            // Escolher plataforma aleatória para spawnar o chapéu
-            const platform = this.platforms[rng.int(0, this.platforms.length - 1)];
-            const hatX = platform.x + platform.width / 2 - 10;
-            const hatY = platform.y - 40; // Um pouco acima da plataforma
-
+        // Adicionar chapéu com 15% de chance (apenas em chunks >= 1)
+        if (this.index >= 1 && rng.next() < 0.15 && this.platforms.length > 0) {
             // Verificar se não colide com outros itens
             const allItems = [];
 
@@ -656,32 +685,39 @@ export class Chunk {
                 });
             });
 
-            // Só adicionar se não colidir com outros itens
-            if (canPlaceItem(hatX, hatY, 20, 20, allItems)) {
-                // Passar o bioma atual para o chapéu - mapeamento correto
-                let biomeType = this.biome.name.toLowerCase().replace(/\s+/g, '_');
+            const biomeMapping = {
+                'plains': 'plains',
+                'cave': 'cave',
+                'underground_cave': 'cave',
+                'ice': 'ice',
+                'desert': 'desert',
+                'sky': 'sky',
+                'apocalypse': 'apocalypse',
+                'moon': 'moon',
+                'black_hole': 'black_hole'
+            };
+            const rawBiomeType = this.biome.name.toLowerCase().replace(/\s+/g, '_');
+            const biomeType = biomeMapping[rawBiomeType] || 'plains';
 
-                // Validar e corrigir nomes de biomas conhecidos
-                const biomeMapping = {
-                    'plains': 'plains',
-                    'cave': 'cave',
-                    'underground_cave': 'cave',
-                    'ice': 'ice',
-                    'desert': 'desert',
-                    'sky': 'sky',
-                    'apocalypse': 'apocalypse',
-                    'moon': 'moon',
-                    'black_hole': 'black_hole'
-                };
+            // Tentar mais de uma plataforma para que 15% represente a chance real
+            // de aparecer, e não apenas a chance de uma única posição estar livre.
+            let attempts = 0;
+            while (attempts < 10 && this.hats.length === 0) {
+                const platform = this.platforms[rng.int(0, this.platforms.length - 1)];
+                const horizontalSlots = [0.5, 0.25, 0.75];
+                const slot = horizontalSlots[attempts % horizontalSlots.length];
+                const hatX = platform.x + platform.width * slot - 10;
+                const hatY = platform.y - CONFIG.TILE_SIZE * 3;
 
-                biomeType = biomeMapping[biomeType] || 'plains';
-                console.log(`Spawning hat in biome: ${this.biome.name} -> ${biomeType}`);
-                this.hats.push(new Hat(hatX, hatY, 'collectable', biomeType));
+                if (canPlaceItem(hatX, hatY, 20, 20, allItems)) {
+                    this.hats.push(new Hat(hatX, hatY, 'collectable', biomeType));
+                }
+                attempts++;
             }
         }
 
         // Adicionar modificador adicional se não veio de pattern
-        if (this.index >= 1 && this.modifiers.length === 0) {
+        if (this.index >= 1 && this.modifiers.length === 0 && rng.next() < diffConfig.modifierChance) {
             const allItems = [];
 
             this.coins.forEach(coin => {
@@ -731,6 +767,78 @@ export class Chunk {
         }
     }
 
+    populatePlatforms(rng, diffConfig) {
+        const tileSize = CONFIG.TILE_SIZE;
+        const allItems = this.modifiers.map(modifier => ({
+            x: modifier.x,
+            y: modifier.y,
+            width: 20,
+            height: 20
+        }));
+        const orderedPlatforms = [...this.platforms].sort((a, b) => a.x - b.x || a.y - b.y);
+
+        for (const platform of orderedPlatforms) {
+            const isSpawnPlatform = this.index === 0 && platform.x === 0;
+            const isBonus = platform.routeRole === 'bonus';
+            let hasEnemy = false;
+
+            const enemyChance = isBonus ? diffConfig.enemyChance * 0.35 : diffConfig.enemyChance;
+            if (!isSpawnPlatform && this.index >= 1 &&
+                rng.next() < enemyChance && platform.width > CONFIG.ENEMY_SIZE * 2) {
+                const enemyX = platform.x + platform.width / 2 - CONFIG.ENEMY_SIZE / 2;
+                const enemyY = platform.y - CONFIG.ENEMY_SIZE;
+
+                if (canPlaceItem(enemyX, enemyY, CONFIG.ENEMY_SIZE, CONFIG.ENEMY_SIZE, allItems)) {
+                    const enemyType = selectEnemyType(this.index, platform.type, rng);
+                    const enemy = createEnemyByType(enemyType, enemyX, enemyY, platform.width, platform.y);
+
+                    if (this.biome.enemySpeedMultiplier && enemy.vx !== 0) {
+                        enemy.vx *= this.biome.enemySpeedMultiplier;
+                    }
+
+                    this.enemies.push(enemy);
+                    allItems.push({
+                        x: enemyX,
+                        y: enemyY,
+                        width: CONFIG.ENEMY_SIZE,
+                        height: CONFIG.ENEMY_SIZE
+                    });
+                    hasEnemy = true;
+                }
+            }
+
+            const shouldPlaceCoins = !isSpawnPlatform && (isBonus || rng.next() < diffConfig.coinChance);
+            if (!shouldPlaceCoins) continue;
+
+            const maxCoinsByWidth = Math.max(1, Math.floor(platform.width / (tileSize * 1.25)));
+            const requestedCoins = isBonus ? rng.int(1, 3) : rng.int(2, 5);
+            const numCoins = Math.min(requestedCoins, maxCoinsByWidth);
+
+            for (let i = 0; i < numCoins; i++) {
+                let coinX;
+                if (hasEnemy) {
+                    const leftSide = i % 2 === 0;
+                    const sideStart = leftSide ? CONFIG.COIN_SIZE : platform.width * 0.65;
+                    const sideEnd = leftSide ? platform.width * 0.35 : platform.width - CONFIG.COIN_SIZE;
+                    coinX = platform.x + rng.range(Math.min(sideStart, sideEnd), Math.max(sideStart, sideEnd));
+                } else {
+                    coinX = platform.x + (i + 1) * (platform.width / (numCoins + 1)) - CONFIG.COIN_SIZE / 2;
+                }
+
+                const coinY = platform.y - tileSize * 2;
+                if (canPlaceItem(coinX, coinY, CONFIG.COIN_SIZE, CONFIG.COIN_SIZE, allItems)) {
+                    this.coins.push(new Coin(coinX, coinY));
+                    allItems.push({
+                        x: coinX,
+                        y: coinY,
+                        width: CONFIG.COIN_SIZE,
+                        height: CONFIG.COIN_SIZE
+                    });
+                }
+            }
+        }
+    }
+
     generateSimpleFallback(rng, diffConfig, seedHeight, currentX, startBoundary, endX, computeGap, pickHeightNear, ensureReachable, resolvePlatformType, applyTypeSettings) {
         const tileSize = CONFIG.TILE_SIZE;
         const maxPlatformsPerChunk = 15;
@@ -738,18 +846,19 @@ export class Chunk {
         const maxHeight = game.height - 100;
 
         let platformCount = 0;
+        let generationAttempts = 0;
         let x = currentX;
         let lastHeight = seedHeight;
 
-        while (x < endX && platformCount < maxPlatformsPerChunk) {
+        while (x < endX && platformCount < maxPlatformsPerChunk && generationAttempts < 60) {
+            generationAttempts++;
             const prevPlatform = this.platforms.length > 0 ? this.platforms[this.platforms.length - 1] : this.entryPlatform;
 
             const gap = computeGap(prevPlatform);
             let platformX = prevPlatform ? getRightEdge(prevPlatform) + gap : x;
-            platformX = Math.max(platformX, startBoundary);
-            if (!prevPlatform) {
-                platformX = Math.max(platformX, x);
-            }
+            // Respeitar o cursor mesmo quando existe uma plataforma anterior evita
+            // repetir indefinidamente a mesma região após colisões ou rejeições.
+            platformX = Math.max(platformX, startBoundary, x);
 
             if (platformX + diffConfig.minPlatformSize >= endX) {
                 break;
@@ -770,7 +879,8 @@ export class Chunk {
             const platform = applyTypeSettings({
                 x: platformX,
                 y: platformY,
-                width: platformWidth
+                width: platformWidth,
+                routeRole: 'main'
             }, resolvedType);
 
             if (!ensureReachable(prevPlatform, platform)) {
@@ -800,65 +910,6 @@ export class Chunk {
             this.platforms.push(platform);
             platformCount++;
 
-            const platformItems = [];
-            let hasEnemy = false;
-
-            if (rng.next() < diffConfig.enemyChance && this.index >= 1 && platform.width > CONFIG.ENEMY_SIZE * 2) {
-                const enemyX = platform.x + platform.width / 2 - CONFIG.ENEMY_SIZE / 2;
-                const enemyY = platform.y - CONFIG.ENEMY_SIZE;
-
-                // Selecionar tipo de inimigo baseado na dificuldade e tipo de plataforma
-                const enemyType = selectEnemyType(this.index, platform.type, rng);
-                const enemy = createEnemyByType(enemyType, enemyX, enemyY, platform.width, platform.y);
-
-                // Aplicar modificador de velocidade do bioma (se existir)
-                if (this.biome.enemySpeedMultiplier && enemy.vx !== 0) {
-                    enemy.vx *= this.biome.enemySpeedMultiplier;
-                }
-
-                this.enemies.push(enemy);
-                platformItems.push({
-                    x: enemyX,
-                    y: enemyY,
-                    width: CONFIG.ENEMY_SIZE,
-                    height: CONFIG.ENEMY_SIZE
-                });
-                hasEnemy = true;
-            }
-
-            if (rng.next() < diffConfig.coinChance) {
-                const numCoins = rng.int(2, 5);
-                let coinsPlaced = 0;
-
-                for (let i = 0; i < numCoins && coinsPlaced < numCoins; i++) {
-                    let coinX;
-                    if (hasEnemy) {
-                        const zone = i % 2;
-                        if (zone === 0) {
-                            coinX = platform.x + rng.range(CONFIG.COIN_SIZE, platform.width * 0.4);
-                        } else {
-                            coinX = platform.x + rng.range(platform.width * 0.6, platform.width - CONFIG.COIN_SIZE);
-                        }
-                    } else {
-                        coinX = platform.x + (i + 1) * (platform.width / (numCoins + 1));
-                    }
-
-                    const coinY = platform.y - tileSize * 2;
-
-                    if (canPlaceItem(coinX, coinY, CONFIG.COIN_SIZE, CONFIG.COIN_SIZE, platformItems)) {
-                        const coin = new Coin(coinX, coinY);
-                        this.coins.push(coin);
-                        platformItems.push({
-                            x: coinX,
-                            y: coinY,
-                            width: CONFIG.COIN_SIZE,
-                            height: CONFIG.COIN_SIZE
-                        });
-                        coinsPlaced++;
-                    }
-                }
-            }
-
             x = getRightEdge(platform);
             lastHeight = platform.y;
         }
@@ -873,7 +924,8 @@ export class Chunk {
                 const fallback = applyTypeSettings({
                     x: startBridge,
                     y: prevPlatform ? prevPlatform.y : clamp(seedHeight, minHeight, maxHeight),
-                    width: Math.min(diffConfig.maxPlatformSize, availableWidth)
+                    width: Math.min(diffConfig.maxPlatformSize, availableWidth),
+                    routeRole: 'main'
                 }, fallbackType);
 
                 if (ensureReachable(prevPlatform, fallback)) {
@@ -968,20 +1020,20 @@ export class Chunk {
     }
 
     drawGroundPlatform(ctx, x, y, width, height) {
-        const tileSize = 16;
+        const tileSize = 28;
         const colors = this.biome.colors;
 
         // OUTLINE PRETO GROSSO (estilo cartoon) - com topo arredondado
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = '#080b22';
         ctx.beginPath();
-        ctx.moveTo(x - 2, y + 8);
-        ctx.lineTo(x - 2, y + height + 2);
-        ctx.lineTo(x + width + 2, y + height + 2);
-        ctx.lineTo(x + width + 2, y + 8);
+        ctx.moveTo(x - 4, y + 8);
+        ctx.lineTo(x - 4, y + height + 4);
+        ctx.lineTo(x + width + 4, y + height + 4);
+        ctx.lineTo(x + width + 4, y + 8);
         // Topo arredondado
-        ctx.arcTo(x + width + 2, y - 2, x + width / 2, y - 2, 8);
-        ctx.lineTo(x + width / 2, y - 2);
-        ctx.arcTo(x - 2, y - 2, x - 2, y + 8, 8);
+        ctx.arcTo(x + width + 4, y - 4, x + width / 2, y - 4, 10);
+        ctx.lineTo(x + width / 2, y - 4);
+        ctx.arcTo(x - 4, y - 4, x - 4, y + 8, 10);
         ctx.closePath();
         ctx.fill();
 
@@ -1007,7 +1059,7 @@ export class Chunk {
         ctx.fillRect(x, y, 3, height);
 
         // Definir altura da camada de grama/topo
-        const grassHeight = 8;
+        const grassHeight = 11;
 
         // Camada de grama/topo (se bioma tiver) - com topo arredondado
         if (colors.grass || colors.cloud) {
@@ -1030,6 +1082,13 @@ export class Chunk {
             ctx.closePath();
             ctx.fill();
 
+            ctx.strokeStyle = '#080b22';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(x + 3, y + grassHeight);
+            ctx.lineTo(x + width - 3, y + grassHeight);
+            ctx.stroke();
+
             // Highlight no topo da grama
             ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
             ctx.fillRect(x + 4, y + 1, width - 8, 2);
@@ -1050,8 +1109,27 @@ export class Chunk {
         }
 
         // Textura de blocos na lateral (padrão de tijolos)
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.lineWidth = 1;
+        for (let px = 0; px < width; px += 72) {
+            const facetW = Math.min(48, width - px);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.075)';
+            ctx.beginPath();
+            ctx.moveTo(x + px, y + grassHeight + 3);
+            ctx.lineTo(x + px + facetW, y + grassHeight + 3);
+            ctx.lineTo(x + px + facetW * .45, y + Math.min(height - 3, grassHeight + 34));
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = 'rgba(8, 11, 34, 0.13)';
+            ctx.beginPath();
+            ctx.moveTo(x + px + facetW, y + grassHeight + 3);
+            ctx.lineTo(x + Math.min(width, px + 70), y + grassHeight + 20);
+            ctx.lineTo(x + px + facetW * .45, y + Math.min(height - 3, grassHeight + 34));
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        ctx.strokeStyle = 'rgba(8, 11, 34, 0.24)';
+        ctx.lineWidth = 1.5;
 
         // Linhas horizontais
         for (let row = grassHeight; row < height; row += tileSize) {

@@ -3,104 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#07162f">
     <title>Stack or Splat</title>
     <link rel="stylesheet" href="css/styles.css">
-
-    <!-- GameDistribution SDK for Rewarded Ads -->
-    <script src="https://html5.api.gamedistribution.com/main.min.js"></script>
+    <script>
+        if (!['localhost', '127.0.0.1'].includes(location.hostname)) {
+            const adSdk = document.createElement('script');
+            adSdk.src = 'https://html5.api.gamedistribution.com/main.min.js';
+            adSdk.async = true;
+            document.head.appendChild(adSdk);
+        }
+    </script>
 </head>
 <body>
-    <!-- Loading Screen (aparece antes do menu) -->
     <div id="loadingScreen">
-        <h1>🎩 STACK OR SPLAT 🎩</h1>
-        <div class="loading-spinner"></div>
-        <p>Loading game...</p>
+        <div class="loading-mark" aria-hidden="true">SOS</div>
+        <p class="eyebrow">Preparing a completely fair universe</p>
+        <h1>STACK OR SPLAT</h1>
+        <div class="loading-track"><span></span></div>
+        <p class="loading-joke">Stacking hats. Questioning physics.</p>
     </div>
 
-    <div id="menu" class="hidden">
-        <h1>🎩 STACK OR SPLAT 🎩</h1>
-        <button id="start1PBtn">🎮 1 Player</button>
-        <button id="start2PBtn">👥 2 Players</button>
-        <button id="instructionsBtn">📖 Instructions</button>
-        <button id="audioBtn">🔊 Audio Settings</button>
+    <div id="menu" class="hidden menu-screen">
+        <div class="menu-shade" aria-hidden="true"></div>
+        <main class="menu-shell">
+            <p class="eyebrow">An extremely serious hat survival game</p>
+            <h1 class="game-logo">STACK<br><span>OR SPLAT</span></h1>
+            <div class="menu-spacer" aria-hidden="true"></div>
 
-        <!-- Audio Settings Panel -->
-        <div id="audioSettings" class="hidden">
-            <h3>🎵 Audio Settings</h3>
-            <div class="volume-control">
-                <label for="masterVolume">🔊 Master Volume:</label>
-                <input type="range" id="masterVolume" min="0" max="100" value="70">
-                <span id="masterVolumeValue">70%</span>
-            </div>
-            <div class="volume-control">
-                <label for="musicVolume">🎵 Music Volume:</label>
-                <input type="range" id="musicVolume" min="0" max="100" value="50">
-                <span id="musicVolumeValue">50%</span>
-            </div>
-            <div class="volume-control">
-                <label for="sfxVolume">🔔 SFX Volume:</label>
-                <input type="range" id="sfxVolume" min="0" max="100" value="80">
-                <span id="sfxVolumeValue">80%</span>
-            </div>
-            <button id="muteBtn" class="mute-btn">🔊 Mute/Unmute</button>
-            <button id="closeAudioBtn">✖️ Close</button>
-        </div>
+            <section class="menu-card" aria-label="Main menu">
+                <div class="menu-card-heading">
+                    <span class="status-dot"></span>
+                    <span>Choose your level of regret</span>
+                </div>
+                <div class="primary-actions">
+                    <button id="start1PBtn" class="game-button game-button-primary">
+                        <span class="button-kicker">Solo run</span>
+                        <strong>ONE BRAVE BEAN</strong>
+                    </button>
+                    <button id="start2PBtn" class="game-button game-button-hot">
+                        <span class="button-kicker">Local chaos</span>
+                        <strong>TWO CONFUSED BEANS</strong>
+                    </button>
+                </div>
+                <div class="secondary-actions">
+                    <button id="instructionsBtn" class="text-button">How not to splat</button>
+                    <button id="audioBtn" class="text-button">Noise controls</button>
+                </div>
+                <p class="tiny-disclaimer">* Hats are protective equipment. Probably.</p>
+            </section>
 
-        <div id="instructions" class="hidden">
-            <p><strong>1 Player Controls:</strong></p>
-            <p>A D / ← → : Move</p>
-            <p>W / ↑ / SPACE : Jump</p>
-            <p><strong>2 Player Controls:</strong></p>
-            <p>P1 (Blue): A D W</p>
-            <p>P2 (Red): ← → ↑</p>
-            <p>SPACE: Both jump together!</p>
-            <p>P : Pause</p>
-            <p><strong>Objective:</strong></p>
-            <p>Collect coins and go as far as possible!</p>
-            <p>Defeat enemies by jumping on them.</p>
-            <p><strong>🎩 Hat System:</strong></p>
-            <p>• Stack up to 5 hats for extra protection!</p>
-            <p>• Each hit removes one hat from the top</p>
-            <p>• No hats = Game Over!</p>
-            <p>• Find hats on the map (~15% chance per chunk)</p>
-            <p><strong>Modifiers (Random Mystery Boxes):</strong></p>
-            <p><strong>Positive:</strong></p>
-            <p>⬆️ Jump Boost • ⚡ Speed Boost • 🛡️ Shield</p>
-            <p>⏫ Double Jump • 🧲 Magnet</p>
-            <p><strong>Challenge:</strong></p>
-            <p>🔄 Reverse Controls • ❄️ Icy Floor</p>
-            <p>🔻 Tiny Player • ⬇️ Heavy</p>
-            <p><strong>Dual Effect:</strong></p>
-            <p>⚾ Bouncy • ⏰ Time Warp</p>
-            <p><strong>Special (2P only):</strong></p>
-            <p>🔀 Swap - Instantly swaps player positions!</p>
-        </div>
+            <section id="instructions" class="overlay-card hidden" aria-label="Instructions">
+                <div class="overlay-heading">
+                    <div><p class="eyebrow">Field manual</p><h2>HOW NOT TO SPLAT</h2></div>
+                    <button type="button" class="panel-close" data-close-panel="instructions" aria-label="Close instructions">CLOSE</button>
+                </div>
+                <div class="instruction-grid">
+                    <article><span class="step-number">01</span><h3>MOVE LIKE YOU MEAN IT</h3><p><b>Player 1:</b> A / D to move, W or Space to jump.<br><b>Player 2:</b> Arrow keys. Space launches both beans.</p></article>
+                    <article><span class="step-number">02</span><h3>STACK THE DRIP</h3><p>Carry up to five hats. Every hit steals the top one. Zero hats means immediate, embarrassing splat.</p></article>
+                    <article><span class="step-number">03</span><h3>TRUST NOTHING</h3><p>Mystery boxes can boost jumps, speed and shields — or reverse controls, freeze the floor and generally ruin lunch.</p></article>
+                    <article><span class="step-number">04</span><h3>KEEP GOING</h3><p>Grab coins, bounce on enemies and survive the procedural universe. Press P whenever courage temporarily expires.</p></article>
+                </div>
+            </section>
+
+            <section id="audioSettings" class="overlay-card audio-card hidden" aria-label="Audio settings">
+                <div class="overlay-heading">
+                    <div><p class="eyebrow">Noise controls</p><h2>HOW LOUD IS PANIC?</h2></div>
+                    <button id="closeAudioBtn" type="button" class="panel-close" aria-label="Close audio settings">CLOSE</button>
+                </div>
+                <div class="volume-control"><label for="masterVolume">Everything</label><input type="range" id="masterVolume" min="0" max="100" value="70"><output id="masterVolumeValue">70%</output></div>
+                <div class="volume-control"><label for="musicVolume">Cosmic jams</label><input type="range" id="musicVolume" min="0" max="100" value="50"><output id="musicVolumeValue">50%</output></div>
+                <div class="volume-control"><label for="sfxVolume">Splat noises</label><input type="range" id="sfxVolume" min="0" max="100" value="80"><output id="sfxVolumeValue">80%</output></div>
+                <button id="muteBtn" class="game-button game-button-hot compact-button">MUTE THE UNIVERSE</button>
+            </section>
+        </main>
+        <footer class="menu-footer"><span>STACK OR SPLAT</span><span>BUILD 0.2 · PHYSICS STILL PENDING APPROVAL</span></footer>
     </div>
 
     <div id="hud" class="hidden">
-        <div id="p1-hud">P1 🏆: <span id="p1-score">0</span> | 🎩 x<span id="p1-hat">1</span></div>
-        <div id="p2-hud" style="display:none;">P2 🏆: <span id="p2-score">0</span> | 🎩 x<span id="p2-hat">1</span></div>
-        <div>📏 Distance: <span id="distance">0</span>m</div>
+        <div class="hud-player hud-player-one" id="p1-hud">
+            <span class="hud-label">P1 · BLUE BEAN</span>
+            <strong><span id="p1-score">0</span> PTS</strong>
+            <span class="hud-hats">HATS <b id="p1-hat">1</b>/5</span>
+        </div>
+        <div class="hud-distance"><span class="hud-label">ESCAPE ATTEMPT</span><strong><span id="distance">0</span>m</strong></div>
+        <div class="hud-player hud-player-two" id="p2-hud" style="display:none;">
+            <span class="hud-label">P2 · RED BEAN</span>
+            <strong><span id="p2-score">0</span> PTS</strong>
+            <span class="hud-hats">HATS <b id="p2-hat">1</b>/5</span>
+        </div>
     </div>
 
-    <!-- Pause button (visible only during gameplay) -->
-    <button id="pauseBtn" class="hidden">⏸️</button>
+    <button id="pauseBtn" class="hidden" aria-label="Pause game">PAUSE</button>
 
-    <!-- Continue Modal (Rewarded Ad) -->
     <div id="continueModal" class="hidden">
         <div class="modal-content">
-            <h2>💀 Continue?</h2>
-            <p>Watch an ad to revive with 1 extra life!</p>
+            <p class="eyebrow">Official incident report</p>
+            <h2>THAT LOOKED EXPENSIVE.</h2>
+            <p>Your bean has splatted, but capitalism offers one more chance.</p>
             <div class="modal-buttons">
-                <button id="watchAdBtn" class="btn-watch-ad">📺 Watch Ad to Revive</button>
-                <button id="giveUpBtn" class="btn-give-up">❌ Give Up</button>
+                <button id="watchAdBtn" class="game-button game-button-primary">WATCH AD · UNSPLAT ME</button>
+                <button id="giveUpBtn" class="text-button">Accept the splat</button>
             </div>
-            <p class="ad-loading hidden">Loading ad...</p>
+            <p class="ad-loading hidden">Negotiating with the universe...</p>
         </div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
-
-    <script type="module" src="js/main.js"></script>
+    <script type="module" src="js/main.js?v=first-sprites-restored"></script>
 </body>
 </html>

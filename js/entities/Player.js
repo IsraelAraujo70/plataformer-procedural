@@ -1,5 +1,9 @@
 import { CONFIG } from '../config.js';
 import { game } from '../game.js';
+import {
+    getCharacterFrameBounds,
+    getCharacterSprite
+} from '../rendering/CharacterSpriteAssets.js?v=first-sprites-restored';
 
 // ============================================
 // PLAYER
@@ -54,9 +58,10 @@ export class Player {
         // Multiplayer: definir número do jogador e controles
         this.playerNumber = playerNumber;
         // Cores vibrantes estilo cartoon
-        this.color = playerNumber === 1 ? '#00d9ff' : '#ff6b6b';
-        this.colorDark = playerNumber === 1 ? '#0099cc' : '#cc3333'; // Sombra
-        this.colorLight = playerNumber === 1 ? '#66efff' : '#ff9999'; // Highlight
+        this.color = playerNumber === 1 ? '#16c9ee' : '#ff5a45';
+        this.colorDark = playerNumber === 1 ? '#08769f' : '#ad2940';
+        this.colorLight = playerNumber === 1 ? '#7cefff' : '#ff9a72';
+        this.colorAccent = playerNumber === 1 ? '#0b4f83' : '#6f1e3d';
         this.controls = playerNumber === 1 ?
             { left: 'a', right: 'd', up: 'w' } :
             { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp' };
@@ -134,6 +139,7 @@ export class Player {
         // Sistema de expressões faciais dinâmicas
         this.expression = 'normal';   // normal, scared, excited, dizzy, angry, determined
         this.expressionTimer = 0;     // Timer para controlar duração de expressões temporárias
+        this.characterSprite = getCharacterSprite(playerNumber);
     }
 
     update() {
@@ -1159,8 +1165,11 @@ export class Player {
         const screenY = this.y - game.camera.y;
 
         // Aplicar walk bounce (pulo sutil ao andar)
-        const bounceOffset = Math.sin(this.walkBounce) * 2;
-        const finalScreenY = screenY - bounceOffset;
+        const bounceOffset = Math.sin(this.walkBounce) * 2.4;
+        const idleFloat = this.grounded && Math.abs(this.vx) < 0.2
+            ? Math.sin(Date.now() / 430 + this.playerNumber * 0.9) * 0.65
+            : 0;
+        const finalScreenY = screenY - bounceOffset - idleFloat;
 
         // Salvar contexto para aplicar transformações
         ctx.save();
@@ -1185,7 +1194,8 @@ export class Player {
             // Aplicar escala vertical e compensar horizontalmente
             // (Princípio de conservação de volume da animação cartoon)
             const horizontalSquash = 1.0 + (1.0 - this.squashStretch) * 0.6; // Mais exagerado!
-            ctx.scale(horizontalSquash, this.squashStretch);
+            const visualScale = 1;
+            ctx.scale(horizontalSquash * visualScale, this.squashStretch * visualScale);
 
             // Retornar origem
             ctx.translate(-centerX, -centerY);
@@ -1393,34 +1403,10 @@ export class Player {
             }
         }
 
-        // Desenhar pernas animadas (antes do corpo para ficarem atrás)
-        this.drawLegs(ctx, screenX, finalScreenY);
-
-        // Desenhar antena (se não tiver chapéus) - ANTES do corpo
-        if (this.hatCount === 0) {
-            this.drawAntenna(ctx, screenX, finalScreenY);
-        }
-
-        // Corpo do jogador em formato BLOB (arredondado)
-        this.drawBlobBody(ctx, screenX, finalScreenY);
-
-        // ============================================
-        // OLHOS COM EXPRESSÕES DINÂMICAS
-        // ============================================
-        this.drawEyes(ctx, screenX, finalScreenY);
-
-        // ============================================
-        // BOCA COM EXPRESSÕES DINÂMICAS
-        // ============================================
-        this.drawMouth(ctx, screenX, finalScreenY);
-
-        // ============================================
-        // ELEMENTOS EXTRAS BASEADOS EM EXPRESSÃO
-        // ============================================
-        this.drawExpressionExtras(ctx, screenX, finalScreenY);
+        this.drawCharacterSprite(ctx, screenX, finalScreenY);
 
         // Desenhar chapéus POR CIMA de tudo (empilhados)
-        if (this.hatCount > 0) {
+        if (this.hatCount > 1) {
             this.drawHats(ctx, screenX, finalScreenY);
         }
 
@@ -1428,11 +1414,58 @@ export class Player {
         ctx.restore();
     }
 
+    getCharacterFrameIndex() {
+        if (!this.grounded) {
+            return this.vy < 2.5 ? 4 : 5;
+        }
+
+        if (Math.abs(this.vx) > 0.5) {
+            return this.animFrame % 2 === 0 ? 2 : 3;
+        }
+
+        return Math.floor(Date.now() / 620 + this.playerNumber * 0.5) % 2;
+    }
+
+    drawCharacterSprite(ctx, screenX, screenY) {
+        const image = this.characterSprite;
+        if (!image || !image.complete || image.naturalWidth === 0) return;
+
+        const frameIndex = this.getCharacterFrameIndex();
+        const [sourceX, sourceY, sourceWidth, sourceHeight] = getCharacterFrameBounds(
+            this.playerNumber,
+            frameIndex
+        );
+
+        const sizeRatio = this.height / CONFIG.PLAYER_HEIGHT;
+        const renderHeight = 78 * sizeRatio;
+        const renderWidth = renderHeight * (sourceWidth / sourceHeight);
+        const feetY = screenY + this.height + 1;
+        const centerX = screenX + this.width / 2;
+
+        ctx.save();
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.translate(centerX, feetY);
+        ctx.scale(this.facingRight ? 1 : -1, 1);
+        ctx.drawImage(
+            image,
+            sourceX,
+            sourceY,
+            sourceWidth,
+            sourceHeight,
+            -renderWidth / 2,
+            -renderHeight,
+            renderWidth,
+            renderHeight
+        );
+        ctx.restore();
+    }
+
     drawEyes(ctx, screenX, screenY) {
-        const eyeLeftX = screenX + 7;
-        const eyeRightX = screenX + 17;
-        const eyeY = screenY + 10;
-        let eyeSize = 4;
+        const eyeLeftX = screenX + 6.8;
+        const eyeRightX = screenX + 17.2;
+        const eyeY = screenY + 10.5;
+        let eyeSize = 4.7;
         let eyeWidthMultiplier = 1;
         let eyeHeightMultiplier = 1;
 
@@ -1444,14 +1477,14 @@ export class Player {
         switch (this.expression) {
             case 'scared':
                 // Olhos mais largos e arredondados
-                eyeSize = 5;
+                eyeSize = 5.6;
                 eyeWidthMultiplier = 1.2;
                 eyeHeightMultiplier = 1.3;
                 break;
 
             case 'excited':
                 // Olhos brilhantes normais
-                eyeSize = 4.5;
+                eyeSize = 5.1;
                 eyeWidthMultiplier = 1.1;
                 eyeHeightMultiplier = 1.1;
                 break;
@@ -1463,20 +1496,20 @@ export class Player {
 
             case 'angry':
                 // Olhos estreitos (mais horizontais)
-                eyeSize = 4;
+                eyeSize = 4.7;
                 eyeWidthMultiplier = 1.2;
                 eyeHeightMultiplier = 0.6;
                 break;
 
             case 'determined':
                 // Olhos semi-fechados focados
-                eyeSize = 4;
+                eyeSize = 4.7;
                 eyeWidthMultiplier = 1;
                 eyeHeightMultiplier = 0.7;
                 break;
 
             default: // normal
-                eyeSize = 4;
+                eyeSize = 4.7;
                 eyeWidthMultiplier = 1;
                 eyeHeightMultiplier = 1;
         }
@@ -1508,6 +1541,18 @@ export class Player {
         if (eyeHeightMultiplier > 0.3) {
             this.drawPupils(ctx, eyeLeftX, eyeRightX, eyeY, eyeWidthMultiplier, eyeHeightMultiplier);
         }
+
+        if (this.playerNumber === 2 && this.expression !== 'dizzy' && eyeHeightMultiplier > 0.25) {
+            ctx.strokeStyle = this.colorAccent;
+            ctx.lineWidth = 1.8;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(eyeLeftX - 3.5, eyeY - 5.8);
+            ctx.lineTo(eyeLeftX + 2.5, eyeY - 6.6);
+            ctx.moveTo(eyeRightX - 2.5, eyeY - 6.6);
+            ctx.lineTo(eyeRightX + 3.5, eyeY - 5.8);
+            ctx.stroke();
+        }
     }
 
     drawDizzyEyes(ctx, eyeLeftX, eyeRightX, eyeY) {
@@ -1537,7 +1582,7 @@ export class Player {
         ctx.fillStyle = '#000000';
         let pupilOffsetX = 0;
         let pupilOffsetY = 0;
-        let pupilSize = 2.5;
+        let pupilSize = 2.7;
 
         // Modificar pupilas baseado em expressão
         switch (this.expression) {
@@ -1549,7 +1594,7 @@ export class Player {
 
             case 'excited':
                 // Pupilas grandes e brilhantes
-                pupilSize = 3;
+                pupilSize = 3.2;
                 if (Math.abs(this.vx) > 0.5) {
                     pupilOffsetX = this.facingRight ? 1.5 : -1.5;
                 }
@@ -1695,14 +1740,27 @@ export class Player {
                     ctx.ellipse(mouthX, mouthY, 2 * mouthOpenness, 2.5 * mouthOpenness, 0, 0, Math.PI * 2);
                     ctx.fill();
                 } else {
-                    // Sorriso simples
-                    const smileSize = 3.5 + Math.abs(this.vx) * 0.2;
-                    ctx.strokeStyle = '#000000';
-                    ctx.lineWidth = 2;
-                    ctx.lineCap = 'round';
-                    ctx.beginPath();
-                    ctx.arc(mouthX, screenY + 17, smileSize, 0.3, Math.PI - 0.3);
-                    ctx.stroke();
+                    if (this.playerNumber === 1) {
+                        ctx.fillStyle = '#080b22';
+                        ctx.beginPath();
+                        ctx.ellipse(mouthX, mouthY - 0.5, 3.8, 3.1, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.fillStyle = '#ff6f91';
+                        ctx.beginPath();
+                        ctx.ellipse(mouthX + 0.5, mouthY + 1.3, 2.1, 1.2, 0.15, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else {
+                        ctx.strokeStyle = '#080b22';
+                        ctx.lineWidth = 2.2;
+                        ctx.lineCap = 'round';
+                        ctx.beginPath();
+                        ctx.arc(mouthX + 0.7, screenY + 16.5, 4.3, 0.25, Math.PI - 0.5);
+                        ctx.stroke();
+                        ctx.fillStyle = '#fff4e8';
+                        ctx.beginPath();
+                        ctx.roundRect(mouthX - 1.6, screenY + 18, 3.2, 1.8, 0.6);
+                        ctx.fill();
+                    }
                 }
         }
     }
@@ -1770,56 +1828,76 @@ export class Player {
         const radiusY = this.height / 2;
 
         // OUTLINE PRETO (estilo cartoon)
-        ctx.fillStyle = '#000000';
-        ctx.beginPath();
-        ctx.ellipse(centerX, centerY, radiusX + 2, radiusY + 2, 0, 0, Math.PI * 2);
-        ctx.fill();
+        const bodyPath = new Path2D();
+        bodyPath.moveTo(centerX, screenY - 1);
+        bodyPath.bezierCurveTo(screenX + 21, screenY, screenX + 25, screenY + 8, screenX + 24, screenY + 18);
+        bodyPath.bezierCurveTo(screenX + 23, screenY + 28, screenX + 18, screenY + 32, centerX, screenY + 31);
+        bodyPath.bezierCurveTo(screenX + 6, screenY + 32, screenX + 1, screenY + 28, screenX, screenY + 18);
+        bodyPath.bezierCurveTo(screenX - 1, screenY + 8, screenX + 3, screenY, centerX, screenY - 1);
+        bodyPath.closePath();
 
         // SOMBRA INTERNA (lado inferior/direito) - gradiente mais suave
         const shadowGradient = ctx.createRadialGradient(
-            centerX - radiusX * 0.4,
-            centerY - radiusY * 0.4,
+            centerX - radiusX * 0.45,
+            centerY - radiusY * 0.48,
             0,
             centerX,
             centerY,
-            radiusX * 1.2
+            radiusY * 1.15
         );
         shadowGradient.addColorStop(0, this.colorLight);
-        shadowGradient.addColorStop(0.5, this.color);
+        shadowGradient.addColorStop(0.48, this.color);
         shadowGradient.addColorStop(1, this.colorDark);
 
         ctx.fillStyle = shadowGradient;
-        ctx.beginPath();
-        ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.strokeStyle = '#080b22';
+        ctx.lineWidth = 4;
+        ctx.lineJoin = 'round';
+        ctx.fill(bodyPath);
+        ctx.stroke(bodyPath);
 
         // HIGHLIGHT GRANDE (brilho no topo) - estilo cartoon fofo
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.36)';
         ctx.beginPath();
-        ctx.ellipse(centerX - radiusX * 0.2, centerY - radiusY * 0.35, radiusX * 0.5, radiusY * 0.4, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX - 4.8, screenY + 5.5, 4.2, 2.4, -0.55, 0, Math.PI * 2);
         ctx.fill();
 
         // Mini highlight secundário
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.save();
+        ctx.globalAlpha = 0.55;
+        ctx.strokeStyle = this.colorLight;
+        ctx.lineWidth = 1.4;
         ctx.beginPath();
-        ctx.ellipse(centerX + radiusX * 0.3, centerY - radiusY * 0.2, radiusX * 0.2, radiusY * 0.15, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.arc(centerX, centerY + 1, radiusX - 2, 0.15, 1.35);
+        ctx.stroke();
+        ctx.restore();
+
+        if (this.playerNumber === 2) {
+            ctx.fillStyle = 'rgba(111, 30, 61, 0.34)';
+            ctx.beginPath();
+            ctx.ellipse(screenX + 3.5, screenY + 17, 2.3, 1.2, -0.2, 0, Math.PI * 2);
+            ctx.ellipse(screenX + 20.5, screenY + 17, 2.3, 1.2, 0.2, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     drawHats(ctx, screenX, screenY) {
-        // Desenhar múltiplos chapéus empilhados
+        // O primeiro chapéu já faz parte da arte-base; desenhar somente os extras.
         const hatCenterX = screenX + this.width / 2;
-        const hatSpacing = 7; // Espaçamento vertical entre chapéus
-        const startY = screenY - 8; // Posição do primeiro chapéu (base)
+        const hatSpacing = 17;
+        const startY = screenY - 58;
+        const extraHatCount = Math.max(0, this.hatCount - 1);
 
-        // Desenhar cada chapéu da pilha (do mais recente ao mais antigo)
-        // Invertido: último coletado fica na base, primeiro fica no topo
-        for (let i = 0; i < this.hatCount; i++) {
+        for (let i = 0; i < extraHatCount; i++) {
             const hatBaseY = startY - (i * hatSpacing);
-            // Pegar o tipo do chapéu INVERTIDO (último coletado = base)
-            const hatIndex = this.hatCount - 1 - i;
+            const hatIndex = this.hatTypes.length - 1 - i;
             const hatType = this.hatTypes[hatIndex] || 'plains';
+            ctx.save();
+            ctx.translate(hatCenterX, hatBaseY + 13);
+            ctx.scale(1.55, 1.55);
+            ctx.translate(-hatCenterX, -(hatBaseY + 13));
             this.drawSingleHat(ctx, hatCenterX, hatBaseY, hatType);
+            ctx.restore();
         }
     }
 
@@ -2308,6 +2386,64 @@ export class Player {
         ctx.fill();
     }
 
+    drawArms(ctx, screenX, screenY) {
+        const moving = this.grounded && Math.abs(this.vx) > 0.25;
+        const phase = [0, 1, 0, -1][this.animFrame % 4] || 0;
+        const identityFlip = this.playerNumber === 2 ? -1 : 1;
+        const idleWave = Math.sin(Date.now() / 280 + this.playerNumber) * 1.4;
+
+        const leftShoulder = { x: screenX + 2, y: screenY + 17 };
+        const rightShoulder = { x: screenX + 22, y: screenY + 17 };
+
+        let leftHand = { x: screenX - 3, y: screenY + 22 - identityFlip * 2 - (this.playerNumber === 2 ? idleWave : 0) };
+        let rightHand = { x: screenX + 28, y: screenY + 18 - identityFlip * 4 - (this.playerNumber === 1 ? idleWave : 0) };
+
+        if (moving) {
+            leftHand = { x: screenX - 4 + phase, y: screenY + 19 + phase * 4 };
+            rightHand = { x: screenX + 28 + phase, y: screenY + 19 - phase * 4 };
+        } else if (!this.grounded) {
+            const reachRight = this.facingRight;
+            leftHand = reachRight
+                ? { x: screenX - 4, y: screenY + 24 }
+                : { x: screenX - 7, y: screenY + 10 };
+            rightHand = reachRight
+                ? { x: screenX + 31, y: screenY + 10 }
+                : { x: screenX + 28, y: screenY + 24 };
+        }
+
+        const drawArm = (shoulder, hand, bendDirection) => {
+            const controlX = (shoulder.x + hand.x) / 2 + bendDirection * 2;
+            const controlY = (shoulder.y + hand.y) / 2 + 2;
+
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#080b22';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(shoulder.x, shoulder.y);
+            ctx.quadraticCurveTo(controlX, controlY, hand.x, hand.y);
+            ctx.stroke();
+
+            ctx.strokeStyle = this.colorDark;
+            ctx.lineWidth = 2.7;
+            ctx.beginPath();
+            ctx.moveTo(shoulder.x, shoulder.y);
+            ctx.quadraticCurveTo(controlX, controlY, hand.x, hand.y);
+            ctx.stroke();
+
+            ctx.fillStyle = '#080b22';
+            ctx.beginPath();
+            ctx.arc(hand.x, hand.y, 4.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(hand.x, hand.y, 2.4, 0, Math.PI * 2);
+            ctx.fill();
+        };
+
+        drawArm(leftShoulder, leftHand, -1);
+        drawArm(rightShoulder, rightHand, 1);
+    }
+
     drawLegs(ctx, screenX, screenY) {
         // Parâmetros das pernas (mais grossinhas e fofas)
         const legWidth = 6;
@@ -2318,7 +2454,7 @@ export class Player {
         // Se estiver no ar, pernas juntas e ARREDONDADAS
         if (!this.grounded) {
             // Outline preto das pernas (arredondado)
-            ctx.fillStyle = '#000000';
+            ctx.fillStyle = '#080b22';
             ctx.beginPath();
             ctx.roundRect(leftLegX - 2, bodyBottom, legWidth + 4, 7, 3);
             ctx.fill();
@@ -2336,7 +2472,7 @@ export class Player {
             ctx.fill();
 
             // Pezinhos ARREDONDADOS
-            ctx.fillStyle = '#000000';
+            ctx.fillStyle = '#080b22';
             ctx.beginPath();
             ctx.arc(leftLegX + legWidth/2, bodyBottom + 6, 5, 0, Math.PI * 2);
             ctx.fill();
@@ -2378,7 +2514,7 @@ export class Player {
         }
 
         // Outline preto das pernas (arredondado)
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = '#080b22';
         ctx.beginPath();
         ctx.roundRect(leftLegX - 2, bodyBottom, legWidth + 4, leftLegHeight + 1, 3);
         ctx.fill();
@@ -2400,7 +2536,7 @@ export class Player {
         const rightFootY = bodyBottom + rightLegHeight;
 
         // Outline dos pezinhos
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = '#080b22';
         ctx.beginPath();
         ctx.arc(leftLegX + legWidth/2, leftFootY + 2, 5, 0, Math.PI * 2);
         ctx.fill();

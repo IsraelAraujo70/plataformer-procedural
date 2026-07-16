@@ -7,7 +7,7 @@ import { animationSystem } from './systems/AnimationSystem.js';
 import { screenEffects } from './systems/ScreenEffects.js';
 import { poolManager } from './systems/ObjectPool.js';
 import { particleSystem, ParticleTypes, explosionEffect, sparkleEffect, dustCloud, landingImpact, coinCollectEffect } from './systems/ParticleSystem.js';
-import { playerSpriteGenerator } from './rendering/PlayerSprites.js';
+import { playerSpriteGenerator } from './rendering/PlayerSprites.js?v=visual-refresh-1';
 import { game } from './game.js';
 
 /**

@@ -1,8 +1,8 @@
 import { game } from './game.js';
-import { updateChunks, updateCamera } from './camera.js';
-import { drawBackground, drawParallaxLayers, createParticles, initAmbientParticles, updateAmbientParticles, drawAmbientParticles } from './render.js';
+import { updateChunks, updateCamera } from './camera.js?v=visual-refresh-1';
+import { drawBackground, drawParallaxLayers, createParticles, initAmbientParticles, updateAmbientParticles, drawAmbientParticles } from './render.js?v=visual-refresh-1';
 import { drawDevModeUI } from './devMode.js';
-import { setupMenuHandlers } from './menu.js';
+import { setupMenuHandlers } from './menu.js?v=first-sprites-restored';
 import { setupInputHandlers } from './input.js';
 import { FloatingText } from './entities/FloatingText.js';
 import { drawModifierTimers } from './ui/ModifierTimers.js';
@@ -12,7 +12,7 @@ import { getBiome } from './world/Patterns.js';
 import { rewardedAdsManager } from './ads/RewardedAds.js';
 import { setupContinueModal, resetContinueFlag } from './ui/ContinueModal.js';
 import { soundManager } from './audio/SoundManager.js';
-import { initializeNewSystems, updateNewSystems, renderNewSystems, applyCameraTransform, restoreCameraTransform, renderDebugStats } from './integration.js';
+import { initializeNewSystems, updateNewSystems, renderNewSystems, applyCameraTransform, restoreCameraTransform, renderDebugStats } from './integration.js?v=visual-refresh-1';
 
 let uiElements = null;
 
@@ -450,6 +450,7 @@ function gameLoop(currentTime) {
 // CANVAS RESPONSIVO (TELA CHEIA)
 // ============================================
 function resizeCanvas() {
+    if (!game.canvas) return;
     // Canvas sempre em tela cheia
     game.canvas.width = game.width;
     game.canvas.height = game.height;
@@ -460,7 +461,7 @@ function resizeCanvas() {
 // ============================================
 // INICIALIZAÇÃO
 // ============================================
-window.addEventListener('load', async () => {
+async function initializeGame() {
     game.canvas = document.getElementById('gameCanvas');
     game.ctx = game.canvas.getContext('2d');
 
@@ -507,7 +508,15 @@ window.addEventListener('load', async () => {
 
     // Começar o loop (mesmo no menu, para possíveis animações)
     requestAnimationFrame(gameLoop);
-});
+}
+
+// Módulos podem terminar de carregar depois do DOMContentLoaded quando o SDK de
+// anúncios está lento. Inicializar nos dois cenários evita prender o jogador no loading.
+if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', initializeGame, { once: true });
+} else {
+    initializeGame();
+}
 
 // Redimensionar quando a janela mudar de tamanho
 window.addEventListener('resize', resizeCanvas);

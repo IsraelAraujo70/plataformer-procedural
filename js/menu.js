@@ -1,7 +1,7 @@
 import { game } from './game.js';
 import { CONFIG } from './config.js';
 import { Random } from './utils/Random.js';
-import { Player } from './entities/Player.js';
+import { Player } from './entities/Player.js?v=first-sprites-restored';
 import { resetContinueFlag } from './ui/ContinueModal.js';
 
 // ============================================
@@ -22,6 +22,7 @@ export function setupMenuHandlers() {
         game.soundManager?.playButtonClick();
         const instructions = document.getElementById('instructions');
         instructions.classList.toggle('hidden');
+        document.getElementById('audioSettings').classList.add('hidden');
     });
     document.getElementById('pauseBtn').addEventListener('click', () => {
         game.soundManager?.playButtonClick();
@@ -33,6 +34,14 @@ export function setupMenuHandlers() {
         game.soundManager?.playButtonClick();
         const audioSettings = document.getElementById('audioSettings');
         audioSettings.classList.toggle('hidden');
+        document.getElementById('instructions').classList.add('hidden');
+    });
+
+    document.querySelectorAll('[data-close-panel]').forEach((button) => {
+        button.addEventListener('click', () => {
+            game.soundManager?.playButtonClick();
+            document.getElementById(button.dataset.closePanel)?.classList.add('hidden');
+        });
     });
 
     // Configurações de áudio
@@ -83,7 +92,7 @@ function setupAudioControls() {
     // Mute/Unmute
     muteBtn.addEventListener('click', () => {
         const isMuted = game.soundManager?.toggleMute();
-        muteBtn.textContent = isMuted ? '🔇 Mute/Unmute' : '🔊 Mute/Unmute';
+        muteBtn.textContent = isMuted ? 'UNMUTE THE UNIVERSE' : 'MUTE THE UNIVERSE';
         game.soundManager?.playButtonClick();
     });
 
@@ -159,7 +168,7 @@ export function startGame(twoPlayerMode = false) {
 
     if (twoPlayerMode) {
         game.player2 = new Player(200, spawnY, 2);
-        document.getElementById('p2-hud').style.display = 'block';
+        document.getElementById('p2-hud').style.display = 'grid';
         console.log('2 Player Mode activated!');
     } else {
         game.player2 = null;
@@ -193,6 +202,7 @@ export function showGameOver() {
     game.soundManager?.stopMusic();
 
     const menu = document.getElementById('menu');
+    menu.classList.remove('menu-screen');
 
     if (game.twoPlayerMode) {
         // Modo 2 jogadores: mostrar pontuação individual e total
@@ -279,6 +289,7 @@ export function showVictory() {
     game.soundManager?.playVictoryMusic();
 
     const menu = document.getElementById('menu');
+    menu.classList.remove('menu-screen');
 
     // Calcular tempo total de jogo
     const totalTimeMs = game.gameEndTime - game.gameStartTime;
@@ -375,13 +386,14 @@ export function pauseGame() {
 
     game.state = 'paused';
     const menu = document.getElementById('menu');
+    menu.classList.remove('menu-screen');
 
     menu.innerHTML = `
-        <h1>⏸️ PAUSED</h1>
-        <p style="font-size: 18px; margin: 20px 0; color: #00ffff;">Game is paused</p>
-        <button id="resumeBtn">▶️ Resume</button>
-        <button id="restartFromPauseBtn">🔄 Restart</button>
-        <button id="quitBtn">🏠 Quit to Menu</button>
+        <h1>PAUSED.</h1>
+        <p style="font-size: 18px; margin: 20px 0;">Courage is temporarily buffering.</p>
+        <button id="resumeBtn">RESUME THE BAD IDEA</button>
+        <button id="restartFromPauseBtn">RESTART THE BAD IDEA</button>
+        <button id="quitBtn">ESCAPE TO MENU</button>
     `;
 
     menu.classList.remove('hidden');

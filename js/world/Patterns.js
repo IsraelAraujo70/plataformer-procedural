@@ -254,6 +254,9 @@ export function getDifficultyConfig(chunkIndex) {
         // Densidade de moedas (inverso da dificuldade)
         coinChance: Math.max(0.7 - distance * 0.01, 0.3),
 
+        // Modificadores são pontuação do percurso, não obrigação de todo chunk
+        modifierChance: Math.min(0.22 + distance * 0.005, 0.4),
+
         // Chance de usar patterns ao invés de geração simples (começar alto)
         patternChance: Math.min(0.5 + distance * 0.01, 0.8),
 
