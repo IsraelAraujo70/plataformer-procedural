@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#07162f">
+    <meta name="theme-color" content="#16052f">
     <title>Stack or Splat</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/styles.css?v=ui-rework-6">
     <script>
         if (!['localhost', '127.0.0.1'].includes(location.hostname)) {
             const adSdk = document.createElement('script');
@@ -17,7 +17,7 @@
 </head>
 <body>
     <div id="loadingScreen">
-        <div class="loading-mark" aria-hidden="true">SOS</div>
+        <div class="loading-mark" aria-hidden="true"><span>S</span><span>O</span><span>S</span></div>
         <p class="eyebrow">Preparing a completely fair universe</p>
         <h1>STACK OR SPLAT</h1>
         <div class="loading-track"><span></span></div>
@@ -26,24 +26,30 @@
 
     <div id="menu" class="hidden menu-screen">
         <div class="menu-shade" aria-hidden="true"></div>
+        <div class="menu-sparkles" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
         <main class="menu-shell">
-            <p class="eyebrow">An extremely serious hat survival game</p>
-            <h1 class="game-logo">STACK<br><span>OR SPLAT</span></h1>
+            <div class="menu-topline">
+                <p class="eyebrow">An extremely serious hat survival game</p>
+                <span class="menu-sticker">ZERO HAT INSURANCE</span>
+            </div>
+            <h1 class="game-logo">STACK OR SPLAT</h1>
             <div class="menu-spacer" aria-hidden="true"></div>
 
             <section class="menu-card" aria-label="Main menu">
                 <div class="menu-card-heading">
-                    <span class="status-dot"></span>
-                    <span>Choose your level of regret</span>
+                    <span class="status-dot" aria-hidden="true"></span>
+                    <span>Choose your level of regret</span><span class="menu-card-note">No refunds after launch</span>
                 </div>
                 <div class="primary-actions">
                     <button id="start1PBtn" class="game-button game-button-primary">
-                        <span class="button-kicker">Solo run</span>
-                        <strong>ONE BRAVE BEAN</strong>
+                        <span class="choice-number" aria-hidden="true">01</span>
+                        <span class="choice-copy"><span class="button-kicker">Solo run</span><strong>ONE BRAVE BEAN</strong></span>
+                        <span class="button-arrow" aria-hidden="true">&#10132;</span>
                     </button>
                     <button id="start2PBtn" class="game-button game-button-hot">
-                        <span class="button-kicker">Local chaos</span>
-                        <strong>TWO CONFUSED BEANS</strong>
+                        <span class="choice-number" aria-hidden="true">02</span>
+                        <span class="choice-copy"><span class="button-kicker">Local chaos</span><strong>TWO CONFUSED BEANS</strong></span>
+                        <span class="button-arrow" aria-hidden="true">&#10132;</span>
                     </button>
                 </div>
                 <div class="secondary-actions">
@@ -77,27 +83,30 @@
                 <button id="muteBtn" class="game-button game-button-hot compact-button">MUTE THE UNIVERSE</button>
             </section>
         </main>
-        <footer class="menu-footer"><span>STACK OR SPLAT</span><span>BUILD 0.2 · PHYSICS STILL PENDING APPROVAL</span></footer>
+        <footer class="menu-footer"><span>STACK OR SPLAT</span><span>BUILD 0.2 &middot; PHYSICS STILL PENDING APPROVAL</span></footer>
     </div>
 
     <div id="hud" class="hidden">
         <div class="hud-player hud-player-one" id="p1-hud">
-            <span class="hud-label">P1 · BLUE BEAN</span>
-            <strong><span id="p1-score">0</span> PTS</strong>
-            <span class="hud-hats">HATS <b id="p1-hat">1</b>/5</span>
+            <span class="hud-label">P1 &middot; BLUE BEAN</span>
+            <strong><span id="p1-score">0</span><small>PTS</small></strong>
+            <span class="hud-hats"><i aria-hidden="true"></i> HATS <b id="p1-hat">1</b><small>/5</small></span>
         </div>
-        <div class="hud-distance"><span class="hud-label">ESCAPE ATTEMPT</span><strong><span id="distance">0</span>m</strong></div>
+        <div class="hud-distance"><span class="hud-label">ESCAPE ATTEMPT</span><strong><span id="distance">0</span><small>m</small></strong><span class="distance-tick" aria-hidden="true"></span></div>
         <div class="hud-player hud-player-two" id="p2-hud" style="display:none;">
-            <span class="hud-label">P2 · RED BEAN</span>
-            <strong><span id="p2-score">0</span> PTS</strong>
-            <span class="hud-hats">HATS <b id="p2-hat">1</b>/5</span>
+            <span class="hud-label">P2 &middot; RED BEAN</span>
+            <strong><span id="p2-score">0</span><small>PTS</small></strong>
+            <span class="hud-hats"><i aria-hidden="true"></i> HATS <b id="p2-hat">1</b><small>/5</small></span>
         </div>
     </div>
 
-    <button id="pauseBtn" class="hidden" aria-label="Pause game">PAUSE</button>
+    <div id="modifierHud" class="modifier-hud hidden" aria-live="polite" aria-label="Active powers"></div>
+
+    <button id="pauseBtn" class="hidden" aria-label="Pause game"><span aria-hidden="true">II</span> PAUSE</button>
 
     <div id="continueModal" class="hidden">
         <div class="modal-content">
+            <span class="modal-splat" aria-hidden="true">!</span>
             <p class="eyebrow">Official incident report</p>
             <h2>THAT LOOKED EXPENSIVE.</h2>
             <p>Your bean has splatted, but capitalism offers one more chance.</p>
@@ -110,6 +119,6 @@
     </div>
 
     <canvas id="gameCanvas"></canvas>
-    <script type="module" src="js/main.js?v=enemy-rework-2"></script>
+    <script type="module" src="js/main.js?v=ui-rework-10"></script>
 </body>
 </html>

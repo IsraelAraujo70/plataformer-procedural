@@ -4,53 +4,44 @@ import { Random } from './utils/Random.js';
 import { Player } from './entities/Player.js?v=player-scale-1';
 import { resetContinueFlag } from './ui/ContinueModal.js';
 
-// ============================================
-// MENU E CONTROLES
-// ============================================
-
 export function setupMenuHandlers() {
-    // Botões principais
     document.getElementById('start1PBtn').addEventListener('click', () => {
         game.soundManager?.playButtonClick();
         startGame(false);
     });
+
     document.getElementById('start2PBtn').addEventListener('click', () => {
         game.soundManager?.playButtonClick();
         startGame(true);
     });
+
     document.getElementById('instructionsBtn').addEventListener('click', () => {
         game.soundManager?.playButtonClick();
-        const instructions = document.getElementById('instructions');
-        instructions.classList.toggle('hidden');
+        document.getElementById('instructions').classList.toggle('hidden');
         document.getElementById('audioSettings').classList.add('hidden');
     });
+
+    document.getElementById('audioBtn').addEventListener('click', () => {
+        game.soundManager?.playButtonClick();
+        document.getElementById('audioSettings').classList.toggle('hidden');
+        document.getElementById('instructions').classList.add('hidden');
+    });
+
     document.getElementById('pauseBtn').addEventListener('click', () => {
         game.soundManager?.playButtonClick();
         pauseGame();
     });
 
-    // Botão de configurações de áudio
-    document.getElementById('audioBtn').addEventListener('click', () => {
-        game.soundManager?.playButtonClick();
-        const audioSettings = document.getElementById('audioSettings');
-        audioSettings.classList.toggle('hidden');
-        document.getElementById('instructions').classList.add('hidden');
-    });
-
-    document.querySelectorAll('[data-close-panel]').forEach((button) => {
+    document.querySelectorAll('[data-close-panel]').forEach(button => {
         button.addEventListener('click', () => {
             game.soundManager?.playButtonClick();
             document.getElementById(button.dataset.closePanel)?.classList.add('hidden');
         });
     });
 
-    // Configurações de áudio
     setupAudioControls();
 }
 
-// ============================================
-// AUDIO CONTROLS
-// ============================================
 function setupAudioControls() {
     const masterVolumeSlider = document.getElementById('masterVolume');
     const musicVolumeSlider = document.getElementById('musicVolume');
@@ -58,7 +49,6 @@ function setupAudioControls() {
     const muteBtn = document.getElementById('muteBtn');
     const closeAudioBtn = document.getElementById('closeAudioBtn');
 
-    // Carregar valores salvos
     if (game.soundManager) {
         masterVolumeSlider.value = game.soundManager.masterVolume * 100;
         musicVolumeSlider.value = game.soundManager.musicVolume * 100;
@@ -66,76 +56,53 @@ function setupAudioControls() {
         updateVolumeDisplays();
     }
 
-    // Master Volume
-    masterVolumeSlider.addEventListener('input', (e) => {
-        const volume = e.target.value / 100;
-        game.soundManager?.setMasterVolume(volume);
+    masterVolumeSlider.addEventListener('input', event => {
+        game.soundManager?.setMasterVolume(event.target.value / 100);
         updateVolumeDisplays();
     });
 
-    // Music Volume
-    musicVolumeSlider.addEventListener('input', (e) => {
-        const volume = e.target.value / 100;
-        game.soundManager?.setMusicVolume(volume);
+    musicVolumeSlider.addEventListener('input', event => {
+        game.soundManager?.setMusicVolume(event.target.value / 100);
         updateVolumeDisplays();
     });
 
-    // SFX Volume
-    sfxVolumeSlider.addEventListener('input', (e) => {
-        const volume = e.target.value / 100;
-        game.soundManager?.setSfxVolume(volume);
+    sfxVolumeSlider.addEventListener('input', event => {
+        game.soundManager?.setSfxVolume(event.target.value / 100);
         updateVolumeDisplays();
-        // Tocar som de teste ao ajustar SFX
         game.soundManager?.playButtonHover();
     });
 
-    // Mute/Unmute
     muteBtn.addEventListener('click', () => {
         const isMuted = game.soundManager?.toggleMute();
         muteBtn.textContent = isMuted ? 'UNMUTE THE UNIVERSE' : 'MUTE THE UNIVERSE';
         game.soundManager?.playButtonClick();
     });
 
-    // Fechar painel
     closeAudioBtn.addEventListener('click', () => {
         game.soundManager?.playButtonClick();
         document.getElementById('audioSettings').classList.add('hidden');
     });
 
-    // Hover effects com som
-    const allButtons = document.querySelectorAll('#menu button');
-    allButtons.forEach(btn => {
-        btn.addEventListener('mouseenter', () => {
-            game.soundManager?.playButtonHover();
-        });
+    document.querySelectorAll('#menu button').forEach(button => {
+        button.addEventListener('mouseenter', () => game.soundManager?.playButtonHover());
     });
 }
 
 function updateVolumeDisplays() {
-    document.getElementById('masterVolumeValue').textContent =
-        Math.round(game.soundManager.masterVolume * 100) + '%';
-    document.getElementById('musicVolumeValue').textContent =
-        Math.round(game.soundManager.musicVolume * 100) + '%';
-    document.getElementById('sfxVolumeValue').textContent =
-        Math.round(game.soundManager.sfxVolume * 100) + '%';
+    document.getElementById('masterVolumeValue').textContent = `${Math.round(game.soundManager.masterVolume * 100)}%`;
+    document.getElementById('musicVolumeValue').textContent = `${Math.round(game.soundManager.musicVolume * 100)}%`;
+    document.getElementById('sfxVolumeValue').textContent = `${Math.round(game.soundManager.sfxVolume * 100)}%`;
 }
 
 export function startGame(twoPlayerMode = false) {
-    // Gerar seed aleatório
     game.seed = Math.floor(Math.random() * 1000000);
-
-    // Definir modo de jogo
     game.twoPlayerMode = twoPlayerMode;
-
-    // Inicializar random
     game.random = new Random(game.seed);
 
-    // Esconder menu e mostrar HUD + botão de pausa
     document.getElementById('menu').classList.add('hidden');
     document.getElementById('hud').classList.remove('hidden');
     document.getElementById('pauseBtn').classList.remove('hidden');
 
-    // Inicializar jogo
     game.chunks.clear();
     game.chunkAnchors.clear();
     game.coins = [];
@@ -158,254 +125,146 @@ export function startGame(twoPlayerMode = false) {
         lastDistance: 0
     };
 
-    // Resetar flag de continue (permitir usar rewarded ad novamente)
     resetContinueFlag();
 
-    // Criar jogador(es) - começar no ar e cair sobre a plataforma inicial do chunk 0
-    const spawnY = game.height - 400; // Bem acima da plataforma para cair
-
+    const spawnY = game.height - 400;
     game.player = new Player(100, spawnY, 1);
 
     if (twoPlayerMode) {
         game.player2 = new Player(200, spawnY, 2);
         document.getElementById('p2-hud').style.display = 'grid';
-        console.log('2 Player Mode activated!');
     } else {
         game.player2 = null;
         document.getElementById('p2-hud').style.display = 'none';
     }
 
-    // Atualizar HUD
     document.getElementById('p1-score').textContent = game.player.score;
     document.getElementById('p1-hat').textContent = game.player.hatCount;
-    document.getElementById('p1-hat').style.color = '#4CAF50';
+    document.getElementById('p1-hat').style.color = '#b8f236';
+
     if (twoPlayerMode) {
         document.getElementById('p2-score').textContent = game.player2.score;
         document.getElementById('p2-hat').textContent = game.player2.hatCount;
-        document.getElementById('p2-hat').style.color = '#4CAF50';
+        document.getElementById('p2-hat').style.color = '#b8f236';
     }
+
     document.getElementById('distance').textContent = game.distance;
-
-    // Trocar música para gameplay
     game.soundManager?.playGameplayMusic();
-
-    // Iniciar loop
     game.state = 'playing';
     game.lastTime = performance.now();
 }
 
-export function showGameOver() {
-    game.state = 'gameover';
+function createScoreCard(label, cardClass, stats, distancePoints, score) {
+    const coinPoints = stats.coinsCollected * 10;
+    const enemyPoints = stats.enemiesDefeated * 50;
+    const modifierPoints = stats.modifiersCollected * 25;
 
-    // Tocar som de game over e parar música
-    game.soundManager?.playGameOver();
-    game.soundManager?.stopMusic();
+    return `
+        <article class="score-card ${cardClass}">
+            <h2>${label}</h2>
+            <div class="score-list">
+                <div class="score-row"><span>Coins politely borrowed</span><b>${stats.coinsCollected} &times; 10 = ${coinPoints}</b></div>
+                <div class="score-row"><span>Enemies inconvenienced</span><b>${stats.enemiesDefeated} &times; 50 = ${enemyPoints}</b></div>
+                <div class="score-row"><span>Mystery boxes trusted</span><b>${stats.modifiersCollected} &times; 25 = ${modifierPoints}</b></div>
+                <div class="score-row"><span>Metres of poor judgment</span><b>${distancePoints} = ${distancePoints}</b></div>
+            </div>
+            <div class="score-total"><span>${label} total</span><strong>${score} pts</strong></div>
+        </article>
+    `;
+}
 
+function showEndState({ victory = false, formattedTime = '' } = {}) {
     const menu = document.getElementById('menu');
-    menu.classList.remove('menu-screen');
+    const isTwoPlayer = game.twoPlayerMode && game.player2;
+    const title = victory ? 'VICTORY!' : 'GAME OVER';
+    const kicker = victory ? 'Official escape certificate' : 'Official splat assessment';
+    const subtitle = victory
+        ? "You've escaped the universe. The universe is taking this personally."
+        : 'Gravity has submitted its final report. It was extremely smug.';
 
-    if (game.twoPlayerMode) {
-        // Modo 2 jogadores: mostrar pontuação individual e total
-        const p1Score = game.player.score;
-        const p2Score = game.player2.score;
-        const totalScore = p1Score + p2Score;
+    let scoreCards;
+    let teamTotal = '';
 
-        // Calcular pontos de cada categoria POR JOGADOR
-        const p1CoinPoints = game.player.stats.coinsCollected * 10;
-        const p1EnemyPoints = game.player.stats.enemiesDefeated * 50;
-        const p1ModifierPoints = game.player.stats.modifiersCollected * 25;
-        const p1DistancePoints = Math.floor(game.player.x / 32); // Distância percorrida por P1
-
-        const p2CoinPoints = game.player2.stats.coinsCollected * 10;
-        const p2EnemyPoints = game.player2.stats.enemiesDefeated * 50;
-        const p2ModifierPoints = game.player2.stats.modifiersCollected * 25;
-        const p2DistancePoints = Math.floor(game.player2.x / 32); // Distância percorrida por P2
-
-        menu.innerHTML = `
-            <h1>GAME OVER</h1>
-            <div style="text-align: left; display: inline-block; margin: 20px 0;">
-                <p style="font-size: 18px; margin: 10px 0; color: #00d9ff;"><strong>🎮 Player 1 Breakdown:</strong></p>
-                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">💰 Coins: ${game.player.stats.coinsCollected} × 10 = ${p1CoinPoints} pts</p>
-                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">👹 Enemies: ${game.player.stats.enemiesDefeated} × 50 = ${p1EnemyPoints} pts</p>
-                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">⚡ Modifiers: ${game.player.stats.modifiersCollected} × 25 = ${p1ModifierPoints} pts</p>
-                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">📏 Distance: ${p1DistancePoints}m = ${p1DistancePoints} pts</p>
-                <p style="font-size: 18px; margin: 10px 0; color: #00d9ff;"><strong>Total P1: ${p1Score} points</strong></p>
-
-                <hr style="margin: 15px 0; border-color: #666;">
-
-                <p style="font-size: 18px; margin: 10px 0; color: #ff6b6b;"><strong>🎮 Player 2 Breakdown:</strong></p>
-                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">💰 Coins: ${game.player2.stats.coinsCollected} × 10 = ${p2CoinPoints} pts</p>
-                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">👹 Enemies: ${game.player2.stats.enemiesDefeated} × 50 = ${p2EnemyPoints} pts</p>
-                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">⚡ Modifiers: ${game.player2.stats.modifiersCollected} × 25 = ${p2ModifierPoints} pts</p>
-                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">📏 Distance: ${p2DistancePoints}m = ${p2DistancePoints} pts</p>
-                <p style="font-size: 18px; margin: 10px 0; color: #ff6b6b;"><strong>Total P2: ${p2Score} points</strong></p>
-
-                <hr style="margin: 15px 0; border-color: #00ffff;">
-                <p style="font-size: 24px; margin: 10px 0; color: #00ffff;"><strong>🏆 TOTAL: ${totalScore} points</strong></p>
-            </div>
-            <button id="playAgainBtn">🔄 Play Again</button>
-            <button id="backToMenuBtn">🏠 Back to Menu</button>
+    if (isTwoPlayer) {
+        const p1Distance = Math.floor(game.player.x / 32);
+        const p2Distance = Math.floor(game.player2.x / 32);
+        scoreCards = `
+            ${createScoreCard('P1 · BLUE BEAN', 'p1', game.player.stats, p1Distance, game.player.score)}
+            ${createScoreCard('P2 · RED BEAN', 'p2', game.player2.stats, p2Distance, game.player2.score)}
         `;
+        teamTotal = `<div class="team-total"><span>Combined chaos</span><strong>${game.player.score + game.player2.score} pts</strong></div>`;
     } else {
-        // Modo 1 jogador: mostrar pontuação única
-        const coinPoints = game.stats.coinsCollected * 10;
-        const enemyPoints = game.stats.enemiesDefeated * 50;
-        const modifierPoints = game.stats.modifiersCollected * 25;
-        const distancePoints = game.distance;
-
-        menu.innerHTML = `
-            <h1>GAME OVER</h1>
-            <div style="text-align: left; display: inline-block; margin: 20px 0;">
-                <p style="font-size: 18px; margin: 10px 0;"><strong>📊 Score Breakdown:</strong></p>
-                <p style="font-size: 16px; margin: 8px 0;">💰 Coins: ${game.stats.coinsCollected} × 10 = ${coinPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">👹 Enemies: ${game.stats.enemiesDefeated} × 50 = ${enemyPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">⚡ Modifiers: ${game.stats.modifiersCollected} × 25 = ${modifierPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">📏 Distance: ${game.distance}m = ${distancePoints} pts</p>
-                <hr style="margin: 15px 0; border-color: #00ffff;">
-                <p style="font-size: 22px; margin: 10px 0; color: #00ffff;"><strong>🏆 TOTAL: ${game.player.score} points</strong></p>
-            </div>
-            <button id="playAgainBtn">🔄 Play Again</button>
-            <button id="backToMenuBtn">🏠 Back to Menu</button>
-        `;
+        scoreCards = createScoreCard('RUN RECEIPT', 'p1', game.stats, game.distance, game.player.score);
     }
+
+    menu.classList.remove('menu-screen');
+    menu.innerHTML = `
+        <main class="state-shell${victory ? ' is-victory' : ''}" data-stamp="${victory ? 'SOMEHOW LEGAL' : 'GRAVITY APPROVED'}">
+            <p class="state-kicker">${kicker}</p>
+            <h1>${title}</h1>
+            <p class="state-subtitle">${subtitle}</p>
+            ${victory ? `<div class="state-time"><span>Survival time</span><strong>${formattedTime}</strong></div>` : ''}
+            <section class="score-grid${isTwoPlayer ? '' : ' is-single'}" aria-label="Score breakdown">${scoreCards}</section>
+            ${teamTotal}
+            <div class="state-actions">
+                <button id="playAgainBtn" class="game-button game-button-primary">REPEAT THE MISTAKE</button>
+                <button id="backToMenuBtn" class="text-button">Retreat to menu</button>
+            </div>
+        </main>
+    `;
 
     menu.classList.remove('hidden');
     document.getElementById('hud').classList.add('hidden');
+    document.getElementById('modifierHud')?.classList.add('hidden');
     document.getElementById('pauseBtn').classList.add('hidden');
-
-    // Configurar event listeners dos botões
     setupGameOverButtons();
 }
 
-// ============================================
-// SHOW VICTORY (completou 2000m)
-// ============================================
+export function showGameOver() {
+    game.state = 'gameover';
+    game.soundManager?.playGameOver();
+    game.soundManager?.stopMusic();
+    showEndState();
+}
+
 export function showVictory() {
     game.state = 'victory';
     game.gameEndTime = Date.now();
-
-    // Tocar som de vitória e música especial
     game.soundManager?.playVictory();
     game.soundManager?.playVictoryMusic();
 
-    const menu = document.getElementById('menu');
-    menu.classList.remove('menu-screen');
-
-    // Calcular tempo total de jogo
-    const totalTimeMs = game.gameEndTime - game.gameStartTime;
-    const totalSeconds = Math.floor(totalTimeMs / 1000);
+    const totalSeconds = Math.floor((game.gameEndTime - game.gameStartTime) / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
-    const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-
-    if (game.twoPlayerMode) {
-        // Modo 2 jogadores
-        const p1Score = game.player.score;
-        const p2Score = game.player2.score;
-        const totalScore = p1Score + p2Score;
-
-        // Calcular pontos de cada categoria POR JOGADOR
-        const p1CoinPoints = game.player.stats.coinsCollected * 10;
-        const p1EnemyPoints = game.player.stats.enemiesDefeated * 50;
-        const p1ModifierPoints = game.player.stats.modifiersCollected * 25;
-        const p1DistancePoints = Math.floor(game.player.x / 32);
-
-        const p2CoinPoints = game.player2.stats.coinsCollected * 10;
-        const p2EnemyPoints = game.player2.stats.enemiesDefeated * 50;
-        const p2ModifierPoints = game.player2.stats.modifiersCollected * 25;
-        const p2DistancePoints = Math.floor(game.player2.x / 32);
-
-        menu.innerHTML = `
-            <h1 style="color: #ffd700; text-shadow: 0 0 20px #ffd700;">🏆 VICTORY! 🏆</h1>
-            <h2 style="color: #00ffff; margin: 10px 0;">You've escaped the universe!</h2>
-            <div style="text-align: left; display: inline-block; margin: 20px 0;">
-                <p style="font-size: 24px; margin: 15px 0; color: #ffd700;"><strong>⏱️ Time: ${formattedTime}</strong></p>
-                <hr style="margin: 15px 0; border-color: #ffd700;">
-
-                <p style="font-size: 18px; margin: 10px 0; color: #00d9ff;"><strong>🎮 Player 1 Breakdown:</strong></p>
-                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">💰 Coins: ${game.player.stats.coinsCollected} × 10 = ${p1CoinPoints} pts</p>
-                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">👹 Enemies: ${game.player.stats.enemiesDefeated} × 50 = ${p1EnemyPoints} pts</p>
-                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">⚡ Modifiers: ${game.player.stats.modifiersCollected} × 25 = ${p1ModifierPoints} pts</p>
-                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">📏 Distance: ${p1DistancePoints}m = ${p1DistancePoints} pts</p>
-                <p style="font-size: 18px; margin: 10px 0; color: #00d9ff;"><strong>Total P1: ${p1Score} points</strong></p>
-
-                <hr style="margin: 15px 0; border-color: #666;">
-
-                <p style="font-size: 18px; margin: 10px 0; color: #ff6b6b;"><strong>🎮 Player 2 Breakdown:</strong></p>
-                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">💰 Coins: ${game.player2.stats.coinsCollected} × 10 = ${p2CoinPoints} pts</p>
-                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">👹 Enemies: ${game.player2.stats.enemiesDefeated} × 50 = ${p2EnemyPoints} pts</p>
-                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">⚡ Modifiers: ${game.player2.stats.modifiersCollected} × 25 = ${p2ModifierPoints} pts</p>
-                <p style="font-size: 14px; margin: 5px 0; padding-left: 15px;">📏 Distance: ${p2DistancePoints}m = ${p2DistancePoints} pts</p>
-                <p style="font-size: 18px; margin: 10px 0; color: #ff6b6b;"><strong>Total P2: ${p2Score} points</strong></p>
-
-                <hr style="margin: 15px 0; border-color: #ffd700;">
-                <p style="font-size: 24px; margin: 10px 0; color: #ffd700;"><strong>🏆 TOTAL: ${totalScore} points</strong></p>
-            </div>
-            <button id="playAgainBtn">🔄 Play Again</button>
-            <button id="backToMenuBtn">🏠 Back to Menu</button>
-        `;
-    } else {
-        // Modo 1 jogador
-        const coinPoints = game.stats.coinsCollected * 10;
-        const enemyPoints = game.stats.enemiesDefeated * 50;
-        const modifierPoints = game.stats.modifiersCollected * 25;
-        const distancePoints = game.distance;
-
-        menu.innerHTML = `
-            <h1 style="color: #ffd700; text-shadow: 0 0 20px #ffd700;">🏆 VICTORY! 🏆</h1>
-            <h2 style="color: #00ffff; margin: 10px 0;">You've escaped the universe!</h2>
-            <div style="text-align: left; display: inline-block; margin: 20px 0;">
-                <p style="font-size: 24px; margin: 15px 0; color: #ffd700;"><strong>⏱️ Time: ${formattedTime}</strong></p>
-                <hr style="margin: 15px 0; border-color: #ffd700;">
-                <p style="font-size: 18px; margin: 10px 0;"><strong>📊 Score Breakdown:</strong></p>
-                <p style="font-size: 16px; margin: 8px 0;">💰 Coins: ${game.stats.coinsCollected} × 10 = ${coinPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">👹 Enemies: ${game.stats.enemiesDefeated} × 50 = ${enemyPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">⚡ Modifiers: ${game.stats.modifiersCollected} × 25 = ${modifierPoints} pts</p>
-                <p style="font-size: 16px; margin: 8px 0;">📏 Distance: ${game.distance}m = ${distancePoints} pts</p>
-                <hr style="margin: 15px 0; border-color: #ffd700;">
-                <p style="font-size: 22px; margin: 10px 0; color: #ffd700;"><strong>🏆 TOTAL: ${game.player.score} points</strong></p>
-            </div>
-            <button id="playAgainBtn">🔄 Play Again</button>
-            <button id="backToMenuBtn">🏠 Back to Menu</button>
-        `;
-    }
-
-    menu.classList.remove('hidden');
-    document.getElementById('hud').classList.add('hidden');
-    document.getElementById('pauseBtn').classList.add('hidden');
-
-    // Configurar event listeners dos botões
-    setupGameOverButtons(); // Mesmos botões que game over
+    showEndState({ victory: true, formattedTime: `${minutes}:${seconds.toString().padStart(2, '0')}` });
 }
 
-// ============================================
-// PAUSE GAME
-// ============================================
 export function pauseGame() {
     if (game.state !== 'playing') return;
 
     game.state = 'paused';
     const menu = document.getElementById('menu');
     menu.classList.remove('menu-screen');
-
     menu.innerHTML = `
-        <h1>PAUSED.</h1>
-        <p style="font-size: 18px; margin: 20px 0;">Courage is temporarily buffering.</p>
-        <button id="resumeBtn">RESUME THE BAD IDEA</button>
-        <button id="restartFromPauseBtn">RESTART THE BAD IDEA</button>
-        <button id="quitBtn">ESCAPE TO MENU</button>
+        <main class="state-shell pause-shell" data-stamp="PANIC BREAK">
+            <p class="state-kicker">Emergency courage maintenance</p>
+            <h1>PAUSED.</h1>
+            <p class="state-subtitle">Courage is temporarily buffering.</p>
+            <div class="pause-actions">
+                <button id="resumeBtn" class="game-button game-button-primary">RESUME THE BAD IDEA</button>
+                <button id="restartFromPauseBtn" class="game-button game-button-hot">RESTART THE BAD IDEA</button>
+                <button id="quitBtn" class="text-button">ESCAPE TO MENU</button>
+            </div>
+        </main>
     `;
 
     menu.classList.remove('hidden');
     document.getElementById('hud').classList.add('hidden');
+    document.getElementById('modifierHud')?.classList.add('hidden');
     document.getElementById('pauseBtn').classList.add('hidden');
-
     setupPauseMenuButtons();
 }
 
-// ============================================
-// RESUME GAME
-// ============================================
 export function resumeGame() {
     game.state = 'playing';
     document.getElementById('menu').classList.add('hidden');
@@ -414,54 +273,21 @@ export function resumeGame() {
     game.lastTime = performance.now();
 }
 
-// ============================================
-// RESTART GAME
-// ============================================
 export function restartGame() {
-    // Esconder menu primeiro
     document.getElementById('menu').classList.add('hidden');
-
-    // Reiniciar no mesmo modo atual
     startGame(game.twoPlayerMode);
 }
 
-// ============================================
-// SETUP PAUSE MENU BUTTONS
-// ============================================
 function setupPauseMenuButtons() {
-    const resumeBtn = document.getElementById('resumeBtn');
-    const restartBtn = document.getElementById('restartFromPauseBtn');
-    const quitBtn = document.getElementById('quitBtn');
-
-    if (resumeBtn) {
-        resumeBtn.addEventListener('click', resumeGame);
-    }
-
-    if (restartBtn) {
-        restartBtn.addEventListener('click', restartGame);
-    }
-
-    if (quitBtn) {
-        quitBtn.addEventListener('click', () => location.reload());
-    }
+    document.getElementById('resumeBtn')?.addEventListener('click', resumeGame);
+    document.getElementById('restartFromPauseBtn')?.addEventListener('click', restartGame);
+    document.getElementById('quitBtn')?.addEventListener('click', () => location.reload());
 }
 
-// ============================================
-// SETUP GAME OVER BUTTONS
-// ============================================
 function setupGameOverButtons() {
-    const playAgainBtn = document.getElementById('playAgainBtn');
-    const backToMenuBtn = document.getElementById('backToMenuBtn');
-
-    if (playAgainBtn) {
-        playAgainBtn.addEventListener('click', restartGame);
-    }
-
-    if (backToMenuBtn) {
-        backToMenuBtn.addEventListener('click', () => location.reload());
-    }
+    document.getElementById('playAgainBtn')?.addEventListener('click', restartGame);
+    document.getElementById('backToMenuBtn')?.addEventListener('click', () => location.reload());
 }
 
-// Expor funções globalmente para serem chamadas pelo Player e main
 window.showGameOver = showGameOver;
 window.showVictory = showVictory;
