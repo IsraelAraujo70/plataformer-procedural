@@ -1,14 +1,15 @@
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../config.js?v=enemy-rework-2';
 import { game } from '../game.js';
-import { WalkerEnemy } from '../entities/enemies/WalkerEnemy.js';
-import { FlyerEnemy } from '../entities/enemies/FlyerEnemy.js';
-import { JumperEnemy } from '../entities/enemies/JumperEnemy.js';
-import { ChaserEnemy } from '../entities/enemies/ChaserEnemy.js';
-import { ShooterEnemy } from '../entities/enemies/ShooterEnemy.js';
-import { Coin } from '../entities/Coin.js';
-import { Modifier } from '../entities/Modifier.js';
-import { Hat } from '../entities/Hat.js';
+import { WalkerEnemy } from '../entities/enemies/WalkerEnemy.js?v=enemy-rework-2';
+import { FlyerEnemy } from '../entities/enemies/FlyerEnemy.js?v=enemy-rework-2';
+import { JumperEnemy } from '../entities/enemies/JumperEnemy.js?v=enemy-rework-2';
+import { ChaserEnemy } from '../entities/enemies/ChaserEnemy.js?v=enemy-rework-2';
+import { ShooterEnemy } from '../entities/enemies/ShooterEnemy.js?v=enemy-rework-2';
+import { Coin } from '../entities/Coin.js?v=player-scale-1';
+import { Modifier } from '../entities/Modifier.js?v=player-scale-1';
+import { Hat } from '../entities/Hat.js?v=player-scale-1';
 import { PATTERNS, PLATFORM_TYPES, getDifficultyConfig, selectPattern, getBiome } from './Patterns.js';
+import { drawCoverGroundPlatform, drawCoverFloatingPlatform } from '../rendering/TerrainRenderer.js';
 
 const ABSOLUTE_MAX_GAP = CONFIG.TILE_SIZE * 5.5;
 
@@ -507,8 +508,8 @@ export class Chunk {
                 if (pattern.reward === 'modifier' && Number.isInteger(pattern.rewardPlatform)) {
                     const rewardPlatform = candidates[pattern.rewardPlatform];
                     if (rewardPlatform) {
-                        const modX = rewardPlatform.x + rewardPlatform.width / 2 - 10;
-                        const modY = rewardPlatform.y - 40;
+                        const modX = rewardPlatform.x + rewardPlatform.width / 2 - CONFIG.MODIFIER_SIZE / 2;
+                        const modY = rewardPlatform.y - CONFIG.PLAYER_HEIGHT - CONFIG.MODIFIER_SIZE - CONFIG.COLLECTIBLE_CLEARANCE;
                         this.modifiers.push(new Modifier(modX, modY));
                     }
                 }
@@ -680,8 +681,8 @@ export class Chunk {
                 allItems.push({
                     x: modifier.x,
                     y: modifier.y,
-                    width: 20,
-                    height: 20
+                    width: CONFIG.MODIFIER_SIZE,
+                    height: CONFIG.MODIFIER_SIZE
                 });
             });
 
@@ -706,10 +707,10 @@ export class Chunk {
                 const platform = this.platforms[rng.int(0, this.platforms.length - 1)];
                 const horizontalSlots = [0.5, 0.25, 0.75];
                 const slot = horizontalSlots[attempts % horizontalSlots.length];
-                const hatX = platform.x + platform.width * slot - 10;
-                const hatY = platform.y - CONFIG.TILE_SIZE * 3;
+                const hatX = platform.x + platform.width * slot - CONFIG.HAT_WIDTH / 2;
+                const hatY = platform.y - CONFIG.PLAYER_HEIGHT - CONFIG.HAT_HEIGHT - CONFIG.COLLECTIBLE_CLEARANCE;
 
-                if (canPlaceItem(hatX, hatY, 20, 20, allItems)) {
+                if (canPlaceItem(hatX, hatY, CONFIG.HAT_WIDTH, CONFIG.HAT_HEIGHT, allItems)) {
                     this.hats.push(new Hat(hatX, hatY, 'collectable', biomeType));
                 }
                 attempts++;
@@ -742,8 +743,8 @@ export class Chunk {
                 allItems.push({
                     x: hat.x,
                     y: hat.y,
-                    width: 20,
-                    height: 20
+                    width: CONFIG.HAT_WIDTH,
+                    height: CONFIG.HAT_HEIGHT
                 });
             });
 
@@ -753,10 +754,10 @@ export class Chunk {
 
                 while (attempts < 10 && !placed) {
                     const platform = this.platforms[rng.int(0, this.platforms.length - 1)];
-                    const modifierX = platform.x + platform.width / 2 - 10;
-                    const modifierY = platform.y - 40;
+                    const modifierX = platform.x + platform.width / 2 - CONFIG.MODIFIER_SIZE / 2;
+                    const modifierY = platform.y - CONFIG.PLAYER_HEIGHT - CONFIG.MODIFIER_SIZE - CONFIG.COLLECTIBLE_CLEARANCE;
 
-                    if (canPlaceItem(modifierX, modifierY, 20, 20, allItems)) {
+                    if (canPlaceItem(modifierX, modifierY, CONFIG.MODIFIER_SIZE, CONFIG.MODIFIER_SIZE, allItems)) {
                         this.modifiers.push(new Modifier(modifierX, modifierY));
                         placed = true;
                     }
@@ -772,8 +773,8 @@ export class Chunk {
         const allItems = this.modifiers.map(modifier => ({
             x: modifier.x,
             y: modifier.y,
-            width: 20,
-            height: 20
+            width: CONFIG.MODIFIER_SIZE,
+            height: CONFIG.MODIFIER_SIZE
         }));
         const orderedPlatforms = [...this.platforms].sort((a, b) => a.x - b.x || a.y - b.y);
 
@@ -825,7 +826,7 @@ export class Chunk {
                     coinX = platform.x + (i + 1) * (platform.width / (numCoins + 1)) - CONFIG.COIN_SIZE / 2;
                 }
 
-                const coinY = platform.y - tileSize * 2;
+                const coinY = platform.y - CONFIG.PLAYER_HEIGHT - CONFIG.COIN_SIZE - CONFIG.COLLECTIBLE_CLEARANCE;
                 if (canPlaceItem(coinX, coinY, CONFIG.COIN_SIZE, CONFIG.COIN_SIZE, allItems)) {
                     this.coins.push(new Coin(coinX, coinY));
                     allItems.push({
@@ -964,9 +965,9 @@ export class Chunk {
             if (screenY + drawHeight < -padding || screenY - padding > viewportHeight) continue;
 
             if (platform.type === 'floating') {
-                this.drawFloatingPlatform(ctx, screenX, screenY, platform.width, drawHeight, collisionHeight);
+                this.drawFloatingPlatform(ctx, screenX, screenY, platform.width, drawHeight, collisionHeight, platform.x);
             } else {
-                this.drawGroundPlatform(ctx, screenX, screenY, platform.width, drawHeight);
+                this.drawGroundPlatform(ctx, screenX, screenY, platform.width, drawHeight, platform.x);
             }
         }
 
@@ -1019,7 +1020,11 @@ export class Chunk {
         }
     }
 
-    drawGroundPlatform(ctx, x, y, width, height) {
+    drawGroundPlatform(ctx, x, y, width, height, worldX = x) {
+        drawCoverGroundPlatform(ctx, x, y, width, height, this.biome.name, this.index, worldX);
+    }
+
+    drawLegacyGroundPlatform(ctx, x, y, width, height) {
         const tileSize = 28;
         const colors = this.biome.colors;
 
@@ -1164,7 +1169,11 @@ export class Chunk {
         ctx.fillRect(x, y + height - 2, width, 2);
     }
 
-    drawFloatingPlatform(ctx, x, y, width, height, collisionHeight = height) {
+    drawFloatingPlatform(ctx, x, y, width, height, collisionHeight = height, worldX = x) {
+        drawCoverFloatingPlatform(ctx, x, y, width, collisionHeight, this.biome.name, this.index, worldX);
+    }
+
+    drawLegacyFloatingPlatform(ctx, x, y, width, height, collisionHeight = height) {
         // Plataformas flutuantes se adaptam ao bioma
         if (this.biome.name === 'Sky') {
             // NUVEM SÓLIDA para bioma Sky

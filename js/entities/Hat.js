@@ -1,5 +1,6 @@
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../config.js?v=player-scale-1';
 import { game } from '../game.js';
+import { intersectsPlayerPickup } from '../utils/Collision.js?v=player-scale-1';
 
 // ============================================
 // TIPOS DE CHAPÉUS BASEADOS EM BIOMAS
@@ -108,8 +109,8 @@ export class Hat {
     constructor(x, y, type = 'collectable', biomeType = 'plains') {
         this.x = x;
         this.y = y;
-        this.width = 20;
-        this.height = 16;
+        this.width = CONFIG.HAT_WIDTH;
+        this.height = CONFIG.HAT_HEIGHT;
         this.type = type; // 'collectable' ou 'dropping'
 
         // Validar e normalizar biomeType
@@ -243,10 +244,7 @@ export class Hat {
     }
 
     intersects(player) {
-        return this.x < player.x + player.width &&
-               this.x + this.width > player.x &&
-               this.y < player.y + player.height &&
-               this.y + this.height > player.y;
+        return intersectsPlayerPickup(this, player);
     }
 
     draw(ctx) {

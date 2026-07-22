@@ -1,5 +1,6 @@
 import { game } from './game.js';
 import { Particle } from './entities/Particle.js';
+import { drawCoverBiomeBackground } from './rendering/BiomeBackgroundRenderer.js?v=moon-flicker-1';
 
 // ============================================
 // PARALLAX BACKGROUND
@@ -32,6 +33,8 @@ export function drawBackground(ctx) {
 
 // Função auxiliar para desenhar um bioma específico
 function drawBiomeBackground(ctx, biomeType) {
+    if (drawCoverBiomeBackground(ctx, game, biomeType)) return;
+
     switch (biomeType) {
         case 'plains':
             drawPlainsBackground(ctx);
@@ -66,6 +69,147 @@ function drawBiomeBackground(ctx, biomeType) {
 // PLAINS BACKGROUND (Planícies - tema original)
 // ============================================
 function drawPlainsBackground(ctx) {
+    const width = game.width;
+    const height = game.height;
+    const time = Date.now() / 1000;
+    const cameraDrift = game.camera.x * 0.035;
+
+    // A capa mistura azul-noite, turquesa e um horizonte dourado. O primeiro
+    // bioma agora usa essa mesma assinatura em vez de um céu diurno genérico.
+    const sky = ctx.createLinearGradient(0, 0, 0, height);
+    sky.addColorStop(0, '#030a28');
+    sky.addColorStop(0.42, '#073d6a');
+    sky.addColorStop(0.76, '#08a6aa');
+    sky.addColorStop(1, '#29d795');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, width, height);
+
+    const coldNebula = ctx.createRadialGradient(width * 0.08, height * 0.54, 0, width * 0.08, height * 0.54, width * 0.56);
+    coldNebula.addColorStop(0, 'rgba(0, 210, 255, 0.34)');
+    coldNebula.addColorStop(0.48, 'rgba(0, 107, 220, 0.13)');
+    coldNebula.addColorStop(1, 'rgba(0, 30, 90, 0)');
+    ctx.fillStyle = coldNebula;
+    ctx.fillRect(0, 0, width, height);
+
+    const warmNebula = ctx.createRadialGradient(width * 0.93, height * 0.68, 0, width * 0.93, height * 0.68, width * 0.48);
+    warmNebula.addColorStop(0, 'rgba(255, 207, 52, 0.56)');
+    warmNebula.addColorStop(0.42, 'rgba(255, 91, 24, 0.18)');
+    warmNebula.addColorStop(1, 'rgba(96, 19, 70, 0)');
+    ctx.fillStyle = warmNebula;
+    ctx.fillRect(0, 0, width, height);
+
+    // Estrelas determinísticas: não cintilam de posição quando a câmera anda.
+    for (let i = 0; i < 86; i++) {
+        const sx = ((i * 173.7 - cameraDrift) % (width + 80) + width + 80) % (width + 80) - 40;
+        const sy = 18 + ((i * 97) % Math.max(80, height * 0.63));
+        const pulse = 0.55 + Math.sin(time * 1.8 + i * 2.1) * 0.25;
+        const radius = i % 13 === 0 ? 2.1 : (i % 5 === 0 ? 1.35 : 0.75);
+        ctx.fillStyle = i % 9 === 0
+            ? `rgba(255, 214, 72, ${pulse})`
+            : `rgba(141, 235, 255, ${pulse})`;
+        ctx.beginPath();
+        ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (i % 13 === 0) {
+            ctx.strokeStyle = `rgba(255, 255, 230, ${pulse * 0.65})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(sx - 5, sy);
+            ctx.lineTo(sx + 5, sy);
+            ctx.moveTo(sx, sy - 5);
+            ctx.lineTo(sx, sy + 5);
+            ctx.stroke();
+        }
+    }
+
+    // Maciços gelados à esquerda, como na capa.
+    const coldOffset = -((game.camera.x * 0.11) % 260);
+    for (let i = -1; i < 5; i++) {
+        const baseX = coldOffset + i * 235;
+        const baseY = height * 0.89;
+        const peak = 128 + (Math.abs(i * 47) % 92);
+
+        ctx.fillStyle = i % 2 === 0 ? '#075a8d' : '#064276';
+        ctx.strokeStyle = 'rgba(2, 15, 48, 0.72)';
+        ctx.lineWidth = 4;
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(baseX - 115, baseY + 25);
+        ctx.lineTo(baseX, baseY - peak);
+        ctx.lineTo(baseX + 125, baseY + 25);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#39d8e9';
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY - peak + 4);
+        ctx.lineTo(baseX - 34, baseY - peak + 55);
+        ctx.lineTo(baseX - 5, baseY - peak + 43);
+        ctx.lineTo(baseX + 18, baseY - peak + 69);
+        ctx.lineTo(baseX + 34, baseY - peak + 54);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(194, 255, 255, 0.8)';
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY - peak + 4);
+        ctx.lineTo(baseX - 28, baseY - peak + 47);
+        ctx.lineTo(baseX - 6, baseY - peak + 36);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // Contraponto quente no lado direito cria a composição frio/quente da arte.
+    const hotOffset = -((game.camera.x * 0.17) % 360);
+    for (let i = 0; i < 4; i++) {
+        const baseX = width * 0.68 + hotOffset + i * 310;
+        const baseY = height * 0.94;
+        const peak = 105 + (i % 3) * 42;
+        const cliff = ctx.createLinearGradient(baseX, baseY - peak, baseX, baseY);
+        cliff.addColorStop(0, '#ffc62f');
+        cliff.addColorStop(0.48, '#ef6b21');
+        cliff.addColorStop(1, '#64234a');
+        ctx.fillStyle = cliff;
+        ctx.strokeStyle = 'rgba(42, 12, 48, 0.72)';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(baseX - 150, baseY + 25);
+        ctx.lineTo(baseX - 72, baseY - peak * 0.42);
+        ctx.lineTo(baseX, baseY - peak);
+        ctx.lineTo(baseX + 54, baseY - peak * 0.55);
+        ctx.lineTo(baseX + 155, baseY + 25);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255, 232, 93, 0.26)';
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY - peak);
+        ctx.lineTo(baseX + 54, baseY - peak * 0.55);
+        ctx.lineTo(baseX + 12, baseY - 18);
+        ctx.lineTo(baseX - 25, baseY - peak * 0.48);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // Névoa de horizonte separa cenário e gameplay e dá profundidade pintada.
+    const horizonMist = ctx.createLinearGradient(0, height * 0.66, 0, height);
+    horizonMist.addColorStop(0, 'rgba(67, 255, 218, 0)');
+    horizonMist.addColorStop(0.7, 'rgba(18, 214, 176, 0.14)');
+    horizonMist.addColorStop(1, 'rgba(3, 32, 66, 0.34)');
+    ctx.fillStyle = horizonMist;
+    ctx.fillRect(0, height * 0.62, width, height * 0.38);
+
+    const vignette = ctx.createRadialGradient(width / 2, height * 0.48, width * 0.18, width / 2, height * 0.48, width * 0.78);
+    vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    vignette.addColorStop(1, 'rgba(1, 5, 28, 0.38)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, width, height);
+}
+
+function drawLegacyPlainsBackground(ctx) {
     // Ciclo dia/noite cíclico (repete a cada 500m)
     const progression = (game.distance / 500) % 1; // 0 a 1, depois volta para 0
 
@@ -2662,6 +2806,25 @@ export function drawParallaxLayers(ctx) {
 // PLAINS PARALLAX - Nuvens e Pássaros
 // ============================================
 function drawPlainsParallax(ctx) {
+    const time = Date.now() / 1000;
+    const drift = (game.camera.x * 0.09) % (game.width + 240);
+
+    // Pequenas faixas de energia substituem as nuvens chapadas e mantêm o
+    // cenário vivo sem competir com as plataformas ou com o personagem.
+    for (let i = 0; i < 7; i++) {
+        const x = ((i * 241 - drift + game.width + 240) % (game.width + 240)) - 120;
+        const y = game.height * (0.28 + (i % 4) * 0.11) + Math.sin(time * 0.45 + i) * 10;
+        const glow = ctx.createRadialGradient(x, y, 0, x, y, 24 + (i % 3) * 10);
+        glow.addColorStop(0, i % 3 === 0 ? 'rgba(255, 221, 61, 0.24)' : 'rgba(56, 232, 255, 0.2)');
+        glow.addColorStop(1, 'rgba(20, 210, 255, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(x, y, 36, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function drawLegacyPlainsParallax(ctx) {
     const time = Date.now() / 1000;
 
     // CAMADA 1: Nuvens distantes (50% velocidade câmera)

@@ -1,13 +1,13 @@
 import { game } from './game.js';
-import { updateChunks, updateCamera } from './camera.js?v=visual-refresh-1';
-import { drawBackground, drawParallaxLayers, createParticles, initAmbientParticles, updateAmbientParticles, drawAmbientParticles } from './render.js?v=visual-refresh-1';
+import { updateChunks, updateCamera } from './camera.js?v=enemy-rework-2';
+import { drawBackground, drawParallaxLayers, createParticles, initAmbientParticles, updateAmbientParticles, drawAmbientParticles } from './render.js?v=biome-backgrounds-2';
 import { drawDevModeUI } from './devMode.js';
-import { setupMenuHandlers } from './menu.js?v=first-sprites-restored';
+import { setupMenuHandlers } from './menu.js?v=player-scale-1';
 import { setupInputHandlers } from './input.js';
 import { FloatingText } from './entities/FloatingText.js';
 import { drawModifierTimers } from './ui/ModifierTimers.js';
 import { drawOffscreenBubble } from './ui/OffscreenBubble.js';
-import { CONFIG } from './config.js';
+import { CONFIG } from './config.js?v=enemy-rework-2';
 import { getBiome } from './world/Patterns.js';
 import { rewardedAdsManager } from './ads/RewardedAds.js';
 import { setupContinueModal, resetContinueFlag } from './ui/ContinueModal.js';

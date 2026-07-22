@@ -292,10 +292,10 @@ export const BIOMES = {
         name: 'Plains',
         backgroundType: 'plains',
         colors: {
-            grass: '#2ecc71',
-            grassDark: '#52d681',
-            ground: '#654321',
-            groundDark: '#3d2812'
+            grass: '#47db24',
+            grassDark: '#087b35',
+            ground: '#8f3e20',
+            groundDark: '#32172b'
         },
         allowedTypes: ['ground', 'floating', 'bouncy'],
         decorations: ['flower', 'rock', 'bush']
@@ -305,9 +305,9 @@ export const BIOMES = {
         name: 'Cave',
         backgroundType: 'cave',
         colors: {
-            ground: '#34495e',
-            groundDark: '#2c3e50',
-            accent: '#95a5a6'
+            ground: '#33466e',
+            groundDark: '#16172f',
+            accent: '#a66cff'
         },
         allowedTypes: ['ground', 'floating', 'crumbling'],
         decorations: ['stalactite', 'crystal', 'mushroom'],
@@ -318,10 +318,10 @@ export const BIOMES = {
         name: 'Ice',
         backgroundType: 'ice',
         colors: {
-            ground: '#ecf0f1',
-            groundDark: '#bdc3c7',
-            ice: '#3498db',
-            accent: '#85c1e9'
+            ground: '#2879ae',
+            groundDark: '#15345f',
+            ice: '#d9ffff',
+            accent: '#66d9ed'
         },
         allowedTypes: ['ice', 'ground', 'floating'],
         decorations: ['snowflake', 'icicle', 'snowpile'],
@@ -332,10 +332,10 @@ export const BIOMES = {
         name: 'Desert',
         backgroundType: 'desert',
         colors: {
-            sand: '#f4a460',
-            sandDark: '#cd853f',
-            ground: '#daa520',
-            groundDark: '#b8860b'
+            sand: '#ffc83e',
+            sandDark: '#e46721',
+            ground: '#b94c21',
+            groundDark: '#54203b'
         },
         allowedTypes: ['ground', 'floating'],
         decorations: ['cactus', 'skull', 'tumbleweed'],
@@ -346,11 +346,11 @@ export const BIOMES = {
         name: 'Sky',
         backgroundType: 'sky',
         colors: {
-            cloud: '#ecf0f1',
-            cloudDark: '#d5dbdb',
-            accent: '#3498db',
-            grass: '#aef5a4', // Grama celestial
-            grassDark: '#8fd687'
+            cloud: '#efffb5',
+            cloudDark: '#46a88e',
+            accent: '#7ce8ff',
+            grass: '#b7f48e', // Grama celestial
+            grassDark: '#46a88e'
         },
         allowedTypes: ['floating', 'bouncy', 'moving'],
         decorations: ['cloud', 'bird', 'star', 'light_ray', 'balloon', 'kite', 'celestial_crystal'],
@@ -361,9 +361,9 @@ export const BIOMES = {
         name: 'Apocalypse',
         backgroundType: 'apocalypse',
         colors: {
-            ground: '#3a2a2a',
-            groundDark: '#2a1a1a',
-            accent: '#8b0000'
+            ground: '#5c2730',
+            groundDark: '#1d1122',
+            accent: '#ffcf35'
         },
         allowedTypes: ['ground', 'crumbling', 'floating'],
         decorations: ['rubble', 'fire', 'crack'],
@@ -375,9 +375,9 @@ export const BIOMES = {
         name: 'Moon',
         backgroundType: 'moon',
         colors: {
-            ground: '#9b9b9b',
-            groundDark: '#6b6b6b',
-            accent: '#c0c0c0'
+            ground: '#676c86',
+            groundDark: '#28283f',
+            accent: '#79ddff'
         },
         allowedTypes: ['ground', 'floating'],
         decorations: ['crater', 'rock', 'flag'],
@@ -388,9 +388,9 @@ export const BIOMES = {
         name: 'Black Hole',
         backgroundType: 'black_hole',
         colors: {
-            ground: '#1a0f2e',
-            groundDark: '#0d0718',
-            accent: '#ff6b35'
+            ground: '#3b205c',
+            groundDark: '#110b27',
+            accent: '#ff7651'
         },
         allowedTypes: ['floating', 'crumbling'],
         decorations: ['void', 'energy', 'distortion'],

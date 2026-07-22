@@ -1,5 +1,6 @@
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../config.js?v=enemy-rework-2';
 import { game } from '../game.js';
+import { drawCoverProjectile } from '../rendering/EnemyRenderer.js?v=enemy-rework-2';
 
 // ============================================
 // PROJECTILE - Projétil disparado por inimigos
@@ -97,6 +98,9 @@ export class Projectile {
 
     draw(ctx) {
         if (!this.alive) return;
+
+        drawCoverProjectile(ctx, this, game.camera);
+        return;
 
         const screenX = this.x - game.camera.x;
         const screenY = this.y - game.camera.y;

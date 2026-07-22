@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Enemy visual preview</title>
+    <style>
+        :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: #f8ecff;
+            background:
+                radial-gradient(circle at 50% 20%, rgba(50, 100, 190, .32), transparent 35%),
+                linear-gradient(155deg, #071335, #13072f 70%, #291143);
+            padding: 36px;
+        }
+        h1 { margin: 0 0 6px; font-size: 30px; letter-spacing: -.03em; }
+        p { margin: 0 0 28px; color: #a9c5ef; }
+        .grid { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); gap: 14px; }
+        article {
+            min-width: 0;
+            border: 2px solid rgba(129, 190, 255, .24);
+            border-radius: 22px;
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(23, 52, 104, .82), rgba(17, 12, 54, .9));
+            box-shadow: 0 18px 38px rgba(0, 0, 0, .25), inset 0 1px rgba(255, 255, 255, .08);
+        }
+        canvas { display: block; width: 100%; height: auto; background: radial-gradient(circle, #174477, #091633 65%); }
+        h2 { margin: 14px 15px 3px; font-size: 17px; text-transform: uppercase; letter-spacing: .08em; }
+        small { display: block; min-height: 46px; padding: 0 15px 16px; color: #8faad2; line-height: 1.35; }
+        @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+    <h1>Stack or Splat — Enemy Lineup</h1>
+    <p>Silhuetas, escala, contraste e leitura de comportamento.</p>
+    <main class="grid" id="grid"></main>
+    <script type="module">
+        import { drawCoverEnemy } from '../js/rendering/EnemyRenderer.js?v=enemy-rework-2';
+
+        const descriptions = {
+            walker: 'Meteoro bruto · patrulha básica',
+            flyer: 'Mariposa cósmica · voo senoidal',
+            jumper: 'Blob elástico · salto carregado',
+            chaser: 'Cometa feroz · investida',
+            shooter: 'Ciclope blindado · tiro telegrafado'
+        };
+        const mockTarget = { x: 145, y: 45, width: 40, height: 56 };
+        const enemies = [
+            { type: 'walker', vx: 1.5 },
+            { type: 'flyer', vx: 2, waveOffset: 0.4 },
+            { type: 'jumper', vx: .8, grounded: true, jumpTimer: 82, jumpInterval: 90 },
+            { type: 'chaser', vx: 3.5, isChasing: true, dashCharging: false, dashChargeTime: 0, dashChargeDuration: 20 },
+            { type: 'shooter', vx: 0, shootTimer: 105, shootInterval: 120, isTelegraphing: true, telegraphTime: 10, telegraphDuration: 15, detectNearestPlayer: () => mockTarget }
+        ];
+
+        for (const data of enemies) {
+            const article = document.createElement('article');
+            const canvas = document.createElement('canvas');
+            canvas.width = 180;
+            canvas.height = 150;
+            article.append(canvas);
+            const title = document.createElement('h2');
+            title.textContent = data.type;
+            article.append(title);
+            const copy = document.createElement('small');
+            copy.textContent = descriptions[data.type];
+            article.append(copy);
+            grid.append(article);
+
+            const ctx = canvas.getContext('2d');
+            const enemy = { x: 70, y: 54, width: 40, height: 40, alive: true, grounded: true, isBlinking: false, ...data };
+            drawCoverEnemy(ctx, enemy);
+        }
+    </script>
+</body>
+</html>

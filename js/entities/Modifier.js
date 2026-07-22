@@ -1,4 +1,6 @@
+import { CONFIG } from '../config.js?v=player-scale-1';
 import { game } from '../game.js';
+import { intersectsPlayerPickup } from '../utils/Collision.js?v=player-scale-1';
 
 // ============================================
 // MODIFIER (Modificador)
@@ -7,8 +9,8 @@ export class Modifier {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.width = 20;
-        this.height = 20;
+        this.width = CONFIG.MODIFIER_SIZE;
+        this.height = CONFIG.MODIFIER_SIZE;
         this.collected = false;
         this.rotation = 0;
         this.pulseTime = 0;
@@ -234,10 +236,7 @@ export class Modifier {
     }
 
     intersects(player) {
-        return this.x < player.x + player.width &&
-               this.x + this.width > player.x &&
-               this.y < player.y + player.height &&
-               this.y + this.height > player.y;
+        return intersectsPlayerPickup(this, player);
     }
 
     draw(ctx) {
@@ -302,7 +301,7 @@ export class Modifier {
         // Símbolo de interrogação no centro (maior e com outline)
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 4;
-        ctx.font = 'bold 16px Arial';
+        ctx.font = `bold ${Math.round(this.width * 0.68)}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.strokeText('?', 0, 0);

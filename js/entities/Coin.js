@@ -1,5 +1,6 @@
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../config.js?v=player-scale-1';
 import { game } from '../game.js';
+import { intersectsPlayerPickup } from '../utils/Collision.js?v=player-scale-1';
 
 // ============================================
 // COIN
@@ -57,10 +58,7 @@ export class Coin {
     }
 
     intersects(player) {
-        return this.x < player.x + player.width &&
-               this.x + this.width > player.x &&
-               this.y < player.y + player.height &&
-               this.y + this.height > player.y;
+        return intersectsPlayerPickup(this, player);
     }
 
     draw(ctx) {
@@ -96,7 +94,7 @@ export class Coin {
         // Símbolo de moeda ($ maior e com outline)
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 3;
-        ctx.font = 'bold 12px Arial';
+        ctx.font = `bold ${Math.round(this.width * 0.62)}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.strokeText('$', 0, 0);
@@ -119,7 +117,7 @@ export class Coin {
         const time = Date.now() / 1000 + this.x; // Offset por posição para variar
         for (let i = 0; i < 4; i++) {
             const angle = time * 2 + (i * Math.PI * 2 / 4);
-            const radius = 14 + Math.sin(time * 3 + i) * 4;
+            const radius = this.width * 0.82 + Math.sin(time * 3 + i) * 4;
             const px = screenX + Math.cos(angle) * radius;
             const py = screenY + Math.sin(angle) * radius;
             const opacity = 0.4 + Math.sin(time * 4 + i) * 0.3;

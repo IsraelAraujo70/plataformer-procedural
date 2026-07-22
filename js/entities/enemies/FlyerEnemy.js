@@ -1,6 +1,7 @@
-import { CONFIG } from '../../config.js';
+import { CONFIG } from '../../config.js?v=enemy-rework-2';
 import { game } from '../../game.js';
-import { Enemy } from '../Enemy.js';
+import { Enemy } from '../Enemy.js?v=enemy-rework-2';
+import { drawCoverEnemy } from '../../rendering/EnemyRenderer.js?v=enemy-rework-2';
 
 // ============================================
 // FLYER ENEMY - Voa em padrão senoidal
@@ -83,6 +84,9 @@ export class FlyerEnemy extends Enemy {
 
     draw(ctx) {
         if (!this.alive) return;
+
+        drawCoverEnemy(ctx, this, game.camera);
+        return;
 
         const screenX = this.x - game.camera.x;
         const screenY = this.y - game.camera.y;

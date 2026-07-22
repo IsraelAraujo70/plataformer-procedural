@@ -1,4 +1,4 @@
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../config.js?v=enemy-rework-2';
 import { game } from '../game.js';
 
 // ============================================

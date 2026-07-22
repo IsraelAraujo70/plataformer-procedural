@@ -1,4 +1,4 @@
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../config.js?v=player-scale-1';
 import { game } from '../game.js';
 import {
     getCharacterFrameBounds,
@@ -892,7 +892,7 @@ export class Player {
             }
 
             // Criar chapéu "dropping" (animação de cair e sumir)
-            const hatX = this.x + this.width / 2 - 10;
+            const hatX = this.x + this.width / 2 - CONFIG.HAT_WIDTH / 2;
             const hatY = this.y - 8;
 
             import('./Hat.js').then(module => {
@@ -965,7 +965,7 @@ export class Player {
             }
 
             // Criar chapéu "dropping" (animação de cair e sumir)
-            const hatX = this.x + this.width / 2 - 10;
+            const hatX = this.x + this.width / 2 - CONFIG.HAT_WIDTH / 2;
             const hatY = this.y - 8; // Posição da antena
 
             // Importar Hat dinamicamente e criar instância tipo 'dropping'
@@ -1437,7 +1437,7 @@ export class Player {
         );
 
         const sizeRatio = this.height / CONFIG.PLAYER_HEIGHT;
-        const renderHeight = 78 * sizeRatio;
+        const renderHeight = CONFIG.PLAYER_RENDER_HEIGHT * sizeRatio;
         const renderWidth = renderHeight * (sourceWidth / sourceHeight);
         const feetY = screenY + this.height + 1;
         const centerX = screenX + this.width / 2;

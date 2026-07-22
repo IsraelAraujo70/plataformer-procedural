@@ -1,7 +1,7 @@
 import { game } from './game.js';
-import { CONFIG } from './config.js';
+import { CONFIG } from './config.js?v=player-scale-1';
 import { Random } from './utils/Random.js';
-import { Player } from './entities/Player.js?v=first-sprites-restored';
+import { Player } from './entities/Player.js?v=player-scale-1';
 import { resetContinueFlag } from './ui/ContinueModal.js';
 
 // ============================================
