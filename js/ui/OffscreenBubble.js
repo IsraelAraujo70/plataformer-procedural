@@ -60,7 +60,8 @@ function currentChunkFor(player) {
 }
 
 function drawCharacterAt(ctx, player, centerX, feetY, renderHeight) {
-    const image = player.characterSprite;
+    const frame = player.getCharacterSpriteFrame?.();
+    const image = frame?.image || player.characterSprite;
     if (!image || !image.complete || image.naturalWidth === 0) {
         const radius = renderHeight * 0.3;
         const fallback = ctx.createRadialGradient(centerX - radius * 0.35, feetY - renderHeight * 0.66, 2, centerX, feetY - renderHeight * 0.5, radius);
@@ -78,14 +79,15 @@ function drawCharacterAt(ctx, player, centerX, feetY, renderHeight) {
     }
 
     const frameIndex = player.getCharacterFrameIndex?.() ?? 0;
-    const [sourceX, sourceY, sourceWidth, sourceHeight] = getCharacterFrameBounds(player.playerNumber, frameIndex);
+    const [sourceX, sourceY, sourceWidth, sourceHeight] = frame?.bounds ||
+        getCharacterFrameBounds(player.playerNumber, frameIndex);
     const renderWidth = renderHeight * (sourceWidth / sourceHeight);
 
     ctx.save();
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.translate(centerX, feetY);
-    ctx.scale(player.facingRight ? 1 : -1, 1);
+    ctx.scale(player.visualFacingScale ?? (player.facingRight ? 1 : -1), 1);
     ctx.drawImage(
         image,
         sourceX,

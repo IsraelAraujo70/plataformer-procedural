@@ -2,8 +2,18 @@ import { CONFIG } from '../config.js?v=player-scale-1';
 import { game } from '../game.js';
 import {
     getCharacterFrameBounds,
+    getCharacterRunFrameBounds,
+    getCharacterRunSprite,
     getCharacterSprite
-} from '../rendering/CharacterSpriteAssets.js?v=first-sprites-restored';
+} from '../rendering/CharacterSpriteAssets.js?v=run-cycle-1';
+import {
+    advanceRunCycleDistance,
+    crossedFootfall,
+    getRunBobOffset,
+    getRunCycleFrame,
+    getRunCyclePhase,
+    smoothFacingScale
+} from '../systems/PlayerMotionAnimation.js?v=run-cycle-1';
 
 // ============================================
 // PLAYER
@@ -86,9 +96,11 @@ export class Player {
 
         // Animação de caminhada
         this.animFrame = 0;
-        this.animCounter = 0;
-        this.animSpeed = 4; // Frames de jogo entre cada frame de animação (mais rápido = mais fluido)
         this.facingRight = true;
+        this.visualFacingScale = 1;
+        this.runCycleDistance = 0;
+        this.runCyclePhase = 0;
+        this.runCycleFrame = 0;
 
         // Animação de morte
         this.dying = false;
@@ -105,10 +117,6 @@ export class Player {
         this.anticipating = false;
         this.anticipationTime = 0;
         this.anticipationDuration = 8; // frames de agachamento antes do pulo
-
-        // Bounce na caminhada (pulo sutil ao andar)
-        this.walkBounce = 0;
-        this.walkBounceSpeed = 0.3;
 
         // Sistema de piscar olhos
         this.blinkTimer = 0;
@@ -140,6 +148,7 @@ export class Player {
         this.expression = 'normal';   // normal, scared, excited, dizzy, angry, determined
         this.expressionTimer = 0;     // Timer para controlar duração de expressões temporárias
         this.characterSprite = getCharacterSprite(playerNumber);
+        this.runCharacterSprite = getCharacterRunSprite(playerNumber);
     }
 
     update() {
@@ -290,6 +299,7 @@ export class Player {
         }
 
         // Controles normais (com inversão se reverseControls ativo)
+        const animationStartX = this.x;
         let moveSpeed = CONFIG.MOVE_SPEED * this.speedBoost;
         if (game.devMode.enabled) moveSpeed *= 2; // Velocidade dobrada em dev mode
 
@@ -305,20 +315,6 @@ export class Player {
         } else {
             // Aplicar fricção (reduzida se icyFloor ativo)
             this.vx *= this.icyFloor ? 0.98 : CONFIG.FRICTION;
-        }
-
-        // Atualizar animação de caminhada (quando está se movendo)
-        if (Math.abs(this.vx) > 0.5) {
-            const currentAnimSpeed = this.speedBoost > 1 ? Math.floor(this.animSpeed / 1.5) : this.animSpeed;
-            // Usar deltaTimeFactor para manter velocidade de animação consistente
-            this.animCounter += game.deltaTimeFactor;
-            if (this.animCounter >= currentAnimSpeed) {
-                this.animFrame = (this.animFrame + 1) % 4;
-                this.animCounter = 0;
-            }
-        } else {
-            this.animFrame = 0;
-            this.animCounter = 0;
         }
 
         // Pulo individual (W ou Seta para cima)
@@ -476,6 +472,7 @@ export class Player {
         const previousVY = this.vy; // Salvar vy ANTES de handleCollisions zerar
         this.grounded = false;
         this.handleCollisions();
+        this.updateMovementAnimation(animationStartX);
 
         // Bouncy: dar bounce ao colidir com o chão (usar vy anterior)
         if (this.bouncy && this.grounded && !wasGrounded && previousVY > 2) {
@@ -521,27 +518,6 @@ export class Player {
 
         // Limitar valores extremos
         this.squashStretch = Math.max(0.4, Math.min(1.8, this.squashStretch));
-
-        // ============================================
-        // WALK BOUNCE (Pulo sutil ao andar)
-        // ============================================
-        if (this.grounded && Math.abs(this.vx) > 0.5) {
-            const oldBounce = this.walkBounce;
-            this.walkBounce += this.walkBounceSpeed * (this.speedBoost > 1 ? 1.5 : 1);
-
-            // Criar partículas de poeira quando o pé toca o chão (bounce no pico)
-            const bouncePhase = Math.sin(this.walkBounce);
-            const oldPhase = Math.sin(oldBounce);
-
-            if (bouncePhase < 0 && oldPhase >= 0 && window.createParticles) {
-                // Pé tocou o chão!
-                const footX = this.x + this.width / 2 + (this.facingRight ? 5 : -5);
-                const footY = this.y + this.height + 4;
-                window.createParticles(footX, footY, '#aa8866', 3);
-            }
-        } else {
-            this.walkBounce = 0;
-        }
 
         // ============================================
         // BODY ROTATION (Rotação sutil ao virar)
@@ -676,6 +652,48 @@ export class Player {
         // SISTEMA DE EXPRESSÕES FACIAIS DINÂMICAS
         // ============================================
         this.updateExpression();
+    }
+
+    updateMovementAnimation(animationStartX) {
+        this.visualFacingScale = smoothFacingScale(
+            this.visualFacingScale,
+            this.facingRight,
+            game.deltaTimeFactor
+        );
+
+        if (!this.grounded) return;
+
+        const traveledDistance = Math.abs(this.x - animationStartX);
+        const isRunning = Math.abs(this.vx) > 0.5 && traveledDistance > 0.01;
+
+        if (!isRunning) {
+            this.runCycleDistance = 0;
+            this.runCyclePhase = 0;
+            this.runCycleFrame = 0;
+            this.animFrame = 0;
+            return;
+        }
+
+        const previousPhase = this.runCyclePhase;
+        const sizeRatio = this.height / CONFIG.PLAYER_HEIGHT;
+        const strideDistance = CONFIG.PLAYER_RUN_CYCLE_DISTANCE * sizeRatio;
+
+        this.runCycleDistance = advanceRunCycleDistance(
+            this.runCycleDistance,
+            traveledDistance,
+            strideDistance
+        );
+        this.runCyclePhase = getRunCyclePhase(this.runCycleDistance, strideDistance);
+        this.runCycleFrame = getRunCycleFrame(this.runCyclePhase);
+
+        // Keep older procedural accents synchronized with the authored poses.
+        this.animFrame = Math.floor(this.runCyclePhase * 4) % 4;
+
+        if (crossedFootfall(previousPhase, this.runCyclePhase) && window.createParticles) {
+            const footX = this.x + this.width / 2 + (this.facingRight ? 6 : -6);
+            const footY = this.y + this.height + 3;
+            window.createParticles(footX, footY, '#aa8866', 2);
+        }
     }
 
     updateExpression() {
@@ -1165,7 +1183,9 @@ export class Player {
         const screenY = this.y - game.camera.y;
 
         // Aplicar walk bounce (pulo sutil ao andar)
-        const bounceOffset = Math.sin(this.walkBounce) * 2.4;
+        const bounceOffset = this.grounded && Math.abs(this.vx) > 0.5
+            ? getRunBobOffset(this.runCyclePhase)
+            : 0;
         const idleFloat = this.grounded && Math.abs(this.vx) < 0.2
             ? Math.sin(Date.now() / 430 + this.playerNumber * 0.9) * 0.65
             : 0;
@@ -1426,15 +1446,30 @@ export class Player {
         return Math.floor(Date.now() / 620 + this.playerNumber * 0.5) % 2;
     }
 
-    drawCharacterSprite(ctx, screenX, screenY) {
-        const image = this.characterSprite;
-        if (!image || !image.complete || image.naturalWidth === 0) return;
+    getCharacterSpriteFrame() {
+        const isRunning = this.grounded && Math.abs(this.vx) > 0.5;
+        const runImageReady = this.runCharacterSprite?.complete && this.runCharacterSprite.naturalWidth > 0;
+
+        if (isRunning && runImageReady) {
+            return {
+                image: this.runCharacterSprite,
+                bounds: getCharacterRunFrameBounds(this.playerNumber, this.runCycleFrame)
+            };
+        }
 
         const frameIndex = this.getCharacterFrameIndex();
-        const [sourceX, sourceY, sourceWidth, sourceHeight] = getCharacterFrameBounds(
-            this.playerNumber,
-            frameIndex
-        );
+        return {
+            image: this.characterSprite,
+            bounds: getCharacterFrameBounds(this.playerNumber, frameIndex)
+        };
+    }
+
+    drawCharacterSprite(ctx, screenX, screenY) {
+        const frame = this.getCharacterSpriteFrame();
+        const image = frame.image;
+        if (!image || !image.complete || image.naturalWidth === 0) return;
+
+        const [sourceX, sourceY, sourceWidth, sourceHeight] = frame.bounds;
 
         const sizeRatio = this.height / CONFIG.PLAYER_HEIGHT;
         const renderHeight = CONFIG.PLAYER_RENDER_HEIGHT * sizeRatio;
@@ -1446,7 +1481,7 @@ export class Player {
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
         ctx.translate(centerX, feetY);
-        ctx.scale(this.facingRight ? 1 : -1, 1);
+        ctx.scale(this.visualFacingScale, 1);
         ctx.drawImage(
             image,
             sourceX,
